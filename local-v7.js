@@ -135,6 +135,22 @@ function v7RunAfterFirstPaint(task){
   else setTimeout(run,120);
 }
 
+function v7DeferBootCleanup(){
+  if(typeof v14CleanupDuplicateSessions!=='function')return;
+  const actualCleanup=v14CleanupDuplicateSessions;
+  let queued=false;
+  v14CleanupDuplicateSessions=async function(...args){
+    if(!queued){
+      queued=true;
+      v7RunAfterFirstPaint(async()=>{
+        try{await actualCleanup(...args);}
+        finally{v14CleanupDuplicateSessions=actualCleanup;}
+      });
+    }
+    return 0;
+  };
+}
+
 window.addEventListener('DOMContentLoaded',async()=>{
   const ready=await v7WaitForDb();
   if(!ready){
@@ -150,7 +166,8 @@ window.addEventListener('DOMContentLoaded',async()=>{
     const sel=document.getElementById('planSelect');
     if(sel&&!sel.disabled)sel.value=String(pi);
 
-    // Show the local training UI as soon as the critical local state is available.
+    // Keep duplicate cleanup and other maintenance off the critical first-paint path.
+    v7DeferBootCleanup();
     document.body.classList.remove('app-booting');
     await v7RestoreDraft(pi);
   }catch(e){
