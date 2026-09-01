@@ -1,6 +1,7 @@
 /* v12 training-page sync shortcuts.
  * Adds a plans-only pull beside the plan selector and a normal incremental push beside Save Workout.
  */
+let v12StatusTimer=null;
 function v12EnsureControls(){
   const sel=document.getElementById('planSelect');
   if(sel&&!document.getElementById('pullPlansTodayBtn')){
@@ -29,6 +30,7 @@ function v12EnsureControls(){
       status.id='todaySyncStatus';
       status.className='muted today-sync-status';
       status.style.margin='8px 0 0';
+      status.style.display='none';
       card.appendChild(status);
     }
   }
@@ -46,8 +48,16 @@ function v12EnsureControls(){
 function v12TodayStatus(text,ok=null){
   const box=document.getElementById('todaySyncStatus');
   if(!box)return;
+  clearTimeout(v12StatusTimer);
   box.textContent=text||'';
+  box.style.display=text?'block':'none';
   box.className='muted today-sync-status '+(ok===true?'sync-ok':ok===false?'sync-error':'');
+  if(text&&ok===true){
+    const shown=text;
+    v12StatusTimer=setTimeout(()=>{
+      if(box.textContent===shown){box.textContent='';box.style.display='none';}
+    },4000);
+  }
 }
 function v12MirrorSettingsStatus(){
   const src=document.getElementById('syncStatus');
