@@ -75,8 +75,8 @@
     <label>Fine-grained token
       <input id="syncToken" type="password" autocomplete="off" placeholder="仅授权该 Private 仓库 Contents 读写">
     </label>
-    <label>同步密码
-      <input id="syncPassword" type="password" autocomplete="off" placeholder="用于端到端加密；三台设备使用同一个密码">
+    <label>固定同步密码
+      <input id="syncPassword" type="password" autocomplete="off" placeholder="首次输入后保存；以后本机自动使用">
     </label>
     <input id="syncPath" type="hidden" value="fitness-sync.enc.json">
     <div class="row wrap top-gap">
@@ -115,5 +115,6 @@
 <script src="v3-ui.js"></script>
 <script src="sync-v3.js"></script>
 <script src="local-v7.js"></script>
+<script src="local-v8.js"></script>
 </body>
 </html>
