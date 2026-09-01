@@ -67,29 +67,27 @@
 
   <div class="card">
     <h2>加密同步</h2>
-    <p class="muted">可选功能。数据在浏览器内用 AES-256-GCM 加密后，再上传到你指定的 Private GitHub 仓库。公开的 Pages 仓库不会保存训练数据。</p>
+    <p class="muted">使用单独的 Private GitHub 仓库。每次训练保存为一个独立密文文件；训练计划和身体数据分别保存为小型密文文件。同步时只新增缺少的训练记录，不会反复重写全部历史。</p>
     <div class="grid2">
       <label>GitHub 用户名<input id="syncOwner" autocomplete="off" placeholder="例如 yourname"></label>
-      <label>私有仓库名<input id="syncRepo" autocomplete="off" placeholder="例如 fitness-data-private"></label>
+      <label>Private 仓库名<input id="syncRepo" autocomplete="off" placeholder="例如 fitness-data-private"></label>
     </div>
     <label>Fine-grained token
-      <input id="syncToken" type="password" autocomplete="off" placeholder="仅需该私有仓库 Contents 读写权限">
+      <input id="syncToken" type="password" autocomplete="off" placeholder="仅授权该 Private 仓库 Contents 读写">
     </label>
     <label>同步密码
-      <input id="syncPassword" type="password" autocomplete="new-password" placeholder="用于端到端加密；GitHub 不会获得此密码">
+      <input id="syncPassword" type="password" autocomplete="new-password" placeholder="用于端到端加密；请在三台设备输入同一个密码">
     </label>
-    <label>同步文件路径
-      <input id="syncPath" value="fitness-sync.enc.json" autocomplete="off">
-    </label>
+    <input id="syncPath" type="hidden" value="fitness-sync.enc.json">
     <div class="row wrap top-gap">
-      <button id="pullSyncBtn">从云端拉取并解密</button>
-      <button id="pushSyncBtn">加密并上传</button>
+      <button id="pullSyncBtn">从云端合并</button>
+      <button id="pushSyncBtn">增量加密同步</button>
       <button id="rememberSyncBtn" class="secondary">保存仓库设置</button>
     </div>
     <p id="syncStatus" class="muted"></p>
     <details>
-      <summary>隐私说明</summary>
-      <p class="muted">Token 和同步密码不会写进公开仓库，也不会被同步到云端。仓库地址可保存在本机；Token/密码默认只保留在当前页面内存中，刷新后需重新输入。上传前会检查目标仓库 visibility 必须为 private。</p>
+      <summary>隐私与冲突说明</summary>
+      <p class="muted">所有训练内容在浏览器内使用 AES-256-GCM 加密后才上传。训练文件名由随机 session ID 的 SHA-256 生成，不直接包含训练日期、动作或身体数据。GitHub 仍可能看到仓库大小、文件数量和提交时间等元数据。Token 和同步密码不会写入公开仓库，也不会上传到同步仓库；页面刷新后需重新输入。上传前会强制检查目标仓库必须是 Private。若云端训练计划或身体数据比本机新，上传会停止并提示先执行“从云端合并”，以减少覆盖风险。</p>
     </details>
   </div>
 
@@ -100,7 +98,7 @@
       <label class="file-btn">导入备份 JSON<input id="importInput" type="file" accept="application/json,.json"></label>
       <button id="wipeBtn" class="danger">删除本机全部数据</button>
     </div>
-    <p class="muted">明文 JSON 适合你自己离线备份；如需跨设备，优先使用上面的加密同步。</p>
+    <p class="muted">明文 JSON 适合你自己离线备份；跨设备优先使用上面的增量加密同步。</p>
   </div>
 </section>
 </main>
@@ -115,5 +113,6 @@
 <script src="v2.js"></script>
 <script src="v2-fix.js"></script>
 <script src="v3-ui.js"></script>
+<script src="sync-v3.js"></script>
 </body>
 </html>
