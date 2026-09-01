@@ -1,4 +1,4 @@
-/* v3 training-page UX: inline plan editing, per-exercise completion, fixed action bar. */
+/* v4 training-page UX: inline plan editing, per-set completion, normal end-of-page action bar. */
 let v3Draft = { planIndex: null, sets: {}, completed: {} };
 
 function v3CurrentPlanIndex(){
@@ -6,6 +6,7 @@ function v3CurrentPlanIndex(){
   return sel && !sel.disabled ? Number(sel.value || 0) : 0;
 }
 function v3DraftKey(ei,si,k){ return `${ei}:${si}:${k}`; }
+function v3DoneKey(ei,si){ return `${ei}:${si}`; }
 function v3EnsureDraftPlan(){
   const pi = v3CurrentPlanIndex();
   if(v3Draft.planIndex !== pi) v3Draft = {planIndex:pi,sets:{},completed:{}};
@@ -16,8 +17,8 @@ function v3CaptureDraft(){
   document.querySelectorAll('#workoutContainer input[data-e][data-s][data-k]').forEach(i=>{
     v3Draft.sets[v3DraftKey(i.dataset.e,i.dataset.s,i.dataset.k)] = i.value;
   });
-  document.querySelectorAll('#workoutContainer .exercise-card[data-e]').forEach(card=>{
-    v3Draft.completed[card.dataset.e] = card.classList.contains('completed');
+  document.querySelectorAll('#workoutContainer .workout-set-row[data-e][data-s]').forEach(row=>{
+    v3Draft.completed[v3DoneKey(row.dataset.e,row.dataset.s)] = row.classList.contains('set-completed');
   });
   v3Draft.planIndex = pi;
 }
@@ -39,7 +40,7 @@ function v3RenderWorkout(){
   c.innerHTML='';
   (plan.exercises||[]).forEach((ex,ei)=>{
     const card=document.createElement('div');
-    card.className='card exercise-card'+(v3Draft.completed[ei]?' completed':'');
+    card.className='card exercise-card';
     card.dataset.e=ei;
     const target=ex.repRange?`${ex.repRange[0]}–${ex.repRange[1]} 次`:'';
     card.innerHTML=`
@@ -50,18 +51,22 @@ function v3RenderWorkout(){
         </div>
         <button class="small secondary exercise-edit-toggle" data-e="${ei}">调整</button>
       </div>
-      <div class="set-row set-header"><span>组</span><span>重量 kg</span><span>次数</span><span>RIR</span></div>
+      <div class="set-row set-header"><span>组</span><span>重量 kg</span><span>次数</span><span>RIR</span><span>完成</span></div>
     `;
     const sets=Math.max(1,Number(ex.sets)||1);
     for(let si=0;si<sets;si++){
       const row=document.createElement('div');
-      row.className='set-row';
+      const done=!!v3Draft.completed[v3DoneKey(ei,si)];
+      row.className='set-row workout-set-row'+(done?' set-completed':'');
+      row.dataset.e=ei;
+      row.dataset.s=si;
       const w=v3RestoreValue(ei,si,'weight'), reps=v3RestoreValue(ei,si,'reps'), rir=v3RestoreValue(ei,si,'rir');
       row.innerHTML=`
         <span>${si+1}</span>
         <input type="number" step="0.5" inputmode="decimal" data-e="${ei}" data-s="${si}" data-k="weight" value="${v3Escape(w)}" placeholder="${ex.defaultWeight??''}">
         <input type="number" step="1" inputmode="numeric" data-e="${ei}" data-s="${si}" data-k="reps" value="${v3Escape(reps)}">
         <input type="number" step="1" min="0" max="10" inputmode="numeric" data-e="${ei}" data-s="${si}" data-k="rir" value="${v3Escape(rir)}" placeholder="1–2">
+        <button class="small set-complete ${done?'':'secondary'}" data-e="${ei}" data-s="${si}">${done?'✓':'完成'}</button>
       `;
       card.appendChild(row);
     }
@@ -90,7 +95,6 @@ function v3RenderWorkout(){
         <button class="small secondary remove-set" data-e="${ei}" ${sets<=1?'disabled':''}>− 1组</button>
         <button class="small secondary add-set" data-e="${ei}">+ 1组</button>
       </div>
-      <button class="exercise-complete ${v3Draft.completed[ei]?'secondary':''}" data-e="${ei}">${v3Draft.completed[ei]?'已完成 ✓':'完成'}</button>
     `;
     card.appendChild(footer);
     const sug=document.createElement('div');
@@ -125,14 +129,17 @@ function v3ShiftDraftAfterDeleteExercise(deletedEi){
     const ne=ei>deletedEi?ei-1:ei;
     nextSets[v3DraftKey(ne,s,k)]=val;
   });
-  Object.entries(v3Draft.completed).forEach(([e,val])=>{
-    const ei=Number(e); if(ei===deletedEi)return;
-    nextCompleted[ei>deletedEi?ei-1:ei]=val;
+  Object.entries(v3Draft.completed).forEach(([key,val])=>{
+    const [e,s]=key.split(':'); const ei=Number(e);
+    if(ei===deletedEi)return;
+    const ne=ei>deletedEi?ei-1:ei;
+    nextCompleted[v3DoneKey(ne,s)]=val;
   });
   v3Draft.sets=nextSets;v3Draft.completed=nextCompleted;
 }
 function v3TrimLastSetDraft(ei,lastSi){
   ['weight','reps','rir'].forEach(k=>delete v3Draft.sets[v3DraftKey(ei,lastSi,k)]);
+  delete v3Draft.completed[v3DoneKey(ei,lastSi)];
 }
 async function v3WorkoutClick(e){
   const b=e.target.closest('button'); if(!b)return;
@@ -145,11 +152,14 @@ async function v3WorkoutClick(e){
     b.textContent=editor.classList.contains('hidden')?'调整':'收起';
     return;
   }
-  if(b.classList.contains('exercise-complete')){
-    const card=b.closest('.exercise-card');
-    const done=!card.classList.contains('completed');
-    card.classList.toggle('completed',done);v3Draft.completed[ei]=done;
-    b.textContent=done?'已完成 ✓':'完成';b.classList.toggle('secondary',done);return;
+  if(b.classList.contains('set-complete')){
+    const si=Number(b.dataset.s), row=b.closest('.workout-set-row');
+    const done=!row.classList.contains('set-completed');
+    row.classList.toggle('set-completed',done);
+    v3Draft.completed[v3DoneKey(ei,si)]=done;
+    b.textContent=done?'✓':'完成';
+    b.classList.toggle('secondary',!done);
+    return;
   }
   if(b.classList.contains('add-set')){
     v3CaptureDraft();plan.exercises[ei].sets=Math.max(1,Number(plan.exercises[ei].sets)||1)+1;await v3PersistAndRender();return;
@@ -204,12 +214,13 @@ async function v3SaveWorkout(){
       const parsed={
         weight:raw.weight===''||raw.weight===undefined?null:Number(raw.weight),
         reps:raw.reps===''||raw.reps===undefined?null:Number(raw.reps),
-        rir:raw.rir===''||raw.rir===undefined?null:Number(raw.rir)
+        rir:raw.rir===''||raw.rir===undefined?null:Number(raw.rir),
+        completed:!!v3Draft.completed[v3DoneKey(ei,si)]
       };
-      if(Object.values(parsed).some(v=>v!==null))sets.push(parsed);
+      if(parsed.completed || [parsed.weight,parsed.reps,parsed.rir].some(v=>v!==null))sets.push(parsed);
     }
-    return {name:ex.name,completed:!!v3Draft.completed[ei],sets};
-  }).filter(ex=>ex.sets.length||ex.completed);
+    return {name:ex.name,sets};
+  }).filter(ex=>ex.sets.length);
   if(!exercises.length){alert('还没有输入训练数据。');return;}
   state.sessions.push({id:crypto.randomUUID(),date:isoDate(),plan:plan.name,exercises});
   await persist();renderHistory();renderProgressOptions();
