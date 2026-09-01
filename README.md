@@ -1,35 +1,36 @@
-# 训练记录 PWA
+# 训练记录 PWA v2
 
-这是一个纯静态、local-first 的个人训练记录 PWA。
+纯静态、local-first 的训练记录 PWA。
 
 ## 隐私设计
-- GitHub Pages 上只部署 HTML/CSS/JS/PWA 图标。
-- 训练记录、身体数据、计划保存在当前设备的 IndexedDB。
-- 无 Google Analytics、无广告、无第三方 SDK、无云数据库。
-- 默认不向外部服务上传训练数据。
-- 备份需要你手动“导出 JSON”。
+- GitHub Pages 公开仓库只保存程序文件。
+- 训练计划、训练历史和身体数据默认只保存在当前设备 IndexedDB。
+- 无 Analytics、广告、第三方 SDK 或第三方云数据库。
+- 可选的跨设备同步使用 **单独的 Private GitHub repository**。
+- 同步前，浏览器用 Web Crypto API 的 **PBKDF2-SHA-256 + AES-256-GCM** 加密整个数据包；Private repo 里只写入密文。
+- 同步密码不上传，也不写入公开仓库。
+- Fine-grained GitHub token 不上传；页面刷新后需要重新输入。
+- 应用上传前会查询目标仓库并拒绝向非 Private 仓库同步。
 
-## GitHub Pages 部署
-1. 新建一个 GitHub repository，例如 `fitness-pwa`。
-2. 把本 zip 中的文件上传到仓库根目录。
-3. GitHub 仓库：Settings → Pages。
-4. Source 选择 `Deploy from a branch`。
-5. Branch 选择 `main`，Folder 选择 `/ (root)`。
-6. 保存后等待 Pages 地址出现。
-7. 打开网页，在“设置”里导入你自己的 starter JSON。
-8. iPhone Safari：分享 → 添加到主屏幕。
-   Android Chrome：菜单 → 安装应用/添加到主屏幕。
+## v2 新功能
+- 网页内新建/删除训练计划。
+- 网页内增加/删除动作。
+- 可直接修改动作名称、组数、rep range、默认重量、加重量步长、备注。
+- 多设备手动加密同步：上传/拉取。
+- 继续支持本地 JSON 导入导出。
 
-## 本地测试
-Service Worker 需要 HTTP(S)，不要直接双击 `index.html` 测 PWA 离线能力。
-可以在目录中运行：
+## 推荐同步仓库设置
+新建一个 **Private** repository，例如 `fitness-data-private`。
+创建 Fine-grained personal access token，只授权这个仓库，并只授予：
+- Contents: Read and write
+- Metadata: Read（GitHub 自动需要）
 
-    python3 -m http.server 8000
+不要给 token 额外仓库权限。
 
-然后访问：
+## 冲突策略
+v2 使用手动 Push / Pull：
+- 在一台设备训练或编辑完后点“加密并上传”。
+- 换设备前点“从云端拉取并解密”。
+- Pull 会覆盖当前本机数据，因此操作前会确认。
 
-    http://localhost:8000
-
-## 更新
-如果修改了静态文件，建议同时把 `sw.js` 里的 CACHE 名称从
-`fitness-pwa-v1` 改为 `fitness-pwa-v2`，避免旧缓存长期保留。
+这种方式简单，也减少自动后台同步产生的覆盖风险。
