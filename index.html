@@ -76,18 +76,18 @@
       <input id="syncToken" type="password" autocomplete="off" placeholder="仅授权该 Private 仓库 Contents 读写">
     </label>
     <label>同步密码
-      <input id="syncPassword" type="password" autocomplete="new-password" placeholder="用于端到端加密；请在三台设备输入同一个密码">
+      <input id="syncPassword" type="password" autocomplete="off" placeholder="用于端到端加密；三台设备使用同一个密码">
     </label>
     <input id="syncPath" type="hidden" value="fitness-sync.enc.json">
     <div class="row wrap top-gap">
       <button id="pullSyncBtn">从云端合并</button>
       <button id="pushSyncBtn">增量加密同步</button>
-      <button id="rememberSyncBtn" class="secondary">保存仓库设置</button>
+      <button id="rememberSyncBtn" class="secondary">保存本机同步信息</button>
     </div>
     <p id="syncStatus" class="muted"></p>
     <details>
       <summary>隐私与冲突说明</summary>
-      <p class="muted">所有训练内容在浏览器内使用 AES-256-GCM 加密后才上传。记录文件名由本地记录 ID 的 SHA-256 生成，不直接包含训练日期、动作、体重或围度。GitHub 仍可能看到仓库大小、文件数量和提交时间等元数据。Token 和同步密码不会写入公开仓库，也不会上传到同步仓库；页面刷新后需重新输入。上传前会强制检查目标仓库必须是 Private。若两台设备都修改过训练计划，应用会检测 revision 冲突并阻止静默覆盖。</p>
+      <p class="muted">四项同步信息可保存在当前浏览器的 IndexedDB 中，方便你自己的设备直接使用；它们不会进入公开仓库、Private 同步仓库或导出的训练备份 JSON。任何能访问当前浏览器配置文件的人，也可能读取这些本机信息。所有训练内容仍会在浏览器内使用 AES-256-GCM 加密后才上传；记录文件名不直接包含训练日期、动作、体重或围度。若两台设备都修改过训练计划，应用会检测 revision 冲突并阻止静默覆盖。</p>
     </details>
   </div>
 
@@ -96,9 +96,9 @@
     <div class="stack">
       <button id="exportBtn">导出明文备份 JSON</button>
       <label class="file-btn">导入备份 JSON<input id="importInput" type="file" accept="application/json,.json"></label>
-      <button id="wipeBtn" class="danger">删除本机全部数据</button>
+      <button id="wipeBtn" class="danger">删除本机全部训练和身体数据</button>
     </div>
-    <p class="muted">明文 JSON 适合你自己离线备份；跨设备优先使用上面的增量加密同步。</p>
+    <p class="muted">明文 JSON 适合你自己离线备份；跨设备优先使用上面的增量加密同步。训练中的未保存输入会自动保存在当前浏览器，并在刷新后恢复。</p>
   </div>
 </section>
 </main>
@@ -114,5 +114,6 @@
 <script src="v2-fix.js"></script>
 <script src="v3-ui.js"></script>
 <script src="sync-v3.js"></script>
+<script src="local-v7.js"></script>
 </body>
 </html>
