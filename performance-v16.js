@@ -179,11 +179,6 @@ const v16BaseSwitchPage=switchPage;
 switchPage=function(id){
   v16BaseSwitchPage(id);
   if(id==='history')v16RenderHistory();
-  if(id==='progress'){
-    renderProgressOptions();
-    renderBodyHistory();
-    drawProgress();
-  }
 };
 
 function v16RevealToday(){
