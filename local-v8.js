@@ -17,14 +17,19 @@ function v8EnsurePasswordTools(){
   const tools=document.createElement('div');
   tools.id='syncPasswordTools';
   tools.className='sync-password-tools';
+  tools.style.display='flex';
+  tools.style.gap='8px';
+  tools.style.flexWrap='wrap';
   tools.innerHTML=`
     <button id="syncPasswordRevealBtn" type="button" class="small secondary">显示</button>
     <button id="syncPasswordCopyBtn" type="button" class="small secondary">复制密码</button>
+    <button id="syncPasswordReenterBtn" type="button" class="small secondary">重新输入</button>
   `;
   input.insertAdjacentElement('afterend',tools);
   const note=document.createElement('div');
   note.id='syncPasswordFixedState';
   note.className='sync-password-fixed-state muted';
+  note.style.marginTop='2px';
   tools.insertAdjacentElement('afterend',note);
 
   document.getElementById('syncPasswordRevealBtn').onclick=()=>{
@@ -44,6 +49,21 @@ function v8EnsurePasswordTools(){
       if(typeof v2Status==='function')v2Status('浏览器未允许复制，请点“显示”后手动复制。',false);
     }
   };
+  document.getElementById('syncPasswordReenterBtn').onclick=async()=>{
+    const c=await idbGet('syncCredentialsV7')||{};
+    if(!c.password)return;
+    const ok=confirm('这只会清除当前设备保存的同步密码，不会修改云端数据。\n\n重新输入时必须使用原来的云端同步密码；输入不同密码将无法解密现有云端记录。\n\n继续？');
+    if(!ok)return;
+    c.password='';
+    await idbSet('syncCredentialsV7',c);
+    input.value='';
+    input.type='password';
+    v8PasswordVisible=false;
+    input.readOnly=false;
+    await v8ApplyPasswordState();
+    input.focus();
+    if(typeof v2Status==='function')v2Status('已解除当前设备的密码锁定，请重新输入原同步密码并保存。',true);
+  };
 }
 
 async function v8ApplyPasswordState(){
@@ -55,16 +75,19 @@ async function v8ApplyPasswordState(){
   if(fixed && input.value!==c.password)input.value=c.password;
   input.readOnly=fixed;
   input.classList.toggle('fixed-secret',fixed);
+  input.style.background=fixed?'#f9fafb':'';
   const fp=fixed?await v8PasswordFingerprint(c.password):'';
   stateBox.textContent=fixed
-    ? `已固定保存在本机 · 密码指纹 ${fp} · 三台设备的指纹应一致`
+    ? `已固定保存在本机 · 密码指纹 ${fp} · 不同设备的指纹应一致`
     : '首次输入正确的云端同步密码后，点“保存本机同步信息”，以后将自动锁定。';
   const remember=document.getElementById('rememberSyncBtn');
   if(remember)remember.textContent=fixed?'同步信息已保存':'保存并固定同步信息';
   const copy=document.getElementById('syncPasswordCopyBtn');
   const reveal=document.getElementById('syncPasswordRevealBtn');
+  const reenter=document.getElementById('syncPasswordReenterBtn');
   if(copy)copy.disabled=!input.value;
   if(reveal)reveal.disabled=!input.value;
+  if(reenter)reenter.disabled=!fixed;
 }
 
 if(typeof v7SaveCredentials==='function'){
