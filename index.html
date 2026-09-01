@@ -67,7 +67,7 @@
 
   <div class="card">
     <h2>加密同步</h2>
-    <p class="muted">使用单独的 Private GitHub 仓库。每次训练保存为一个独立密文文件；训练计划和身体数据分别保存为小型密文文件。同步时只新增缺少的训练记录，不会反复重写全部历史。</p>
+    <p class="muted">使用单独的 Private GitHub 仓库。每次训练和每条身体记录都保存为独立密文文件，只新增缺少的记录；训练计划使用一个带 revision 的小型密文文件，避免多设备静默覆盖。</p>
     <div class="grid2">
       <label>GitHub 用户名<input id="syncOwner" autocomplete="off" placeholder="例如 yourname"></label>
       <label>Private 仓库名<input id="syncRepo" autocomplete="off" placeholder="例如 fitness-data-private"></label>
@@ -87,7 +87,7 @@
     <p id="syncStatus" class="muted"></p>
     <details>
       <summary>隐私与冲突说明</summary>
-      <p class="muted">所有训练内容在浏览器内使用 AES-256-GCM 加密后才上传。训练文件名由随机 session ID 的 SHA-256 生成，不直接包含训练日期、动作或身体数据。GitHub 仍可能看到仓库大小、文件数量和提交时间等元数据。Token 和同步密码不会写入公开仓库，也不会上传到同步仓库；页面刷新后需重新输入。上传前会强制检查目标仓库必须是 Private。若云端训练计划或身体数据比本机新，上传会停止并提示先执行“从云端合并”，以减少覆盖风险。</p>
+      <p class="muted">所有训练内容在浏览器内使用 AES-256-GCM 加密后才上传。记录文件名由本地记录 ID 的 SHA-256 生成，不直接包含训练日期、动作、体重或围度。GitHub 仍可能看到仓库大小、文件数量和提交时间等元数据。Token 和同步密码不会写入公开仓库，也不会上传到同步仓库；页面刷新后需重新输入。上传前会强制检查目标仓库必须是 Private。若两台设备都修改过训练计划，应用会检测 revision 冲突并阻止静默覆盖。</p>
     </details>
   </div>
 
