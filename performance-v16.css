@@ -1,0 +1,30 @@
+/* v16 compact history, lazy trend controls, and boot placeholder */
+body.app-booting #today > .card:not(.today-boot-card),
+body.app-booting #today > #workoutContainer{display:none}
+.today-boot-card{display:none;min-height:120px;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
+body.app-booting .today-boot-card{display:flex}
+
+#progressRange{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+#progressRange .v16-range-btn{background:#eef0f3;color:var(--text);padding:7px 10px;border-radius:999px;font-size:12px;font-weight:650}
+#progressRange .v16-range-btn.active{background:var(--accent);color:#fff}
+
+.v16-history-card{border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-top:10px;background:#fff}
+.v16-history-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:7px;border-bottom:1px solid var(--border);font-size:14px}
+.v16-history-head .badge{margin-left:0;padding:3px 7px}
+.v16-history-ex{display:grid;grid-template-columns:minmax(90px,130px) 1fr;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #f0f1f3}
+.v16-history-ex:last-of-type{border-bottom:0}
+.v16-history-name{font-weight:700;font-size:13px;line-height:1.25}
+.v16-history-sets{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-start}
+.v16-set-chip{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--border);border-radius:999px;padding:4px 7px;font-size:12px;line-height:1;background:#fafafa;white-space:nowrap}
+.v16-set-chip b{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#f0f1f3;font-size:10px}
+.v16-history-note{margin-top:6px;color:var(--muted);font-size:11px;line-height:1.35}
+.v16-more-row{display:flex;justify-content:center;margin-top:12px}
+.v16-more-row button{min-width:180px}
+
+@media(max-width:620px){
+  .v16-history-card{padding:9px 10px;margin-top:8px}
+  .v16-history-ex{grid-template-columns:88px 1fr;gap:6px;padding:5px 0}
+  .v16-history-name{font-size:12px}
+  .v16-history-sets{gap:4px}
+  .v16-set-chip{padding:4px 6px;font-size:11px}
+}
