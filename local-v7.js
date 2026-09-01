@@ -120,19 +120,49 @@ function v7InitAutoHide(){
   window.addEventListener('resize',show,{passive:true});
 }
 
-window.addEventListener('load',()=>setTimeout(async()=>{
-  try{if(navigator.storage?.persist)await navigator.storage.persist();}
-  catch(e){console.warn('persistent storage request failed',e);}
+async function v7WaitForDb(){
+  if(db)return true;
+  for(let i=0;i<100;i++){
+    await new Promise(resolve=>setTimeout(resolve,10));
+    if(db)return true;
+  }
+  return false;
+}
 
-  try{await v7LoadCredentials();}catch(e){console.warn('credential restore failed',e);}
+function v7RunAfterFirstPaint(task){
+  const run=()=>Promise.resolve(task()).catch(e=>console.warn('post-boot task failed',e));
+  if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:1500});
+  else setTimeout(run,120);
+}
+
+window.addEventListener('DOMContentLoaded',async()=>{
+  const ready=await v7WaitForDb();
+  if(!ready){
+    console.warn('local restore skipped because IndexedDB was not ready');
+    document.body.classList.remove('app-booting');
+    return;
+  }
+
   try{
     v7DraftStore=await idbGet(V7_DRAFTS_KEY)||{};
     let pi=Number(await idbGet(V7_ACTIVE_PLAN_KEY));
     if(!Number.isInteger(pi)||pi<0||pi>=state.plans.length)pi=0;
     const sel=document.getElementById('planSelect');
     if(sel&&!sel.disabled)sel.value=String(pi);
+
+    // Show the local training UI as soon as the critical local state is available.
+    document.body.classList.remove('app-booting');
     await v7RestoreDraft(pi);
-  }catch(e){console.warn('draft restore failed',e);}
+  }catch(e){
+    console.warn('draft restore failed',e);
+    document.body.classList.remove('app-booting');
+  }
+
+  // Credentials and persistence are useful, but they do not need to delay first paint.
+  v7LoadCredentials().catch(e=>console.warn('credential restore failed',e));
+  v7RunAfterFirstPaint(async()=>{
+    if(navigator.storage?.persist)await navigator.storage.persist();
+  });
 
   const remember=document.getElementById('rememberSyncBtn');
   if(remember){remember.textContent='保存本机同步信息';remember.onclick=()=>v7SaveCredentials(true);}
@@ -140,4 +170,4 @@ window.addEventListener('load',()=>setTimeout(async()=>{
   document.addEventListener('visibilitychange',()=>{if(document.hidden)v7SnapshotDraft();});
   window.addEventListener('pagehide',v7SnapshotDraft);
   v7InitAutoHide();
-},360));
+});
