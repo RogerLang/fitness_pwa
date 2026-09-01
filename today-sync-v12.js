@@ -1,6 +1,48 @@
 /* v12 training-page sync shortcuts.
  * Adds a plans-only pull beside the plan selector and a normal incremental push beside Save Workout.
  */
+function v12EnsureControls(){
+  const sel=document.getElementById('planSelect');
+  if(sel&&!document.getElementById('pullPlansTodayBtn')){
+    const wrap=document.createElement('div');
+    wrap.className='today-plan-sync-controls';
+    wrap.style.display='flex';
+    wrap.style.gap='8px';
+    wrap.style.alignItems='center';
+    wrap.style.minWidth='0';
+    const pull=document.createElement('button');
+    pull.id='pullPlansTodayBtn';
+    pull.type='button';
+    pull.className='small secondary';
+    pull.textContent='拉取最新计划';
+    pull.style.whiteSpace='nowrap';
+    sel.parentNode.insertBefore(wrap,sel);
+    wrap.appendChild(pull);
+    wrap.appendChild(sel);
+    sel.style.width='auto';
+    sel.style.minWidth='140px';
+    sel.style.flex='1 1 auto';
+
+    const card=wrap.closest('.card');
+    if(card&&!document.getElementById('todaySyncStatus')){
+      const status=document.createElement('p');
+      status.id='todaySyncStatus';
+      status.className='muted today-sync-status';
+      status.style.margin='8px 0 0';
+      card.appendChild(status);
+    }
+  }
+
+  const save=document.getElementById('saveWorkoutBtn');
+  if(save&&!document.getElementById('syncTodayBtn')){
+    const sync=document.createElement('button');
+    sync.id='syncTodayBtn';
+    sync.type='button';
+    sync.className='secondary';
+    sync.textContent='增量同步';
+    save.insertAdjacentElement('afterend',sync);
+  }
+}
 function v12TodayStatus(text,ok=null){
   const box=document.getElementById('todaySyncStatus');
   if(!box)return;
@@ -60,8 +102,8 @@ async function v12PullPlansOnly(){
     renderAll();
     let nextIndex=state.plans.findIndex(p=>p.name===oldName);
     if(nextIndex<0)nextIndex=0;
-    const sel=document.getElementById('planSelect');
-    if(sel&&!sel.disabled)sel.value=String(nextIndex);
+    const nextSel=document.getElementById('planSelect');
+    if(nextSel&&!nextSel.disabled)nextSel.value=String(nextIndex);
     if(typeof v3Draft!=='undefined'){
       v3Draft={planIndex:nextIndex,sets:{},completed:{}};
       if(typeof v3RenderWorkout==='function')v3RenderWorkout();
@@ -97,6 +139,7 @@ async function v12RunPush(){
   }
 }
 window.addEventListener('load',()=>setTimeout(()=>{
+  v12EnsureControls();
   const pull=document.getElementById('pullPlansTodayBtn');
   const push=document.getElementById('syncTodayBtn');
   if(pull)pull.onclick=v12RunPlansPull;
