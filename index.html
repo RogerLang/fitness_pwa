@@ -3,26 +3,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#111827" />
-  <meta name="description" content="本地优先、可同步到 Private GitHub 仓库的个人训练记录 PWA" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="application-name" content="练了么" />
+  <meta name="apple-mobile-web-app-title" content="练了么" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="description" content="练了么：本地优先、可同步到 Private GitHub 仓库的个人训练记录应用" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icon-192.png" />
+  <link rel="manifest" href="manifest.webmanifest?v=18" />
+  <link rel="icon" href="icon-192.png?v=18" />
+  <link rel="apple-touch-icon" href="icon-192.png?v=18" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="training-ux-v13.css" />
   <link rel="stylesheet" href="training-ux-v14.css" />
   <link rel="stylesheet" href="performance-v16.css" />
-  <title>训练记录</title>
+  <title>练了么</title>
 </head>
 <body class="app-booting">
 <header class="app-header">
-  <div><h1>训练记录</h1><p class="muted">默认本机保存 · 可选 Private GitHub 同步</p></div>
+  <div><h1>练了么</h1><p class="muted">默认本机保存 · 可选 Private GitHub 同步</p></div>
   <button id="installBtn" class="secondary hidden">安装</button>
 </header>
 
 <main>
 <section id="today" class="page active">
-  <div class="card today-boot-card">正在恢复训练状态…</div>
+  <div class="card today-boot-card" role="status" aria-live="polite">
+    <div class="boot-brand" aria-label="练了么，正在恢复训练状态">
+      <div class="boot-logo" aria-hidden="true">
+        <span class="boot-bar boot-bar-blue"></span>
+        <span class="boot-bar boot-bar-purple"></span>
+        <span class="boot-bar boot-bar-mint"></span>
+      </div>
+      <div class="boot-name">练了么</div>
+      <div class="boot-status">正在恢复训练状态…</div>
+    </div>
+  </div>
   <div class="card">
     <div class="row between wrap">
       <div><h2>今日训练</h2><p id="todayDate" class="muted"></p></div>

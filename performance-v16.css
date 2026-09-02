@@ -1,8 +1,21 @@
-/* v16 compact history, lazy trend controls, and boot placeholder */
+/* v18 boot branding, compact history, and lazy trend controls */
+body.app-booting{background:#fff}
+body.app-booting .app-header,
+body.app-booting .bottom-nav{visibility:hidden}
+body.app-booting main{max-width:none;padding:0}
+body.app-booting #today{display:flex;min-height:100svh;align-items:center;justify-content:center}
 body.app-booting #today > .card:not(.today-boot-card),
 body.app-booting #today > #workoutContainer{display:none}
-.today-boot-card{display:none;min-height:120px;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
-body.app-booting .today-boot-card{display:flex}
+.today-boot-card{display:none}
+body.app-booting .today-boot-card{display:flex;width:100%;min-height:0;margin:0;padding:24px;align-items:center;justify-content:center;border:0;background:transparent;box-shadow:none}
+.boot-brand{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.boot-logo{width:156px;display:grid;gap:10px;margin-bottom:22px}
+.boot-bar{display:block;width:100%;height:30px;border-radius:999px;box-shadow:inset 0 2px 2px rgba(255,255,255,.9),inset 0 -1px 2px rgba(17,24,39,.05)}
+.boot-bar-blue{border:2px solid #9ac5f5;background:linear-gradient(180deg,#fbfdff 0%,#d9eaff 45%,#e5f0ff 100%)}
+.boot-bar-purple{border:2px solid #ae97f0;background:linear-gradient(180deg,#fdfbff 0%,#e6dfff 45%,#eee9ff 100%)}
+.boot-bar-mint{border:2px solid #6dccd1;background:linear-gradient(180deg,#fbffff 0%,#d4f5f6 45%,#e0f9f9 100%)}
+.boot-name{font-size:28px;font-weight:780;letter-spacing:.08em;color:#111827;line-height:1.2}
+.boot-status{margin-top:10px;color:var(--muted);font-size:12px}
 
 #progressRange{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 #progressRange .v16-range-btn{background:#eef0f3;color:var(--text);padding:7px 10px;border-radius:999px;font-size:12px;font-weight:650}
@@ -22,6 +35,7 @@ body.app-booting .today-boot-card{display:flex}
 .v16-more-row button{min-width:180px}
 
 @media(max-width:620px){
+  .boot-logo{width:148px;gap:9px}.boot-bar{height:29px}.boot-name{font-size:27px}
   .v16-history-card{padding:9px 10px;margin-top:8px}
   .v16-history-ex{grid-template-columns:88px 1fr;gap:6px;padding:5px 0}
   .v16-history-name{font-size:12px}

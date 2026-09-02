@@ -1,4 +1,4 @@
-const SHELL_CACHE = "fitness-pwa-shell-v17";
+const SHELL_CACHE = "fitness-pwa-shell-v18";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
@@ -17,7 +17,11 @@ const SHELL_ASSETS = [
   "./training-ux-v14.js",
   "./recovery-v15.js",
   "./performance-v16.js",
-  "./manifest.webmanifest"
+  "./manifest.webmanifest?v=18",
+  "./icon-192.png?v=18",
+  "./icon-512.png?v=18",
+  "./icon-192-maskable.png?v=18",
+  "./icon-512-maskable.png?v=18"
 ];
 
 self.addEventListener("install", event => {
