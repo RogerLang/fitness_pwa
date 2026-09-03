@@ -14,10 +14,18 @@
     previousSummary
   } = Progression;
 
-  function progressionHtml(suggestion) {
+  function progressionHtml(suggestion, ex) {
+    if (!suggestion) {
+      return `<section class="exercise-panel exercise-summary-panel exercise-plan-panel">
+        <div class="context-head"><strong>本次计划</strong><span class="context-chip">专项热身</span></div>
+        <div class="context-target">${setCount(ex)} 组专项热身</div>
+        <div class="context-detail">${App.esc(ex.note || "按预设完成后进入正式工作组。")}</div>
+      </section>`;
+    }
+
     const weight = suggestion.weight === null || suggestion.weight === undefined ? "自选重量" : `${Number(suggestion.weight)} kg`;
     const confirm = suggestion.confirmation ? `<span class="context-chip">${suggestion.confirmation}/2</span>` : "";
-    return `<section class="workout-context progression-context">
+    return `<section class="exercise-panel exercise-summary-panel exercise-plan-panel">
       <div class="context-head"><strong>本次计划</strong><span class="context-chip">${App.esc(suggestion.statusLabel)}</span>${confirm}</div>
       <div class="context-target">${App.esc(weight)} · ${App.esc((suggestion.reps || []).join(" / "))} 次</div>
       <div class="context-detail">${App.esc(suggestion.reason)}</div>
@@ -25,11 +33,18 @@
   }
 
   function previousHtml(summary) {
-    if (!summary) return "";
-    return `<section class="workout-context previous-context">
+    if (!summary) {
+      return `<section class="exercise-panel exercise-summary-panel exercise-previous-panel">
+        <div class="context-head"><strong>上次记录</strong></div>
+        <div class="context-target is-empty">暂无历史记录</div>
+        <div class="context-detail">完成一次训练后会自动显示。</div>
+      </section>`;
+    }
+
+    return `<section class="exercise-panel exercise-summary-panel exercise-previous-panel">
       <div class="context-head"><strong>上次记录</strong></div>
       <div class="context-target">${App.esc(summary.target)}</div>
-      ${summary.detail ? `<div class="context-detail">${App.esc(summary.detail)}</div>` : ""}
+      ${summary.detail ? `<div class="context-detail">${App.esc(summary.detail)}</div>` : '<div class="context-detail">最近一次有效训练记录</div>'}
     </section>`;
   }
 
@@ -45,10 +60,8 @@
     const [min, max] = repRange(ex);
     const sets = setCount(ex);
     const editorOpen = openEditors.has(ei);
-    const meta = ex.warmup ? (ex.note || "专项热身；不计入正式组与进阶") : `${min}–${max} 次${ex.note ? ` · ${ex.note}` : ""}`;
-    const contexts = ex.warmup
-      ? `<div class="warmup-callout">${App.esc(ex.note || "专项热身；完成后进入正式工作组")}</div>`
-      : `<div class="workout-context-grid">${previousHtml(summary)}${progressionHtml(suggestion)}</div>`;
+    const meta = ex.note || (ex.warmup ? "专项热身" : "");
+    const setsMeta = ex.warmup ? `${sets} 组 · 专项热身` : `${sets} 组 · ${min}–${max} 次`;
 
     let rows = "";
     for (let si = 0; si < sets; si++) {
@@ -77,9 +90,23 @@
         </div>
         <button type="button" class="small secondary exercise-edit-toggle" data-e="${ei}">${editorOpen ? "收起" : "调整"}</button>
       </div>
-      ${contexts}
-      <div class="set-row set-header"><span>组</span><span>重量 kg</span><span>次数</span><span>RIR</span><span>完成</span></div>
-      ${rows}
+
+      <div class="exercise-card-layout">
+        <div class="exercise-summary-grid">
+          ${previousHtml(summary)}
+          ${progressionHtml(suggestion, ex)}
+        </div>
+
+        <section class="exercise-panel exercise-sets-panel">
+          <div class="exercise-panel-heading">
+            <div class="exercise-panel-title">动作组</div>
+            <div class="exercise-panel-meta">${App.esc(setsMeta)}</div>
+          </div>
+          <div class="set-row set-header"><span>组</span><span>重量 kg</span><span>次数</span><span>RIR</span><span>完成</span></div>
+          ${rows}
+        </section>
+      </div>
+
       <div class="exercise-inline-editor${editorOpen ? "" : " hidden"}" data-e="${ei}">
         <div class="inline-editor-grid">
           <label class="wide">动作名称<input data-edit="name" value="${App.esc(ex.name || "")}"></label>
