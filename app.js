@@ -203,11 +203,11 @@ async function refresh(reason = "refresh") {
   if (document.getElementById("progress")?.classList.contains("active")) renderBodyHistory();
 }
 
-async function switchPage(id, { historyMode = "push", scroll = true } = {}) {
+async function switchPage(id, { historyMode = "replace", scroll = true } = {}) {
   const pageId = PAGE_IDS.has(id) ? id : "today";
   const nextHash = `#${pageId}`;
 
-  if (historyMode === "replace") {
+  if (historyMode === "replace" && window.location.hash !== nextHash) {
     window.history.replaceState(null, "", nextHash);
   } else if (historyMode === "push" && window.location.hash !== nextHash) {
     window.history.pushState(null, "", nextHash);
@@ -223,7 +223,7 @@ async function switchPage(id, { historyMode = "push", scroll = true } = {}) {
 
 function bindCoreEvents() {
   document.querySelectorAll(".bottom-nav button").forEach(button => {
-    button.onclick = () => switchPage(button.dataset.page);
+    button.onclick = () => switchPage(button.dataset.page, { historyMode: "replace" });
   });
   document.getElementById("saveBodyBtn").onclick = saveBody;
   document.getElementById("exportBtn").onclick = exportData;
