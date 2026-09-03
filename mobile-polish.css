@@ -11,7 +11,10 @@
   .app-header h1{font-size:18px;font-weight:800;letter-spacing:.005em;line-height:1.25}
   .app-header p{margin-top:1px;font-size:11.5px;line-height:1.35}
 
-  main{padding-top:10px}
+  main{
+    padding-top:10px;
+    padding-bottom:calc(88px + env(safe-area-inset-bottom,0px));
+  }
   h2{font-size:18px;line-height:1.3}
   h3{font-size:15px}
   .muted{font-size:12px}
@@ -43,15 +46,8 @@
   .set-row input{font-size:15px;padding:8px 4px}
   .set-complete{font-size:11px;padding:8px 2px}
 
-  .bottom-nav button{font-size:12px}
-}
-
-@media (display-mode:standalone) and (max-width:680px){
-  html,body{background:#f5f6f8}
-  body:not(.app-booting)::after{display:none}
-
-  main{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
-
+  /* Use one native-like bottom bar on every mobile display mode.
+     Some Android/Edge installed PWAs do not reliably match display-mode:standalone. */
   .bottom-nav{
     left:0;
     right:0;
@@ -64,10 +60,10 @@
     border:0;
     border-top:1px solid rgba(216,221,228,.58);
     border-radius:0;
-    background:rgba(247,248,250,.94);
+    background:rgba(247,248,250,.96);
     -webkit-backdrop-filter:blur(22px) saturate(150%);
     backdrop-filter:blur(22px) saturate(150%);
-    box-shadow:0 -8px 24px rgba(30,35,44,.055);
+    box-shadow:0 -5px 18px rgba(30,35,44,.045);
   }
   body.chrome-hidden .bottom-nav{transform:none;opacity:1}
   .bottom-nav button{
@@ -78,10 +74,14 @@
     font-weight:700;
   }
   .bottom-nav button.active{
-    background:rgba(255,255,255,.92);
+    background:rgba(255,255,255,.94);
     color:#171a21;
-    box-shadow:0 2px 9px rgba(35,40,48,.055),inset 0 0 0 1px rgba(221,225,232,.72);
+    box-shadow:0 2px 9px rgba(35,40,48,.05),inset 0 0 0 1px rgba(221,225,232,.72);
   }
+  .app-toast{bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+}
 
-  .app-toast{bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+@media (display-mode:standalone) and (max-width:680px){
+  html,body{background:#f5f6f8}
+  body:not(.app-booting)::after{display:none}
 }
