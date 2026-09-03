@@ -213,6 +213,110 @@ canvas{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.84);
 }
 
+/* The other three primary pages use the same hierarchy as the training surface. */
+#history h2,
+#progress h2,
+#settings h2,
+#progress h3{
+  color:var(--workout-text-primary);
+  font-weight:800;
+  letter-spacing:-.012em;
+}
+
+#history .history-card{
+  background:
+    radial-gradient(118% 92% at 10% 0%,rgba(255,255,255,.38),rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,rgba(255,255,255,.65),rgba(246,249,252,.49));
+  border-color:rgba(255,255,255,.72);
+}
+
+#history .history-head{
+  border-bottom-color:rgba(169,181,197,.18);
+}
+
+#history .history-head strong{
+  color:var(--workout-text-strong);
+  font-weight:760;
+}
+
+#history .history-exercise-name{
+  color:var(--workout-text-strong);
+  font-weight:720;
+}
+
+#history .history-exercise{
+  border-bottom-color:rgba(169,181,197,.14);
+}
+
+#history .history-set-chip{
+  border-color:rgba(255,255,255,.66);
+  background:rgba(255,255,255,.58);
+  color:var(--workout-text-secondary);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.82),
+    0 1px 3px rgba(30,35,44,.022);
+}
+
+#history .history-set-chip b{
+  background:rgba(228,233,239,.68);
+  color:#66717f;
+}
+
+#progressRange .v16-range-btn{
+  border:1px solid rgba(255,255,255,.62);
+  background:rgba(255,255,255,.46);
+  color:var(--workout-text-secondary);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.76);
+  transition:background .18s ease,color .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+
+#progressRange .v16-range-btn.active{
+  border-color:rgba(255,255,255,.88);
+  background:rgba(255,255,255,.88);
+  color:var(--workout-text-primary);
+  box-shadow:
+    0 4px 12px rgba(35,40,48,.055),
+    inset 0 1px 0 rgba(255,255,255,.98);
+}
+
+#progress .body-history-row{
+  border-bottom-color:rgba(169,181,197,.16);
+}
+
+#progress .body-history-row strong{
+  color:var(--workout-text-strong);
+}
+
+#progress .body-history-row span,
+#progress #progressSummary{
+  color:var(--workout-text-muted);
+}
+
+#settings details{
+  padding:12px 13px;
+  border:1px solid rgba(255,255,255,.66);
+  border-radius:18px;
+  background:linear-gradient(180deg,rgba(255,255,255,.54),rgba(246,249,252,.40));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+}
+
+#settings summary{
+  color:var(--workout-text-strong);
+  font-weight:720;
+}
+
+#settings details .muted,
+#settings .sync-status{
+  color:var(--workout-text-muted);
+}
+
+#settings .file-btn{
+  border:1px solid rgba(255,255,255,.68);
+  background:rgba(255,255,255,.58);
+  color:var(--workout-text-strong);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.84);
+}
+
 /* The bottom action card already behaved like glass; harmonize it with the thicker sheets. */
 #today .sticky-actions{
   background:
@@ -280,10 +384,13 @@ canvas{
   }
 
   #workoutContainer .set-complete{
+    position:relative;
+    top:-1px;
     width:62px;
     padding:0 5px;
     border-radius:15px;
     font-size:12.5px;
+    line-height:1;
   }
 
   #today .sticky-actions{
