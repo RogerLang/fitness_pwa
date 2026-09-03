@@ -13,8 +13,8 @@
     scroll-snap-type:y mandatory;
   }
 
-  /* A deliberate fast upward return is continuous; normal/slow scrolling keeps snap. */
-  html.training-snap-ready.training-free-return{
+  /* A deliberate fast upward/downward fling is continuous; normal/slow scrolling keeps snap. */
+  html.training-snap-ready.training-free-glide{
     scroll-snap-type:none;
   }
 
@@ -71,7 +71,7 @@
 
 @media (prefers-reduced-motion:reduce){
   html.training-snap-ready{scroll-snap-type:y proximity}
-  html.training-snap-ready.training-free-return{scroll-snap-type:none}
+  html.training-snap-ready.training-free-glide{scroll-snap-type:none}
   #today .today-overview,
   #workoutContainer .exercise-card,
   #workoutContainer .exercise-card.is-current{
