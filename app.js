@@ -9,7 +9,9 @@ let deferredPrompt = null;
 
 const appModules = [];
 const persistHooks = [];
+const initializedModules = new WeakSet();
 let appStarted = false;
+let auxiliaryInitStarted = false;
 let toastTimer = null;
 
 function esc(value = "") {
@@ -252,14 +254,52 @@ function initChromeAutoHide() {
   }, { passive: true });
 }
 
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator) || window.__fitnessSwRegisterStarted) return;
+  window.__fitnessSwRegisterStarted = true;
+  navigator.serviceWorker.register("./sw.js").catch(error => {
+    window.__fitnessSwRegisterStarted = false;
+    console.warn("service worker", error);
+  });
+}
+
+async function initModule(module) {
+  if (!module?.init || initializedModules.has(module)) return;
+  await module.init();
+  initializedModules.add(module);
+}
+
+function initAuxiliaryModules(modules) {
+  if (auxiliaryInitStarted || !modules.length) return;
+  auxiliaryInitStarted = true;
+  requestAnimationFrame(() => setTimeout(async () => {
+    for (const module of modules) {
+      try { await initModule(module); }
+      catch (error) { console.warn("auxiliary module init", error); }
+    }
+  }, 0));
+}
+
+function revealApp() {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.body.classList.remove("app-booting");
+    document.body.classList.add("app-ready");
+  }));
+}
+
 async function start() {
   if (appStarted) return;
   appStarted = true;
+  registerServiceWorker();
   try {
     db = await openDB();
     await loadState();
     bindCoreEvents();
-    for (const module of appModules) if (module.init) await module.init();
+
+    const criticalModules = appModules.filter(module => typeof module.refresh === "function");
+    const auxiliaryModules = appModules.filter(module => !criticalModules.includes(module));
+    for (const module of criticalModules) await initModule(module);
+
     await refresh("boot");
 
     const initialPage = pageFromLocation();
@@ -267,12 +307,10 @@ async function start() {
     await switchPage(initialPage, { historyMode: hasValidHash ? "none" : "replace", scroll: false });
 
     initChromeAutoHide();
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(error => console.warn("service worker", error));
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      document.body.classList.remove("app-booting");
-      document.body.classList.add("app-ready");
-    }));
+    revealApp();
+    initAuxiliaryModules(auxiliaryModules);
   } catch (error) {
+    appStarted = false;
     console.error(error);
     const status = document.querySelector(".boot-status");
     if (status) status.textContent = "启动失败，请刷新页面重试";
