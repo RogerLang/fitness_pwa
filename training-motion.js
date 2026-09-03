@@ -1,50 +1,26 @@
 (() => {
   const MOBILE_QUERY = window.matchMedia("(max-width:680px)");
-  const container = document.getElementById("workoutContainer");
+  const root = document.documentElement;
+  const body = document.body;
   const todayPage = document.getElementById("today");
-  if (!container || !todayPage) return;
+  const overview = document.querySelector("#today .today-overview");
+  const container = document.getElementById("workoutContainer");
+  if (!todayPage || !overview || !container) return;
 
   const SNAP_TOP = 10;
   const SNAP_BOTTOM = 126;
   const OVERVIEW_TOP = 68;
   const OVERVIEW_TOLERANCE = 26;
-  const FIRST_SETTLE_DELAY = 180;
-  const CHROME_TRANSITION_DELAY = 210;
+  const SCROLL_SETTLE_DELAY = 140;
 
+  let enabled = false;
+  let mode = "overview";
   let ticking = false;
-  let snapReady = false;
-  let firstTransitionActive = false;
-  let firstTransitionScrolled = false;
-  let firstSettleTimer = null;
+  let settleTimer = null;
+  let lastY = window.scrollY;
 
-  function todayActive() {
-    return todayPage.classList.contains("active");
-  }
-
-  function cards() {
-    return [...container.querySelectorAll(".exercise-card")];
-  }
-
-  function syncSnapState() {
-    const enabled = MOBILE_QUERY.matches && todayActive() && !document.body.classList.contains("app-booting");
-    snapReady = enabled;
-    document.documentElement.classList.toggle("training-snap-ready", enabled);
-
-    if (!enabled) {
-      endFirstTransition(false);
-      cards().forEach(card => {
-        card.classList.remove("is-current");
-        card.classList.remove("snap-start");
-      });
-    }
-  }
-
-  function overviewSettled() {
-    const overview = document.querySelector("#today .today-overview");
-    if (!overview || !todayActive()) return false;
-    const rect = overview.getBoundingClientRect();
-    return Math.abs(rect.top - OVERVIEW_TOP) <= OVERVIEW_TOLERANCE;
-  }
+  const cards = () => [...container.querySelectorAll(".exercise-card")];
+  const todayActive = () => todayPage.classList.contains("active");
 
   function snapGeometry() {
     const snapTop = SNAP_TOP;
@@ -58,38 +34,61 @@
     };
   }
 
-  function cardDistance(card, geometry) {
-    const rect = card.getBoundingClientRect();
-    return card.classList.contains("snap-start")
-      ? Math.abs(rect.top - geometry.snapTop)
-      : Math.abs((rect.top + rect.bottom) / 2 - geometry.snapCenter);
+  function overviewSettled() {
+    if (!todayActive()) return false;
+    return Math.abs(overview.getBoundingClientRect().top - OVERVIEW_TOP) <= OVERVIEW_TOLERANCE;
+  }
+
+  function setMode(nextMode) {
+    if (mode === nextMode) return;
+    mode = nextMode;
+    root.classList.toggle("training-overview-mode", mode === "overview");
+    root.classList.toggle("training-exercise-mode", mode === "exercise");
+    overview.classList.toggle("is-current", mode === "overview");
+
+    if (mode === "overview") body.classList.remove("chrome-hidden");
+  }
+
+  function classifyCards(geometry = snapGeometry()) {
+    for (const card of cards()) {
+      /* offsetHeight is layout height and is unaffected by the card's scale animation. */
+      card.classList.toggle("snap-start", card.offsetHeight > geometry.snapHeight - 20);
+    }
+  }
+
+  function clearTrainingState() {
+    clearTimeout(settleTimer);
+    settleTimer = null;
+    root.classList.remove("training-snap-ready", "training-overview-mode", "training-exercise-mode");
+    overview.classList.remove("is-current");
+    for (const card of cards()) card.classList.remove("is-current", "snap-start");
+  }
+
+  function syncState() {
+    enabled = MOBILE_QUERY.matches && todayActive() && !body.classList.contains("app-booting");
+    root.classList.toggle("training-snap-ready", enabled);
+
+    if (!enabled) {
+      clearTrainingState();
+      return;
+    }
+
+    classifyCards();
+    mode = overviewSettled() ? "exercise" : "overview";
+    setMode(overviewSettled() ? "overview" : "exercise");
+    lastY = window.scrollY;
+    scheduleUpdate();
   }
 
   function updateCurrentCard() {
     ticking = false;
-    const exerciseCards = cards();
-    if (!exerciseCards.length) return;
+    if (!enabled) return;
 
-    if (!snapReady || !MOBILE_QUERY.matches || !todayActive()) {
-      exerciseCards.forEach(card => {
-        card.classList.remove("is-current");
-        card.classList.remove("snap-start");
-      });
-      return;
-    }
-
-    const atOverview = overviewSettled();
     const geometry = snapGeometry();
+    classifyCards(geometry);
 
-    for (const card of exerciseCards) {
-      card.classList.toggle("snap-start", card.getBoundingClientRect().height > geometry.snapHeight - 20);
-    }
-
-    /* Only restore chrome once the overview has actually reached its own snap position.
-       This avoids fighting the base auto-hide logic throughout the first-card transition. */
-    if (atOverview) {
-      document.body.classList.remove("chrome-hidden");
-      exerciseCards.forEach(card => card.classList.remove("is-current"));
+    if (mode === "overview") {
+      for (const card of cards()) card.classList.remove("is-current");
       return;
     }
 
@@ -97,7 +96,7 @@
     if (actions) {
       const rect = actions.getBoundingClientRect();
       if (Math.abs(rect.bottom - geometry.snapBottom) <= 54 && rect.top < geometry.snapBottom) {
-        exerciseCards.forEach(card => card.classList.remove("is-current"));
+        for (const card of cards()) card.classList.remove("is-current");
         return;
       }
     }
@@ -105,17 +104,21 @@
     let bestCard = null;
     let bestDistance = Infinity;
 
-    for (const card of exerciseCards) {
+    for (const card of cards()) {
       const rect = card.getBoundingClientRect();
       if (rect.bottom <= geometry.snapTop || rect.top >= geometry.snapBottom) continue;
-      const distance = cardDistance(card, geometry);
+
+      const distance = card.classList.contains("snap-start")
+        ? Math.abs(rect.top - geometry.snapTop)
+        : Math.abs((rect.top + rect.bottom) / 2 - geometry.snapCenter);
+
       if (distance < bestDistance) {
         bestDistance = distance;
         bestCard = card;
       }
     }
 
-    exerciseCards.forEach(card => card.classList.toggle("is-current", card === bestCard));
+    for (const card of cards()) card.classList.toggle("is-current", card === bestCard);
   }
 
   function scheduleUpdate() {
@@ -124,97 +127,68 @@
     requestAnimationFrame(updateCurrentCard);
   }
 
-  function snapCardExactly(card) {
-    if (!card || !todayActive() || !MOBILE_QUERY.matches) return;
-    const geometry = snapGeometry();
-    const rect = card.getBoundingClientRect();
-    const delta = card.classList.contains("snap-start")
-      ? rect.top - geometry.snapTop
-      : (rect.top + rect.bottom) / 2 - geometry.snapCenter;
+  function settleScrollState() {
+    clearTimeout(settleTimer);
+    settleTimer = null;
+    if (!enabled) return;
 
-    if (Math.abs(delta) <= 3) return;
-    window.scrollTo({ top: Math.max(0, window.scrollY + delta), behavior: "smooth" });
-  }
-
-  function beginFirstTransition() {
-    if (!snapReady || !overviewSettled() || firstTransitionActive) return;
-    firstTransitionActive = true;
-    firstTransitionScrolled = false;
-    document.body.classList.add("training-chrome-lock");
-  }
-
-  function endFirstTransition(correctFirstCard = true) {
-    clearTimeout(firstSettleTimer);
-    firstSettleTimer = null;
-
-    if (!firstTransitionActive && !document.body.classList.contains("training-chrome-lock")) return;
-    firstTransitionActive = false;
-    firstTransitionScrolled = false;
-    document.body.classList.remove("training-chrome-lock");
-
-    if (!correctFirstCard || !todayActive()) return;
-
-    const firstCard = container.querySelector(".exercise-card");
-    if (!firstCard || !firstCard.classList.contains("is-current")) return;
-
-    /* Release the visual lock only after native snapping has settled. If the base
-       auto-hide has not fired yet, hide chrome now, then correct the card once the
-       180ms header/nav transform has finished. */
-    document.body.classList.add("chrome-hidden");
-    setTimeout(() => {
-      updateCurrentCard();
-      if (firstCard.classList.contains("is-current")) snapCardExactly(firstCard);
-    }, CHROME_TRANSITION_DELAY);
-  }
-
-  function scheduleFirstTransitionSettle() {
-    if (!firstTransitionActive || !firstTransitionScrolled) return;
-    clearTimeout(firstSettleTimer);
-    firstSettleTimer = setTimeout(() => {
-      updateCurrentCard();
-      if (overviewSettled()) {
-        document.body.classList.remove("chrome-hidden");
-        endFirstTransition(false);
-        return;
-      }
-      endFirstTransition(true);
-    }, FIRST_SETTLE_DELAY);
+    if (overviewSettled()) setMode("overview");
+    else setMode("exercise");
+    scheduleUpdate();
   }
 
   function onScroll() {
-    if (firstTransitionActive && !overviewSettled()) firstTransitionScrolled = true;
+    if (!enabled) return;
+
+    const y = window.scrollY;
+    const delta = y - lastY;
+    lastY = y;
+
+    /* Leaving the overview immediately enters the final no-header exercise layout.
+       Exercise snap coordinates never depend on the header animation. */
+    if (mode === "overview" && delta > 1) {
+      setMode("exercise");
+      body.classList.add("chrome-hidden");
+    } else if (mode === "exercise" && delta < -1 && overviewSettled()) {
+      setMode("overview");
+    }
+
     scheduleUpdate();
-    scheduleFirstTransitionSettle();
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(settleScrollState, SCROLL_SETTLE_DELAY);
   }
 
-  function onPointerUp() {
-    if (firstTransitionActive && !firstTransitionScrolled) endFirstTransition(false);
-  }
-
-  const contentObserver = new MutationObserver(scheduleUpdate);
+  const contentObserver = new MutationObserver(() => {
+    if (!enabled) return;
+    classifyCards();
+    scheduleUpdate();
+  });
   contentObserver.observe(container, { childList: true, subtree: true });
 
-  const stateObserver = new MutationObserver(() => {
-    syncSnapState();
-    scheduleUpdate();
-  });
-  stateObserver.observe(todayPage, { attributes: true, attributeFilter: ["class"] });
-  stateObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  const pageObserver = new MutationObserver(syncState);
+  pageObserver.observe(todayPage, { attributes: true, attributeFilter: ["class"] });
 
-  window.addEventListener("pointerdown", beginFirstTransition, { passive: true });
-  window.addEventListener("pointerup", onPointerUp, { passive: true });
-  window.addEventListener("pointercancel", onPointerUp, { passive: true });
+  let bootObserver = null;
+  if (body.classList.contains("app-booting")) {
+    bootObserver = new MutationObserver(() => {
+      if (body.classList.contains("app-booting")) return;
+      bootObserver.disconnect();
+      syncState();
+    });
+    bootObserver.observe(body, { attributes: true, attributeFilter: ["class"] });
+  }
+
   window.addEventListener("scroll", onScroll, { passive: true });
+  if ("onscrollend" in window) window.addEventListener("scrollend", settleScrollState, { passive: true });
   window.addEventListener("resize", () => {
-    syncSnapState();
-    scheduleUpdate();
+    if (enabled) classifyCards();
+    syncState();
   }, { passive: true });
-  container.addEventListener("click", () => setTimeout(scheduleUpdate, 0), { passive: true });
-  MOBILE_QUERY.addEventListener?.("change", () => {
-    syncSnapState();
+  container.addEventListener("click", () => requestAnimationFrame(() => {
+    if (enabled) classifyCards();
     scheduleUpdate();
-  });
+  }), { passive: true });
+  MOBILE_QUERY.addEventListener?.("change", syncState);
 
-  syncSnapState();
-  scheduleUpdate();
+  syncState();
 })();
