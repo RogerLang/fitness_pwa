@@ -1,40 +1,43 @@
-/* Experimental training-card motion layer. Kept separate so it can be tuned or removed without touching the stable v40 UI. */
+/* Experimental training-card motion layer. Kept separate so it can be tuned or removed without touching the archived v40 UI. */
 
 @media (max-width:680px){
   html{
-    scroll-snap-type:y proximity;
+    scroll-snap-type:y mandatory;
     scroll-padding-top:68px;
   }
 
-  #workoutContainer .exercise-card{
-    scroll-snap-align:start;
-    scroll-snap-stop:normal;
-    scroll-margin-top:68px;
-    transform-origin:center top;
+  /* Keep the app title visible while training cards snap underneath it. */
+  body.chrome-hidden:has(#today.active) .app-header{
+    transform:none;
   }
-}
 
-@supports (animation-timeline:view()){
-  @media (max-width:680px) and (prefers-reduced-motion:no-preference){
-    #workoutContainer .exercise-card{
-      animation-name:exerciseCardFocus;
-      animation-duration:auto;
-      animation-timing-function:linear;
-      animation-fill-mode:both;
-      animation-timeline:view(block);
-      animation-range:entry 0% exit 100%;
-    }
+  #today .today-overview,
+  #workoutContainer .exercise-card,
+  #today .sticky-actions{
+    scroll-snap-align:start;
+    scroll-snap-stop:always;
+    scroll-margin-top:68px;
+  }
 
-    @keyframes exerciseCardFocus{
-      0%{transform:scale(.985);opacity:.92}
-      28%{transform:scale(1);opacity:1}
-      72%{transform:scale(1);opacity:1}
-      100%{transform:scale(.985);opacity:.92}
-    }
+  #workoutContainer .exercise-card{
+    transform-origin:center top;
+    opacity:.48;
+    transform:scale(.985);
+    transition:opacity .18s ease,transform .18s ease,box-shadow .18s ease;
+  }
+
+  #workoutContainer .exercise-card.is-current{
+    opacity:1;
+    transform:scale(1);
+    box-shadow:0 18px 44px rgba(31,36,45,.075),0 2px 7px rgba(31,36,45,.04);
   }
 }
 
 @media (prefers-reduced-motion:reduce){
-  html{scroll-snap-type:none}
-  #workoutContainer .exercise-card{transform:none;opacity:1}
+  html{scroll-snap-type:y proximity}
+  #workoutContainer .exercise-card,
+  #workoutContainer .exercise-card.is-current{
+    transform:none;
+    transition:none;
+  }
 }
