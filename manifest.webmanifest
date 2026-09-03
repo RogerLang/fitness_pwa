@@ -6,8 +6,8 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#f5f6f8",
+  "theme_color": "#f5f6f8",
   "description": "本地优先的个人训练记录应用",
   "icons": [
     {
