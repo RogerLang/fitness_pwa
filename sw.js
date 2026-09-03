@@ -1,4 +1,4 @@
-const SHELL_CACHE = "fitness-pwa-shell-v63";
+const SHELL_CACHE = "fitness-pwa-shell-v64";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const SHELL_ASSETS = [
   "./training-motion.css?v=63",
   "./nav-motion.css?v=63",
   "./glass-cards.css?v=63",
+  "./sw-register.js?v=64",
   "./app.js?v=63",
   "./training-progression.js?v=63",
   "./training-draft.js?v=63",
@@ -26,7 +27,6 @@ const SHELL_ASSETS = [
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(SHELL_CACHE).then(cache => cache.addAll(SHELL_ASSETS)));
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", event => {
@@ -37,41 +37,36 @@ self.addEventListener("activate", event => {
         .map(key => caches.delete(key))
     ))
   );
-  self.clients.claim();
 });
 
-async function networkFirstNavigation(request) {
+async function appShellNavigation(request) {
   const cache = await caches.open(SHELL_CACHE);
+  const cached = (await cache.match("./index.html")) || (await cache.match("./"));
+  if (cached) return cached;
   try {
     const response = await fetch(request);
     if (response?.ok && response.type === "basic") {
-      cache.put(request, response.clone()).catch(() => {});
       cache.put("./index.html", response.clone()).catch(() => {});
     }
     return response;
   } catch (_) {
-    return (await cache.match(request)) ||
-      (await cache.match("./index.html")) ||
-      (await cache.match("./")) ||
-      Response.error();
+    return Response.error();
   }
 }
 
-async function staleWhileRevalidate(request) {
+async function cacheFirst(request) {
   const cache = await caches.open(SHELL_CACHE);
   const cached = await cache.match(request);
-  const network = fetch(request).then(response => {
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
     if (response?.ok && response.type === "basic") {
       cache.put(request, response.clone()).catch(() => {});
     }
     return response;
-  }).catch(() => null);
-
-  if (cached) {
-    network.catch(() => {});
-    return cached;
+  } catch (_) {
+    return Response.error();
   }
-  return (await network) || Response.error();
 }
 
 self.addEventListener("fetch", event => {
@@ -80,8 +75,8 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (request.mode === "navigate") {
-    event.respondWith(networkFirstNavigation(request));
+    event.respondWith(appShellNavigation(request));
     return;
   }
-  event.respondWith(staleWhileRevalidate(request));
+  event.respondWith(cacheFirst(request));
 });
