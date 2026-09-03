@@ -1,10 +1,10 @@
-const SHELL_CACHE = "fitness-pwa-shell-v37";
+const SHELL_CACHE = "fitness-pwa-shell-v38";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
   "./rescue.html",
-  "./styles.css?v=37",
-  "./mobile-polish.css?v=37",
+  "./styles.css?v=38",
+  "./mobile-polish.css?v=38",
   "./app.js",
   "./training.js",
   "./sync.js",
