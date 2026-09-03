@@ -25,8 +25,18 @@ const SHELL_ASSETS = [
   "./icon-512-maskable.png"
 ];
 
+async function cacheShell() {
+  const cache = await caches.open(SHELL_CACHE);
+  await Promise.all(SHELL_ASSETS.map(async asset => {
+    const request = new Request(asset, { cache: "reload" });
+    const response = await fetch(request);
+    if (!response.ok) throw new Error(`Shell asset failed: ${asset}`);
+    await cache.put(asset, response);
+  }));
+}
+
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(SHELL_CACHE).then(cache => cache.addAll(SHELL_ASSETS)));
+  event.waitUntil(cacheShell());
 });
 
 self.addEventListener("activate", event => {
