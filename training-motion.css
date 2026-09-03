@@ -2,25 +2,26 @@
 
 @media (max-width:680px){
   html{
-    --training-snap-top:68px;
+    /* Exercise snapping uses a fixed viewport so header hide/show cannot move the target mid-gesture. */
+    --training-snap-top:10px;
+    --training-overview-offset:58px;
     --training-snap-bottom:126px;
     scroll-padding-top:var(--training-snap-top);
     scroll-padding-bottom:var(--training-snap-bottom);
   }
 
-  /* Snap stays disabled until the user actually starts scrolling the training page. */
   html.training-snap-ready{
     scroll-snap-type:y mandatory;
   }
 
-  /* The overview is the real top stop, so returning to it never gets pulled into exercise 1. */
+  /* The overview remains below the visible app header, independent of exercise snap geometry. */
   #today .today-overview{
     scroll-snap-align:start;
     scroll-snap-stop:always;
-    scroll-margin-top:var(--training-snap-top);
+    scroll-margin-top:var(--training-overview-offset);
   }
 
-  /* Normal exercise cards settle in the usable visual center between header and bottom nav. */
+  /* Normal exercise cards settle in the fixed usable visual center. */
   #workoutContainer .exercise-card{
     scroll-snap-align:center;
     scroll-snap-stop:always;
