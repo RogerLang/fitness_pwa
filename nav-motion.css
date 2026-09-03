@@ -5,13 +5,13 @@
   will-change:transform,opacity;
   backface-visibility:hidden;
   transition:
-    transform .32s cubic-bezier(.22,1,.36,1),
-    opacity .24s ease-out;
+    transform .20s ease,
+    opacity .18s ease;
 }
 
 body.chrome-hidden .bottom-nav.nav-motion-ready{
-  transform:translate3d(-50%,24px,0) scale(.975);
-  opacity:0;
+  transform:translate3d(-50%,calc(100% + 28px),0);
+  opacity:.2;
   pointer-events:none;
 }
 
@@ -99,11 +99,11 @@ body.chrome-hidden .bottom-nav.nav-motion-ready{
 
 @media(max-width:680px){
   .bottom-nav.nav-motion-ready{
-    transform:translate3d(-50%,0,0) scale(1);
+    transform:translate3d(-50%,0,0);
   }
 
   body.chrome-hidden .bottom-nav.nav-motion-ready{
-    transform:translate3d(-50%,24px,0) scale(.975);
+    transform:translate3d(-50%,calc(100% + 28px),0);
   }
 }
 
