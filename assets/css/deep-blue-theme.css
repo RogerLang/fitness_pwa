@@ -1,0 +1,73 @@
+/* Deep dimensional blue page background. Loaded last so the theme can be tuned independently. */
+
+:root{
+  --bg:#061326;
+}
+
+html{
+  background:#061326;
+}
+
+body:not(.app-booting){
+  background:
+    radial-gradient(78% 52% at 12% 2%,rgba(37,116,214,.48) 0%,rgba(25,79,157,.22) 38%,rgba(7,25,52,0) 72%),
+    radial-gradient(66% 54% at 96% 30%,rgba(47,89,186,.42) 0%,rgba(22,51,109,.20) 40%,rgba(5,16,34,0) 74%),
+    radial-gradient(92% 60% at 52% 106%,rgba(11,50,103,.74) 0%,rgba(4,18,40,.32) 44%,rgba(3,10,23,0) 76%),
+    linear-gradient(158deg,#0d376b 0%,#09254a 27%,#061a35 53%,#041125 78%,#020914 100%);
+  background-attachment:fixed;
+  background-size:140% 125%,132% 126%,120% 112%,100% 100%;
+  background-position:left top,right top,center bottom,center;
+}
+
+body:not(.app-booting) .app-header{
+  background:linear-gradient(180deg,rgba(5,20,43,.90),rgba(5,18,38,.70));
+  border-bottom-color:rgba(153,194,246,.16);
+  -webkit-backdrop-filter:blur(20px) saturate(140%);
+  backdrop-filter:blur(20px) saturate(140%);
+  box-shadow:0 10px 28px rgba(1,8,20,.18),inset 0 -1px 0 rgba(183,214,255,.05);
+}
+
+body:not(.app-booting) .app-header h1{
+  color:#f4f8ff;
+  text-shadow:0 1px 12px rgba(88,154,241,.14);
+}
+
+body:not(.app-booting) .app-header .muted{
+  color:rgba(222,235,251,.70);
+}
+
+body:not(.app-booting) .bottom-nav{
+  border-color:rgba(201,221,248,.42);
+  background:linear-gradient(180deg,rgba(239,246,255,.84),rgba(224,236,251,.70));
+  box-shadow:
+    0 20px 52px rgba(0,9,24,.28),
+    0 3px 10px rgba(0,9,24,.16),
+    inset 0 1px 0 rgba(255,255,255,.92);
+}
+
+body:not(.app-booting) #today .sticky-actions{
+  box-shadow:
+    0 18px 46px rgba(0,9,24,.20),
+    0 3px 10px rgba(0,9,24,.10),
+    inset 0 1px 0 rgba(255,255,255,.96),
+    inset 0 -1px 0 rgba(79,109,150,.05);
+}
+
+@media(max-width:680px){
+  body:not(.app-booting){
+    background-size:175% 118%,165% 125%,150% 112%,100% 100%;
+    background-position:12% top,88% 26%,50% bottom,center;
+  }
+
+  body:not(.app-booting) .app-header{
+    background:linear-gradient(180deg,rgba(5,20,43,.94),rgba(5,18,38,.76));
+  }
+}
+
+@media(prefers-reduced-transparency:reduce){
+  body:not(.app-booting) .app-header{
+    background:#081d3a;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+}
