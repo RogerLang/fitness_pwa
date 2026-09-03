@@ -3,6 +3,7 @@
   const container = document.getElementById("workoutContainer");
   if (!container) return;
 
+  const SNAP_BOTTOM = 126;
   let ticking = false;
   let userScrollIntent = false;
   let snapReady = false;
@@ -27,10 +28,23 @@
     intentTimer = setTimeout(() => { userScrollIntent = false; }, 1400);
   }
 
-  function headerAnchor() {
+  function overviewAtTop() {
+    const overview = document.querySelector("#today .today-overview");
+    if (!overview || !todayActive()) return false;
+    const rect = overview.getBoundingClientRect();
+    const threshold = Math.min(150, Math.max(92, window.innerHeight * .2));
+    return rect.top <= threshold && rect.bottom > 64;
+  }
+
+  function headerAnchor(forceVisible = false) {
     const header = document.querySelector(".app-header");
-    const bottom = header?.getBoundingClientRect().bottom || 0;
-    const anchor = Math.max(10, Math.round(bottom + 10));
+    if (!header) return 68;
+
+    if (forceVisible) document.body.classList.remove("chrome-hidden");
+
+    const rect = header.getBoundingClientRect();
+    const visibleAnchor = Math.max(68, Math.round(header.offsetHeight + 10));
+    const anchor = forceVisible ? visibleAnchor : Math.max(10, Math.round(rect.bottom + 10));
     document.documentElement.style.setProperty("--training-snap-top", `${anchor}px`);
     return anchor;
   }
@@ -41,35 +55,53 @@
     if (!cards.length) return;
 
     if (!MOBILE_QUERY.matches || !todayActive()) {
+      cards.forEach(card => {
+        card.classList.remove("is-current");
+        card.classList.remove("snap-start");
+      });
+      return;
+    }
+
+    const atOverview = overviewAtTop();
+    const snapTop = headerAnchor(atOverview);
+    const snapBottom = Math.max(snapTop + 160, window.innerHeight - SNAP_BOTTOM);
+    const snapHeight = Math.max(180, snapBottom - snapTop);
+    const snapCenter = snapTop + snapHeight / 2;
+
+    /* Cards that cannot fit comfortably in the center keep a top-aligned snap point. */
+    for (const card of cards) {
+      card.classList.toggle("snap-start", card.getBoundingClientRect().height > snapHeight - 20);
+    }
+
+    /* The overview owns the top stop, so no exercise should steal focus there. */
+    if (atOverview) {
       cards.forEach(card => card.classList.remove("is-current"));
       return;
     }
 
-    const anchor = headerAnchor();
-    const viewportBottom = window.innerHeight;
-    let bestCard = null;
-
-    /* Prefer the card that currently spans the snap anchor. */
-    for (const card of cards) {
-      const rect = card.getBoundingClientRect();
-      if (rect.top <= anchor + 24 && rect.bottom > anchor + 72) {
-        bestCard = card;
-        break;
+    const actions = document.querySelector("#today .sticky-actions");
+    if (actions) {
+      const rect = actions.getBoundingClientRect();
+      if (Math.abs(rect.bottom - snapBottom) <= 54 && rect.top < snapBottom) {
+        cards.forEach(card => card.classList.remove("is-current"));
+        return;
       }
     }
 
-    /* Before the first card approaches the top area, keep every card subdued. */
-    if (!bestCard) {
-      let bestDistance = Infinity;
-      const activationDistance = Math.min(180, Math.round(window.innerHeight * .24));
-      for (const card of cards) {
-        const rect = card.getBoundingClientRect();
-        if (rect.bottom <= anchor || rect.top >= viewportBottom) continue;
-        const distance = Math.abs(rect.top - anchor);
-        if (distance <= activationDistance && distance < bestDistance) {
-          bestDistance = distance;
-          bestCard = card;
-        }
+    let bestCard = null;
+    let bestDistance = Infinity;
+
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      if (rect.bottom <= snapTop || rect.top >= snapBottom) continue;
+
+      const distance = card.classList.contains("snap-start")
+        ? Math.abs(rect.top - snapTop)
+        : Math.abs((rect.top + rect.bottom) / 2 - snapCenter);
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestCard = card;
       }
     }
 
@@ -97,6 +129,7 @@
   window.addEventListener("wheel", markUserScrollIntent, { passive: true });
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", scheduleUpdate, { passive: true });
+  container.addEventListener("click", () => setTimeout(scheduleUpdate, 0), { passive: true });
   MOBILE_QUERY.addEventListener?.("change", () => {
     if (!MOBILE_QUERY.matches) setSnapReady(false);
     scheduleUpdate();
