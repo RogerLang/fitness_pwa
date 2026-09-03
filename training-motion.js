@@ -13,7 +13,7 @@
   const OVERVIEW_TOP = 68;
   const OVERVIEW_TOLERANCE = 26;
   const OVERVIEW_FOCUS_ACQUIRE_RATIO = .34;
-  const OVERVIEW_FOCUS_RELEASE_RATIO = .18;
+  const OVERVIEW_FOCUS_RELEASE_DISTANCE = 28;
   const SCROLL_SETTLE_DELAY = 140;
   const FAST_GLIDE_DISTANCE = 150;
   const FAST_GLIDE_MAX_DURATION = 380;
@@ -58,6 +58,10 @@
     return Math.min(1, visible / rect.height);
   }
 
+  function overviewDepartureDistance() {
+    return Math.max(0, OVERVIEW_TOP - overview.getBoundingClientRect().top);
+  }
+
   function actionsSettled(geometry = snapGeometry()) {
     const rect = actions.getBoundingClientRect();
     return Math.abs(rect.bottom - geometry.snapBottom) <= TARGET_TOLERANCE;
@@ -81,18 +85,16 @@
       return;
     }
 
-    const ratio = overviewVisibleRatio();
-
     if (!overviewFocusLocked) {
       const returningUp = delta < -1 || freeGlideDirection === "up";
-      if (returningUp && ratio >= OVERVIEW_FOCUS_ACQUIRE_RATIO) {
+      if (returningUp && overviewVisibleRatio() >= OVERVIEW_FOCUS_ACQUIRE_RATIO) {
         overviewFocusLocked = true;
       }
       return;
     }
 
     const leavingDown = delta > 1 || freeGlideDirection === "down";
-    if (leavingDown && ratio <= OVERVIEW_FOCUS_RELEASE_RATIO) {
+    if (leavingDown && overviewDepartureDistance() >= OVERVIEW_FOCUS_RELEASE_DISTANCE) {
       overviewFocusLocked = false;
     }
   }
@@ -283,7 +285,7 @@
 
     setMode(overviewSettled() ? "overview" : "exercise");
     if (mode === "overview") overviewFocusLocked = true;
-    else if (overviewVisibleRatio() <= OVERVIEW_FOCUS_RELEASE_RATIO) overviewFocusLocked = false;
+    else if (overviewDepartureDistance() >= OVERVIEW_FOCUS_RELEASE_DISTANCE) overviewFocusLocked = false;
     setOverviewCurrent(overviewFocusLocked);
     scheduleUpdate();
   }
@@ -382,7 +384,7 @@
       root.classList.remove("training-free-glide");
       setMode(overviewSettled() ? "overview" : "exercise");
       if (mode === "overview") overviewFocusLocked = true;
-      else if (overviewVisibleRatio() <= OVERVIEW_FOCUS_RELEASE_RATIO) overviewFocusLocked = false;
+      else if (overviewDepartureDistance() >= OVERVIEW_FOCUS_RELEASE_DISTANCE) overviewFocusLocked = false;
     }
     programmaticTarget = null;
 
