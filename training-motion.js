@@ -1,33 +1,29 @@
 (() => {
   const MOBILE_QUERY = window.matchMedia("(max-width:680px)");
   const container = document.getElementById("workoutContainer");
-  if (!container) return;
+  const todayPage = document.getElementById("today");
+  if (!container || !todayPage) return;
 
   const SNAP_TOP = 10;
   const SNAP_BOTTOM = 126;
   let ticking = false;
-  let userScrollIntent = false;
   let snapReady = false;
-  let intentTimer = null;
 
   function todayActive() {
-    return document.getElementById("today")?.classList.contains("active");
+    return todayPage.classList.contains("active");
   }
 
-  function setSnapReady(enabled) {
-    snapReady = !!enabled && MOBILE_QUERY.matches && todayActive();
-    document.documentElement.classList.toggle("training-snap-ready", snapReady);
-    if (!snapReady) {
-      container.querySelectorAll(".exercise-card.is-current").forEach(card => card.classList.remove("is-current"));
+  function syncSnapState() {
+    const enabled = MOBILE_QUERY.matches && todayActive() && !document.body.classList.contains("app-booting");
+    snapReady = enabled;
+    document.documentElement.classList.toggle("training-snap-ready", enabled);
+
+    if (!enabled) {
+      container.querySelectorAll(".exercise-card").forEach(card => {
+        card.classList.remove("is-current");
+        card.classList.remove("snap-start");
+      });
     }
-  }
-
-  function markUserScrollIntent() {
-    if (!MOBILE_QUERY.matches || !todayActive()) return;
-    userScrollIntent = true;
-    if (!snapReady) setSnapReady(true);
-    clearTimeout(intentTimer);
-    intentTimer = setTimeout(() => { userScrollIntent = false; }, 1400);
   }
 
   function overviewAtTop() {
@@ -43,7 +39,7 @@
     const cards = [...container.querySelectorAll(".exercise-card")];
     if (!cards.length) return;
 
-    if (!MOBILE_QUERY.matches || !todayActive()) {
+    if (!snapReady || !MOBILE_QUERY.matches || !todayActive()) {
       cards.forEach(card => {
         card.classList.remove("is-current");
         card.classList.remove("snap-start");
@@ -53,9 +49,10 @@
 
     const atOverview = overviewAtTop();
 
-    /* Only the overview controls header visibility. Exercise snap coordinates stay fixed. */
+    /* The overview owns the top state and restores the app header. */
     if (atOverview) document.body.classList.remove("chrome-hidden");
 
+    /* Exercise snap geometry is fixed, so header animation cannot move the target. */
     const snapTop = SNAP_TOP;
     const snapBottom = Math.max(snapTop + 160, window.innerHeight - SNAP_BOTTOM);
     const snapHeight = Math.max(180, snapBottom - snapTop);
@@ -105,33 +102,28 @@
     requestAnimationFrame(updateCurrentCard);
   }
 
-  function onScroll() {
-    if (!snapReady && userScrollIntent && todayActive() && window.scrollY > 4) setSnapReady(true);
+  const contentObserver = new MutationObserver(scheduleUpdate);
+  contentObserver.observe(container, { childList: true, subtree: true });
+
+  const stateObserver = new MutationObserver(() => {
+    syncSnapState();
     scheduleUpdate();
-  }
+  });
+  stateObserver.observe(todayPage, { attributes: true, attributeFilter: ["class"] });
+  stateObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
-  const observer = new MutationObserver(scheduleUpdate);
-  observer.observe(container, { childList: true, subtree: true });
-
-  window.addEventListener("pointerdown", markUserScrollIntent, { passive: true });
-  window.addEventListener("touchstart", markUserScrollIntent, { passive: true });
-  window.addEventListener("wheel", markUserScrollIntent, { passive: true });
-  window.addEventListener("scroll", onScroll, { passive: true });
-  window.addEventListener("resize", scheduleUpdate, { passive: true });
+  window.addEventListener("scroll", scheduleUpdate, { passive: true });
+  window.addEventListener("resize", () => {
+    syncSnapState();
+    scheduleUpdate();
+  }, { passive: true });
   container.addEventListener("click", () => setTimeout(scheduleUpdate, 0), { passive: true });
   MOBILE_QUERY.addEventListener?.("change", () => {
-    if (!MOBILE_QUERY.matches) setSnapReady(false);
+    syncSnapState();
     scheduleUpdate();
   });
 
-  document.querySelectorAll(".bottom-nav button").forEach(button => {
-    button.addEventListener("click", () => {
-      setSnapReady(false);
-      userScrollIntent = false;
-      scheduleUpdate();
-    });
-  });
-
-  setSnapReady(false);
+  /* Snap is already active before the first user gesture once the training page is visible. */
+  syncSnapState();
   scheduleUpdate();
 })();
