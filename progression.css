@@ -1,5 +1,6 @@
 .last-performance,
-.progression-plan{
+.progression-plan,
+.warmup-plan{
   margin:10px 0 12px;
   padding:11px 12px;
   border:1px solid var(--border,#e5e7eb);
@@ -11,15 +12,23 @@
   overflow-wrap:anywhere;
 }
 .workout-context-head,
-.progression-plan-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}
+.progression-plan-head,
+.warmup-plan-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}
 .progression-chip{display:inline-flex;align-items:center;padding:2px 7px;border:1px solid #d1d5db;border-radius:999px;font-size:12px;line-height:1.4;color:#4b5563;background:#fff}
 .workout-context-target,
 .progression-plan-target{font-size:16px;font-weight:700;letter-spacing:.01em}
 .workout-context-detail,
-.progression-plan-reason{margin-top:4px;color:var(--muted,#6b7280);font-size:13px;line-height:1.45}
+.progression-plan-reason,
+.warmup-plan-note{margin-top:4px;color:var(--muted,#6b7280);font-size:13px;line-height:1.45}
+.warmup-plan{background:#fff}
+.warmup-plan-sets{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}
+.warmup-plan-sets span{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--border,#e5e7eb);border-radius:9px;background:#fafafa;font-size:13px}
+.warmup-plan-sets b{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;border-radius:999px;background:#eef0f3;font-size:11px}
 .exercise-card .exercise-card-actions{display:none}
 .exercise-card.adjustments-open .exercise-card-actions{display:flex}
 @media(max-width:620px){
-  .last-performance,.progression-plan{padding:10px 11px}
+  .last-performance,.progression-plan,.warmup-plan{padding:10px 11px}
   .workout-context-target,.progression-plan-target{font-size:15px}
+  .warmup-plan-sets{gap:6px}
+  .warmup-plan-sets span{padding:6px 8px}
 }
