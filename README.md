@@ -13,16 +13,18 @@
 - `nav-motion.css`：底部导航栏隐藏/出现与滑动玻璃胶囊样式。
 - `app.js`：应用启动、IndexedDB 基础读写、页面路由和通用事件。
 - `training-progression.js`：训练次数区间、重量档位、历史上下文、进阶建议和上次记录摘要。
+- `training-draft.js`：训练草稿、当前计划索引、组输入值、完成状态以及草稿 IndexedDB 持久化。
+- `training-render.js`：计划选择器、动作卡 HTML、动作编辑器展开状态和训练页渲染。
 - `training-insights.js`：历史记录页、趋势页、趋势时间范围状态和图表绘制。
 - `training-maintenance.js`：重复训练记录识别与维护清理。
-- `training.js`：训练草稿、动作卡渲染、计划编辑、训练保存以及训练模块之间的协调。
+- `training.js`：训练页事件、计划编辑、训练保存以及各训练模块之间的流程协调。
 - `training-motion.js`：训练页滚动吸附、快速滑动、卡片定位以及输入编辑时的吸附保护。
 - `nav-motion.js`：底部导航选中胶囊的位置和动画状态。
 - `sync.js`：Private GitHub 仓库同步、冲突检测和同步设置。
 - `sw.js`：静态 shell 缓存、离线回退和旧缓存清理。
 - `rescue.html`：只清理 Service Worker 和静态缓存的恢复入口，不删除 IndexedDB 数据。
 
-训练模块按依赖顺序加载：`training-progression.js` → `training-insights.js` / `training-maintenance.js` → `training.js` → `training-motion.js`。进阶算法、历史趋势和维护逻辑应继续留在各自模块，`training.js` 只协调训练主流程。
+训练模块按依赖顺序加载：`training-progression.js` → `training-draft.js` → `training-render.js` → `training-insights.js` / `training-maintenance.js` → `training.js` → `training-motion.js`。草稿状态、页面渲染、进阶算法、历史趋势和维护逻辑应继续留在各自模块，`training.js` 只协调训练主流程。
 
 已经验证并长期保留的功能应优先回收到对应正式模块中，避免新增只包含少量覆盖规则的临时补丁文件。每次发布统一使用同一个静态资源查询版本号，并同步更新 `SHELL_CACHE`，减少多文件版本混用。
 
@@ -33,7 +35,7 @@
 - 可选跨设备同步使用一个单独的 **Private GitHub repository**。
 - 同步数据在 Private 仓库中以普通 JSON 保存；任何能访问该 Private 仓库的人都可以读取内容。
 - Fine-grained token 可保存在当前浏览器 IndexedDB 中，不会提交到公开程序仓库，也不会写入训练数据文件。
-- 上传前会强制检查同步目标必须是 Private repository。
+- 上传前会强制检查同步目标必须为 Private repository。
 
 ## 增量同步结构
 Private 数据仓库使用以下结构：
