@@ -11,7 +11,8 @@
 - `glass-cards.css`：液体玻璃视觉系统、页面视觉层级和与视觉直接相关的小尺寸调整。
 - `training-motion.css`：训练页滚动吸附、高亮和编辑状态对应的样式。
 - `nav-motion.css`：底部导航栏隐藏/出现与滑动玻璃胶囊样式。
-- `app.js`：应用启动、IndexedDB 基础读写、页面路由和通用事件。
+- `app-storage.js`：IndexedDB 打开、KV 读写，以及 plans / sessions / body 三类主状态的批量读取和写入。
+- `app.js`：应用状态、启动流程、页面路由、通用事件、备份和身体数据交互；通过 `app-storage.js` 使用 IndexedDB。
 - `training-progression.js`：训练次数区间、重量档位、历史上下文、进阶建议和上次记录摘要。
 - `training-draft.js`：训练草稿、当前计划索引、组输入值、完成状态以及草稿 IndexedDB 持久化。
 - `training-render.js`：计划选择器、动作卡 HTML、动作编辑器展开状态和训练页渲染。
@@ -26,7 +27,7 @@
 - `sw.js`：静态 shell 缓存、离线回退和旧缓存清理。
 - `rescue.html`：只清理 Service Worker 和静态缓存的恢复入口，不删除 IndexedDB 数据。
 
-训练模块按依赖顺序加载：`training-progression.js` → `training-draft.js` → `training-render.js` → `training-insights.js` / `training-maintenance.js` → `training.js` → `training-motion.js`。同步模块按 `sync-remote.js` → `sync.js` 加载。远端协议、GitHub HTTP 与文件完整性校验留在 `sync-remote.js`；同步业务状态和页面交互留在 `sync.js`。
+基础应用按 `sw-register.js` → `app-storage.js` → `app.js` 加载。训练模块按依赖顺序加载：`training-progression.js` → `training-draft.js` → `training-render.js` → `training-insights.js` / `training-maintenance.js` → `training.js` → `training-motion.js`。同步模块按 `sync-remote.js` → `sync.js` 加载。远端协议、GitHub HTTP 与文件完整性校验留在 `sync-remote.js`；同步业务状态和页面交互留在 `sync.js`。
 
 已经验证并长期保留的功能应优先回收到对应正式模块中，避免新增只包含少量覆盖规则的临时补丁文件。每次发布统一使用同一个静态资源查询版本号，并同步更新 `SHELL_CACHE`，减少多文件版本混用。
 
