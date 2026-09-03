@@ -24,6 +24,11 @@
   function markUserScrollIntent() {
     if (!MOBILE_QUERY.matches || !todayActive()) return;
     userScrollIntent = true;
+
+    /* Enable snapping before the first scroll movement starts. The overview is now
+       a real snap target, so this no longer causes an automatic jump on page entry. */
+    if (!snapReady) setSnapReady(true);
+
     clearTimeout(intentTimer);
     intentTimer = setTimeout(() => { userScrollIntent = false; }, 1400);
   }
@@ -115,6 +120,7 @@
   }
 
   function onScroll() {
+    /* Fallback for keyboard/programmatic edge cases where no pointer intent fired. */
     if (!snapReady && userScrollIntent && todayActive() && window.scrollY > 4) {
       setSnapReady(true);
     }
