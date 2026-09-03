@@ -1,0 +1,11 @@
+.progression-plan{
+  margin:10px 0 12px;
+  padding:11px 12px;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  background:#fafafa;
+}
+.progression-plan-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}
+.progression-chip{display:inline-flex;align-items:center;padding:2px 7px;border:1px solid #d1d5db;border-radius:999px;font-size:12px;line-height:1.4;color:#4b5563;background:#fff}
+.progression-plan-target{font-size:16px;font-weight:700;letter-spacing:.01em}
+.progression-plan-reason{margin-top:4px;color:#6b7280;font-size:13px;line-height:1.45}
