@@ -9,6 +9,7 @@
 const PROGRESSION_VERSION = 1;
 
 function progressionNum(value){
+  if(value===null||value===undefined||value==='')return null;
   const n=Number(value);
   return Number.isFinite(n)?n:null;
 }
@@ -56,9 +57,11 @@ function progressionLastRir(sets){
   return null;
 }
 function progressionSessionHistory(exName,planName=''){
-  const all=[...state.sessions]
-    .filter(s=>(s?.exercises||[]).some(e=>e?.name===exName))
-    .sort((a,b)=>String(b?.date||'').localeCompare(String(a?.date||'')));
+  const all=state.sessions
+    .map((session,index)=>({session,index}))
+    .filter(x=>(x.session?.exercises||[]).some(e=>e?.name===exName))
+    .sort((a,b)=>String(b.session?.date||'').localeCompare(String(a.session?.date||''))||(b.index-a.index))
+    .map(x=>x.session);
   const samePlan=all.filter(s=>s?.plan===planName);
   const source=samePlan.length?samePlan:all;
   return source.map(session=>({
@@ -129,6 +132,22 @@ function progressionSuggestion(planExercise,planName=''){
   }
 
   const baseWeight=last.weight??fallbackWeight;
+  const lastBelowMin=last.complete&&last.observed.every(s=>Number(s.reps)<repMin);
+  const previousBelowMin=previous&&previous.complete&&previous.observed.every(s=>Number(s.reps)<repMin);
+  const sameReviewWeight=previous&&((baseWeight===null&&previous.weight===null)||(baseWeight!==null&&previous.weight===baseWeight));
+  if(lastBelowMin&&previousBelowMin&&sameReviewWeight&&!last.historyItem.exercise?.weightOverride&&!previous.historyItem.exercise?.weightOverride){
+    return {
+      version:PROGRESSION_VERSION,
+      status:'review',
+      statusLabel:'检查疲劳',
+      weight:baseWeight,
+      reps:Array(setCount).fill(repMin),
+      repRange:[repMin,repMax],
+      weightStep:step,
+      confirmation:0,
+      reason:'连续两次全部工作组低于目标次数下限；优先检查恢复和动作状态，必要时再考虑降低一档。'
+    };
+  }
   if(last.allTop){
     if(!last.rirAllowsProgress){
       return {
