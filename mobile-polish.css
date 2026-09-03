@@ -13,7 +13,7 @@
 
   main{
     padding-top:10px;
-    padding-bottom:calc(88px + env(safe-area-inset-bottom,0px));
+    padding-bottom:calc(104px + env(safe-area-inset-bottom,0px));
   }
   h2{font-size:18px;line-height:1.3}
   h3{font-size:15px}
@@ -46,8 +46,7 @@
   .set-row input{font-size:15px;padding:8px 4px}
   .set-complete{font-size:11px;padding:8px 2px}
 
-  /* Use one native-like bottom bar on every mobile display mode.
-     Some Android/Edge installed PWAs do not reliably match display-mode:standalone. */
+  /* Liquid-glass navigation: full-width and flush to the Android gesture edge. */
   .bottom-nav{
     left:0;
     right:0;
@@ -55,30 +54,45 @@
     width:100%;
     max-width:none;
     transform:none;
-    gap:6px;
-    padding:6px max(10px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left));
-    border:0;
-    border-top:1px solid rgba(216,221,228,.58);
-    border-radius:0;
-    background:rgba(247,248,250,.96);
-    -webkit-backdrop-filter:blur(22px) saturate(150%);
-    backdrop-filter:blur(22px) saturate(150%);
-    box-shadow:0 -5px 18px rgba(30,35,44,.045);
+    gap:5px;
+    padding:7px max(10px,env(safe-area-inset-right)) calc(10px + max(env(safe-area-inset-bottom,0px),18px)) max(10px,env(safe-area-inset-left));
+    border:1px solid rgba(255,255,255,.78);
+    border-left:0;
+    border-right:0;
+    border-bottom:0;
+    border-radius:30px 30px 0 0;
+    background:rgba(246,248,251,.72);
+    -webkit-backdrop-filter:blur(28px) saturate(165%);
+    backdrop-filter:blur(28px) saturate(165%);
+    box-shadow:0 -10px 34px rgba(30,35,44,.08),inset 0 1px 0 rgba(255,255,255,.88);
+    overflow:hidden;
+  }
+  .bottom-nav::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:linear-gradient(180deg,rgba(255,255,255,.30) 0%,rgba(255,255,255,.08) 48%,rgba(238,241,246,.16) 100%);
   }
   body.chrome-hidden .bottom-nav{transform:none;opacity:1}
   .bottom-nav button{
-    padding:9px 4px;
-    border-radius:14px;
-    color:#747c88;
+    position:relative;
+    z-index:1;
+    background:transparent;
+    color:#7b828d;
+    padding:10px 4px;
+    border-radius:20px;
     font-size:12px;
     font-weight:700;
+    box-shadow:none;
   }
   .bottom-nav button.active{
-    background:rgba(255,255,255,.94);
+    background:rgba(255,255,255,.78);
     color:#171a21;
-    box-shadow:0 2px 9px rgba(35,40,48,.05),inset 0 0 0 1px rgba(221,225,232,.72);
+    font-weight:800;
+    box-shadow:0 4px 14px rgba(35,40,48,.07),inset 0 1px 0 rgba(255,255,255,.94),inset 0 0 0 1px rgba(255,255,255,.38);
   }
-  .app-toast{bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+  .app-toast{bottom:calc(88px + max(env(safe-area-inset-bottom,0px),18px))}
 }
 
 @media (display-mode:standalone) and (max-width:680px){
