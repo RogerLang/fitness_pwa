@@ -3,6 +3,7 @@
   const container = document.getElementById("workoutContainer");
   if (!container) return;
 
+  const SNAP_TOP = 10;
   const SNAP_BOTTOM = 126;
   let ticking = false;
   let userScrollIntent = false;
@@ -24,11 +25,7 @@
   function markUserScrollIntent() {
     if (!MOBILE_QUERY.matches || !todayActive()) return;
     userScrollIntent = true;
-
-    /* Enable snapping before the first scroll movement starts. The overview is now
-       a real snap target, so this no longer causes an automatic jump on page entry. */
     if (!snapReady) setSnapReady(true);
-
     clearTimeout(intentTimer);
     intentTimer = setTimeout(() => { userScrollIntent = false; }, 1400);
   }
@@ -39,19 +36,6 @@
     const rect = overview.getBoundingClientRect();
     const threshold = Math.min(150, Math.max(92, window.innerHeight * .2));
     return rect.top <= threshold && rect.bottom > 64;
-  }
-
-  function headerAnchor(forceVisible = false) {
-    const header = document.querySelector(".app-header");
-    if (!header) return 68;
-
-    if (forceVisible) document.body.classList.remove("chrome-hidden");
-
-    const rect = header.getBoundingClientRect();
-    const visibleAnchor = Math.max(68, Math.round(header.offsetHeight + 10));
-    const anchor = forceVisible ? visibleAnchor : Math.max(10, Math.round(rect.bottom + 10));
-    document.documentElement.style.setProperty("--training-snap-top", `${anchor}px`);
-    return anchor;
   }
 
   function updateCurrentCard() {
@@ -68,17 +52,19 @@
     }
 
     const atOverview = overviewAtTop();
-    const snapTop = headerAnchor(atOverview);
+
+    /* Only the overview controls header visibility. Exercise snap coordinates stay fixed. */
+    if (atOverview) document.body.classList.remove("chrome-hidden");
+
+    const snapTop = SNAP_TOP;
     const snapBottom = Math.max(snapTop + 160, window.innerHeight - SNAP_BOTTOM);
     const snapHeight = Math.max(180, snapBottom - snapTop);
     const snapCenter = snapTop + snapHeight / 2;
 
-    /* Cards that cannot fit comfortably in the center keep a top-aligned snap point. */
     for (const card of cards) {
       card.classList.toggle("snap-start", card.getBoundingClientRect().height > snapHeight - 20);
     }
 
-    /* The overview owns the top stop, so no exercise should steal focus there. */
     if (atOverview) {
       cards.forEach(card => card.classList.remove("is-current"));
       return;
@@ -120,10 +106,7 @@
   }
 
   function onScroll() {
-    /* Fallback for keyboard/programmatic edge cases where no pointer intent fired. */
-    if (!snapReady && userScrollIntent && todayActive() && window.scrollY > 4) {
-      setSnapReady(true);
-    }
+    if (!snapReady && userScrollIntent && todayActive() && window.scrollY > 4) setSnapReady(true);
     scheduleUpdate();
   }
 
