@@ -3,7 +3,9 @@
 @media (max-width:680px){
   html{
     --training-snap-top:68px;
+    --training-snap-bottom:126px;
     scroll-padding-top:var(--training-snap-top);
+    scroll-padding-bottom:var(--training-snap-bottom);
   }
 
   /* Snap stays disabled until the user actually starts scrolling the training page. */
@@ -11,20 +13,41 @@
     scroll-snap-type:y mandatory;
   }
 
-  #workoutContainer .exercise-card{
+  /* The overview is the real top stop, so returning to it never gets pulled into exercise 1. */
+  #today .today-overview{
     scroll-snap-align:start;
     scroll-snap-stop:always;
     scroll-margin-top:var(--training-snap-top);
-    transform-origin:center top;
+  }
+
+  /* Normal exercise cards settle in the usable visual center between header and bottom nav. */
+  #workoutContainer .exercise-card{
+    scroll-snap-align:center;
+    scroll-snap-stop:always;
+    transform-origin:center center;
     opacity:.28;
     transform:scale(.982);
     transition:opacity .18s ease,transform .18s ease,box-shadow .18s ease;
+  }
+
+  /* Cards taller than the usable snap area keep their top accessible. */
+  #workoutContainer .exercise-card.snap-start{
+    scroll-snap-align:start;
+    scroll-margin-top:var(--training-snap-top);
+    transform-origin:center top;
   }
 
   #workoutContainer .exercise-card.is-current{
     opacity:1;
     transform:scale(1);
     box-shadow:0 18px 44px rgba(31,36,45,.075),0 2px 7px rgba(31,36,45,.04);
+  }
+
+  /* The final action card is the bottom edge stop. */
+  #today .sticky-actions{
+    scroll-snap-align:end;
+    scroll-snap-stop:always;
+    scroll-margin-bottom:var(--training-snap-bottom);
   }
 }
 
