@@ -1,0 +1,87 @@
+/* Mobile PWA chrome and typography refinements. Loaded after styles.css. */
+
+@media (max-width:680px){
+  .app-header{
+    padding:9px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));
+    background:rgba(245,246,248,.97);
+    border-bottom:1px solid rgba(216,221,228,.38);
+    -webkit-backdrop-filter:blur(14px) saturate(135%);
+    backdrop-filter:blur(14px) saturate(135%);
+  }
+  .app-header h1{font-size:18px;font-weight:800;letter-spacing:.005em;line-height:1.25}
+  .app-header p{margin-top:1px;font-size:11.5px;line-height:1.35}
+
+  main{padding-top:10px}
+  h2{font-size:18px;line-height:1.3}
+  h3{font-size:15px}
+  .muted{font-size:12px}
+  button{font-size:13px}
+  button.small{font-size:12px}
+  label{font-size:12px}
+
+  .today-overview{padding:14px 15px}
+  .today-heading{margin-bottom:10px}
+  .today-plan-bar{gap:8px}
+  .today-plan-bar select{font-size:14px;padding:9px 10px}
+  .today-sync-status{font-size:11px}
+
+  .exercise-head{margin-bottom:9px}
+  .exercise-title{font-size:16px;line-height:1.3}
+  .exercise-meta{font-size:11px;margin-top:3px}
+  .badge{font-size:10px}
+  .workout-context-grid{margin:9px 0 11px}
+  .workout-context{padding:10px 11px}
+  .context-head,.context-head strong{font-size:11px}
+  .context-chip{font-size:10px}
+  .context-target{font-size:14px;line-height:1.35}
+  .context-detail{font-size:11px}
+  .warmup-callout{font-size:11px;padding:10px 11px;margin:8px 0 11px}
+
+  .set-row{margin-top:7px}
+  .set-row>span{font-size:11px}
+  .set-header>span{font-size:10px}
+  .set-row input{font-size:15px;padding:8px 4px}
+  .set-complete{font-size:11px;padding:8px 2px}
+
+  .bottom-nav button{font-size:12px}
+}
+
+@media (display-mode:standalone) and (max-width:680px){
+  html,body{background:#f5f6f8}
+  body:not(.app-booting)::after{display:none}
+
+  main{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+
+  .bottom-nav{
+    left:0;
+    right:0;
+    bottom:0;
+    width:100%;
+    max-width:none;
+    transform:none;
+    gap:6px;
+    padding:6px max(10px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left));
+    border:0;
+    border-top:1px solid rgba(216,221,228,.58);
+    border-radius:0;
+    background:rgba(247,248,250,.94);
+    -webkit-backdrop-filter:blur(22px) saturate(150%);
+    backdrop-filter:blur(22px) saturate(150%);
+    box-shadow:0 -8px 24px rgba(30,35,44,.055);
+  }
+  body.chrome-hidden .bottom-nav{transform:none;opacity:1}
+  .bottom-nav button{
+    padding:9px 4px;
+    border-radius:14px;
+    color:#747c88;
+    font-size:12px;
+    font-weight:700;
+  }
+  .bottom-nav button.active{
+    background:rgba(255,255,255,.92);
+    color:#171a21;
+    box-shadow:0 2px 9px rgba(35,40,48,.055),inset 0 0 0 1px rgba(221,225,232,.72);
+  }
+
+  .app-toast{bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+}
