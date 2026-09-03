@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <title>练了么 · 修复缓存</title>
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6;color:#111827}
+    main{max-width:520px;margin:0 auto;padding:28px 18px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+    h1{font-size:21px;margin:0 0 12px}p{line-height:1.6;color:#4b5563}.status{margin-top:14px;padding:12px;border-radius:12px;background:#f9fafb;font-size:14px;white-space:pre-line}
+    a{display:none;margin-top:16px;padding:12px 14px;border-radius:12px;background:#111827;color:#fff;text-decoration:none;text-align:center;font-weight:700}
+    a.show{display:block}
+  </style>
+</head>
+<body>
+<main><div class="card">
+  <h1>练了么缓存修复</h1>
+  <p>此页面只注销 Service Worker 和删除练了么的静态缓存，不会删除 IndexedDB 中的训练记录、草稿或同步信息。</p>
+  <div id="status" class="status">正在清理旧缓存…</div>
+  <a id="continue" href="./?clean=24">重新打开练了么</a>
+</div></main>
+<script>
+(async()=>{
+  const status=document.getElementById('status');
+  const link=document.getElementById('continue');
+  try{
+    let registrations=[];
+    if('serviceWorker' in navigator){
+      registrations=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(r=>r.unregister()));
+    }
+    let deleted=0;
+    if('caches' in window){
+      const keys=await caches.keys();
+      const targets=keys.filter(k=>k.startsWith('fitness-pwa-'));
+      const results=await Promise.all(targets.map(k=>caches.delete(k)));
+      deleted=results.filter(Boolean).length;
+    }
+    status.textContent=`清理完成。\n已注销 ${registrations.length} 个 Service Worker，删除 ${deleted} 个练了么缓存。\n训练数据未删除。`;
+    link.classList.add('show');
+  }catch(err){
+    status.textContent='自动清理遇到问题：'+String(err&&err.message||err)+'\n请关闭此页面后重新打开一次，再重试。';
+    link.classList.add('show');
+  }
+})();
+</script>
+</body>
+</html>
