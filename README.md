@@ -20,11 +20,13 @@
 - `training.js`：训练页事件、计划编辑、训练保存以及各训练模块之间的流程协调。
 - `training-motion.js`：训练页滚动吸附、快速滑动、卡片定位以及输入编辑时的吸附保护。
 - `nav-motion.js`：底部导航选中胶囊的位置和动画状态。
-- `sync.js`：Private GitHub 仓库同步、冲突检测和同步设置。
+- `sync-remote.js`：GitHub API 请求、Base64 编解码、SHA-256、manifest 与远端记录格式校验，以及远端文件读写。
+- `sync.js`：本机与远端同步流程、计划冲突处理、同步凭据、本机元数据和同步按钮交互。
+- `sw-register.js`：尽早注册 Service Worker，使缓存更新独立于应用业务初始化。
 - `sw.js`：静态 shell 缓存、离线回退和旧缓存清理。
 - `rescue.html`：只清理 Service Worker 和静态缓存的恢复入口，不删除 IndexedDB 数据。
 
-训练模块按依赖顺序加载：`training-progression.js` → `training-draft.js` → `training-render.js` → `training-insights.js` / `training-maintenance.js` → `training.js` → `training-motion.js`。草稿状态、页面渲染、进阶算法、历史趋势和维护逻辑应继续留在各自模块，`training.js` 只协调训练主流程。
+训练模块按依赖顺序加载：`training-progression.js` → `training-draft.js` → `training-render.js` → `training-insights.js` / `training-maintenance.js` → `training.js` → `training-motion.js`。同步模块按 `sync-remote.js` → `sync.js` 加载。远端协议、GitHub HTTP 与文件完整性校验留在 `sync-remote.js`；同步业务状态和页面交互留在 `sync.js`。
 
 已经验证并长期保留的功能应优先回收到对应正式模块中，避免新增只包含少量覆盖规则的临时补丁文件。每次发布统一使用同一个静态资源查询版本号，并同步更新 `SHELL_CACHE`，减少多文件版本混用。
 
