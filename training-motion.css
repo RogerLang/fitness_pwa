@@ -1,0 +1,40 @@
+/* Experimental training-card motion layer. Kept separate so it can be tuned or removed without touching the stable v40 UI. */
+
+@media (max-width:680px){
+  html{
+    scroll-snap-type:y proximity;
+    scroll-padding-top:68px;
+  }
+
+  #workoutContainer .exercise-card{
+    scroll-snap-align:start;
+    scroll-snap-stop:normal;
+    scroll-margin-top:68px;
+    transform-origin:center top;
+  }
+}
+
+@supports (animation-timeline:view()){
+  @media (max-width:680px) and (prefers-reduced-motion:no-preference){
+    #workoutContainer .exercise-card{
+      animation-name:exerciseCardFocus;
+      animation-duration:auto;
+      animation-timing-function:linear;
+      animation-fill-mode:both;
+      animation-timeline:view(block);
+      animation-range:entry 0% exit 100%;
+    }
+
+    @keyframes exerciseCardFocus{
+      0%{transform:scale(.985);opacity:.92}
+      28%{transform:scale(1);opacity:1}
+      72%{transform:scale(1);opacity:1}
+      100%{transform:scale(.985);opacity:.92}
+    }
+  }
+}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-snap-type:none}
+  #workoutContainer .exercise-card{transform:none;opacity:1}
+}
