@@ -1,0 +1,64 @@
+/* Shadow-led glass treatment for the three exercise sub-panels. */
+
+#workoutContainer .exercise-panel{
+  border-color:rgba(255,255,255,.28);
+  background:
+    radial-gradient(120% 92% at 12% -8%,rgba(255,255,255,.62) 0%,rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,rgba(255,255,255,.70),rgba(245,248,252,.52));
+  box-shadow:
+    0 10px 24px rgba(37,48,64,.075),
+    0 2px 6px rgba(37,48,64,.035),
+    inset 0 1.5px 0 rgba(255,255,255,.98),
+    inset 0 -1px 0 rgba(96,112,134,.035);
+}
+
+#workoutContainer .exercise-plan-panel{
+  border-color:rgba(255,255,255,.30);
+  background:
+    radial-gradient(120% 92% at 12% -8%,rgba(255,255,255,.66) 0%,rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,rgba(252,253,255,.74),rgba(242,247,252,.54));
+}
+
+#workoutContainer .exercise-sets-panel{
+  border-color:rgba(255,255,255,.32);
+  background:
+    radial-gradient(118% 88% at 10% -5%,rgba(255,255,255,.72) 0%,rgba(255,255,255,0) 60%),
+    linear-gradient(180deg,rgba(255,255,255,.78),rgba(240,246,252,.60));
+  box-shadow:
+    0 16px 34px rgba(34,46,64,.105),
+    0 4px 10px rgba(34,46,64,.055),
+    inset 0 1.5px 0 rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(84,103,130,.04);
+}
+
+#workoutContainer .exercise-panel-heading{
+  border-bottom-color:rgba(126,145,169,.12);
+}
+
+@media(max-width:680px){
+  #workoutContainer .exercise-panel{
+    border-color:rgba(255,255,255,.24);
+    box-shadow:
+      0 8px 20px rgba(37,48,64,.07),
+      0 2px 5px rgba(37,48,64,.03),
+      inset 0 1.5px 0 rgba(255,255,255,.98),
+      inset 0 -1px 0 rgba(96,112,134,.03);
+  }
+
+  #workoutContainer .exercise-sets-panel{
+    border-color:rgba(255,255,255,.28);
+    box-shadow:
+      0 14px 30px rgba(34,46,64,.10),
+      0 3px 8px rgba(34,46,64,.045),
+      inset 0 1.5px 0 rgba(255,255,255,1),
+      inset 0 -1px 0 rgba(84,103,130,.035);
+  }
+}
+
+@media(prefers-reduced-transparency:reduce){
+  #workoutContainer .exercise-panel{
+    border-color:rgba(205,211,220,.42);
+    background:#f8f9fb;
+    box-shadow:0 6px 16px rgba(37,48,64,.06);
+  }
+}
