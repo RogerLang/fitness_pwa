@@ -1,8 +1,7 @@
-/* Experimental training-card motion layer. Kept separate so it can be tuned or removed without touching the archived v40 UI. */
+/* Training-page scroll snapping. Kept separate from the archived v40 UI layer. */
 
 @media (max-width:680px){
   html{
-    /* Exercise snapping uses a fixed viewport so header hide/show cannot move the target mid-gesture. */
     --training-snap-top:10px;
     --training-overview-offset:58px;
     --training-snap-bottom:126px;
@@ -14,24 +13,14 @@
     scroll-snap-type:y mandatory;
   }
 
-  /* During the overview -> first exercise gesture, keep chrome visually fixed even if
-     the base auto-hide logic has already marked it hidden. It is released after snap settles. */
-  body.training-chrome-lock.chrome-hidden .app-header{
-    transform:none;
-  }
-  body.training-chrome-lock.chrome-hidden .bottom-nav{
-    transform:translateX(-50%);
-    opacity:1;
-  }
-
-  /* The overview remains below the visible app header, independent of exercise snap geometry. */
+  /* The overview owns the visible-header starting position. */
   #today .today-overview{
     scroll-snap-align:start;
     scroll-snap-stop:always;
     scroll-margin-top:var(--training-overview-offset);
   }
 
-  /* Normal exercise cards settle in the fixed usable visual center. */
+  /* Every exercise uses the final hidden-header viewport from the first movement onward. */
   #workoutContainer .exercise-card{
     scroll-snap-align:center;
     scroll-snap-stop:always;
@@ -41,7 +30,6 @@
     transition:opacity .18s ease,transform .18s ease,box-shadow .18s ease;
   }
 
-  /* Cards taller than the usable snap area keep their top accessible. */
   #workoutContainer .exercise-card.snap-start{
     scroll-snap-align:start;
     scroll-margin-top:var(--training-snap-top);
@@ -54,7 +42,7 @@
     box-shadow:0 18px 44px rgba(31,36,45,.075),0 2px 7px rgba(31,36,45,.04);
   }
 
-  /* The final action card is the bottom edge stop. */
+  /* The final action card remains the bottom edge stop. */
   #today .sticky-actions{
     scroll-snap-align:end;
     scroll-snap-stop:always;
