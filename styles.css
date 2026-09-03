@@ -155,13 +155,14 @@ body.app-ready .app-header,body.app-ready main,body.app-ready .bottom-nav{animat
 
 @media(display-mode:standalone){
   html,body{background:var(--bg)}
+  body:not(.app-booting)::after{content:"";position:fixed;left:0;right:0;bottom:0;height:max(env(safe-area-inset-bottom,0px),24px);background:var(--bg);pointer-events:none;z-index:2}
   .app-header{background:rgba(245,246,248,.96);border-bottom-color:rgba(216,221,228,.34)}
 }
 
 @media(display-mode:standalone) and (max-width:680px){
-  main{padding-bottom:132px}
-  .bottom-nav{bottom:calc(20px + env(safe-area-inset-bottom))}
-  .app-toast{bottom:calc(112px + env(safe-area-inset-bottom))}
+  main{padding-bottom:calc(148px + env(safe-area-inset-bottom,0px))}
+  .bottom-nav{bottom:calc(32px + env(safe-area-inset-bottom,0px))}
+  .app-toast{bottom:calc(124px + env(safe-area-inset-bottom,0px))}
 }
 
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.app-header,.bottom-nav,button,.app-toast{transition:none!important}body.app-ready .app-header,body.app-ready main,body.app-ready .bottom-nav{animation:none}}
