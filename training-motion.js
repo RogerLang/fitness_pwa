@@ -12,6 +12,7 @@
   const OVERVIEW_TOP = 68;
   const OVERVIEW_TOLERANCE = 26;
   const SCROLL_SETTLE_DELAY = 140;
+  const MOTION_SETTLE_GUARD = 90;
   const FAST_RETURN_DISTANCE = 84;
   const FAST_RETURN_MAX_DURATION = 460;
   const FAST_RETURN_MIN_VELOCITY = .28;
@@ -26,6 +27,7 @@
   let programmaticTarget = null;
   let fastReturning = false;
   let touchGesture = null;
+  let motionStartedAt = 0;
 
   const cards = () => [...container.querySelectorAll(".exercise-card")];
   const todayActive = () => todayPage.classList.contains("active");
@@ -93,6 +95,7 @@
     programmaticTarget = null;
     fastReturning = false;
     touchGesture = null;
+    motionStartedAt = 0;
     root.classList.remove(
       "training-snap-ready",
       "training-overview-mode",
@@ -176,6 +179,14 @@
     settleTimer = setTimeout(settleScrollState, SCROLL_SETTLE_DELAY);
   }
 
+  function beginMotion() {
+    motionStartedAt = performance.now();
+  }
+
+  function motionGuardActive() {
+    return performance.now() - motionStartedAt < MOTION_SETTLE_GUARD;
+  }
+
   function finishFastReturn() {
     fastReturning = false;
     root.classList.remove("training-free-return");
@@ -190,16 +201,27 @@
     if (!enabled) return;
 
     if (fastReturning) {
+      /* Ignore a stale scrollend from the native gesture that preceded smooth return. */
+      if (motionGuardActive() && !overviewSettled()) {
+        armSettle();
+        return;
+      }
       finishFastReturn();
       return;
     }
 
     if (programmaticTarget?.isConnected) {
       const target = programmaticTarget;
+      const distance = cardDistance(target);
+      /* The same stale-scrollend guard is needed for tap-to-focus smooth movement. */
+      if (motionGuardActive() && distance > TARGET_TOLERANCE) {
+        armSettle();
+        return;
+      }
       programmaticTarget = null;
       setMode("exercise");
       classifyCards();
-      if (cardDistance(target) <= TARGET_TOLERANCE) setCurrentCard(target);
+      if (distance <= TARGET_TOLERANCE) setCurrentCard(target);
       else scheduleUpdate();
       return;
     }
@@ -226,6 +248,7 @@
       return;
     }
 
+    beginMotion();
     window.scrollTo({ top: targetTop, behavior: "smooth" });
     armSettle();
   }
@@ -236,7 +259,26 @@
     programmaticTarget = null;
     fastReturning = true;
     root.classList.add("training-free-return");
+    beginMotion();
+    window.scrollTo({ top: targetScrollForOverview(), behavior: "smooth" });
+    armSettle();
+  }
+
+  function focusOverview() {
+    if (!enabled) return;
+
+    programmaticTarget = null;
+    fastReturning = true;
+    root.classList.add("training-free-return");
+    setMode("overview");
+
     const targetTop = targetScrollForOverview();
+    if (Math.abs(targetTop - window.scrollY) <= TARGET_TOLERANCE) {
+      finishFastReturn();
+      return;
+    }
+
+    beginMotion();
     window.scrollTo({ top: targetTop, behavior: "smooth" });
     armSettle();
   }
@@ -267,6 +309,7 @@
     if (fastReturning) {
       fastReturning = false;
       root.classList.remove("training-free-return");
+      setMode(overviewSettled() ? "overview" : "exercise");
     }
 
     const touch = event.touches[0];
@@ -353,6 +396,11 @@
     }
 
     focusCard(card);
+  });
+
+  overview.addEventListener("click", event => {
+    if (!enabled || isInteractiveTarget(event.target)) return;
+    focusOverview();
   });
 
   MOBILE_QUERY.addEventListener?.("change", syncState);
