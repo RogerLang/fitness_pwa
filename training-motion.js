@@ -39,8 +39,8 @@
     return Math.abs(overview.getBoundingClientRect().top - OVERVIEW_TOP) <= OVERVIEW_TOLERANCE;
   }
 
-  function setMode(nextMode) {
-    if (mode === nextMode) return;
+  function setMode(nextMode, force = false) {
+    if (!force && mode === nextMode) return;
     mode = nextMode;
     root.classList.toggle("training-overview-mode", mode === "overview");
     root.classList.toggle("training-exercise-mode", mode === "exercise");
@@ -51,7 +51,7 @@
 
   function classifyCards(geometry = snapGeometry()) {
     for (const card of cards()) {
-      /* offsetHeight is layout height and is unaffected by the card's scale animation. */
+      /* Layout height stays constant while the visual scale animation runs. */
       card.classList.toggle("snap-start", card.offsetHeight > geometry.snapHeight - 20);
     }
   }
@@ -74,8 +74,7 @@
     }
 
     classifyCards();
-    mode = overviewSettled() ? "exercise" : "overview";
-    setMode(overviewSettled() ? "overview" : "exercise");
+    setMode(overviewSettled() ? "overview" : "exercise", true);
     lastY = window.scrollY;
     scheduleUpdate();
   }
@@ -132,8 +131,7 @@
     settleTimer = null;
     if (!enabled) return;
 
-    if (overviewSettled()) setMode("overview");
-    else setMode("exercise");
+    setMode(overviewSettled() ? "overview" : "exercise");
     scheduleUpdate();
   }
 
@@ -144,8 +142,7 @@
     const delta = y - lastY;
     lastY = y;
 
-    /* Leaving the overview immediately enters the final no-header exercise layout.
-       Exercise snap coordinates never depend on the header animation. */
+    /* As soon as the overview is left downward, use the final no-header exercise layout. */
     if (mode === "overview" && delta > 1) {
       setMode("exercise");
       body.classList.add("chrome-hidden");
@@ -168,9 +165,8 @@
   const pageObserver = new MutationObserver(syncState);
   pageObserver.observe(todayPage, { attributes: true, attributeFilter: ["class"] });
 
-  let bootObserver = null;
   if (body.classList.contains("app-booting")) {
-    bootObserver = new MutationObserver(() => {
+    const bootObserver = new MutationObserver(() => {
       if (body.classList.contains("app-booting")) return;
       bootObserver.disconnect();
       syncState();
@@ -180,10 +176,7 @@
 
   window.addEventListener("scroll", onScroll, { passive: true });
   if ("onscrollend" in window) window.addEventListener("scrollend", settleScrollState, { passive: true });
-  window.addEventListener("resize", () => {
-    if (enabled) classifyCards();
-    syncState();
-  }, { passive: true });
+  window.addEventListener("resize", syncState, { passive: true });
   container.addEventListener("click", () => requestAnimationFrame(() => {
     if (enabled) classifyCards();
     scheduleUpdate();
