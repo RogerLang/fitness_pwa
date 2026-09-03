@@ -122,12 +122,15 @@ body.app-booting main{max-width:none;padding:0}
 body.app-booting #today{display:flex;min-height:100svh;align-items:center;justify-content:center}
 body.app-booting #today>.card:not(.today-boot-card),body.app-booting #today>#workoutContainer{display:none}
 body.app-booting .today-boot-card{display:flex;width:100%;margin:0;padding:24px;align-items:center;justify-content:center;border:0;background:transparent;box-shadow:none}
-.boot-brand{display:flex;flex-direction:column;align-items:center;text-align:center}
-.boot-logo{width:148px;display:grid;gap:9px;margin-bottom:21px}.boot-bar{display:block;width:100%;height:28px;border-radius:999px;box-shadow:inset 0 2px 2px rgba(255,255,255,.92),inset 0 -1px 2px rgba(17,24,39,.05)}
+.boot-brand{width:min(100%,320px);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.boot-lockup{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.boot-logo{width:144px;display:grid;gap:9px;margin:0}.boot-bar{display:block;width:100%;height:28px;border-radius:999px;box-shadow:inset 0 2px 2px rgba(255,255,255,.92),inset 0 -1px 2px rgba(17,24,39,.05)}
 .boot-bar-blue{border:2px solid #9ac5f5;background:linear-gradient(180deg,#fbfdff 0%,#d9eaff 48%,#e5f0ff 100%)}
 .boot-bar-purple{border:2px solid #ae97f0;background:linear-gradient(180deg,#fdfbff 0%,#e6dfff 48%,#eee9ff 100%)}
 .boot-bar-mint{border:2px solid #6dccd1;background:linear-gradient(180deg,#fbffff 0%,#d4f5f6 48%,#e0f9f9 100%)}
-.boot-name{font-size:27px;font-weight:800;letter-spacing:.08em}.boot-status{margin-top:9px;color:var(--muted);font-size:12px}
+.boot-wordmark{display:flex;align-items:center;justify-content:center}
+.boot-name{margin:0;font-size:30px;font-weight:800;letter-spacing:.06em;line-height:1.15;color:#111827}
+.boot-status{margin-top:18px;color:var(--muted);font-size:12px;line-height:1.4;text-align:center}
 body.app-ready .app-header,body.app-ready main,body.app-ready .bottom-nav{animation:appReveal .14s ease-out both}@keyframes appReveal{from{opacity:.35}to{opacity:1}}
 
 @media(max-width:680px){
@@ -139,6 +142,7 @@ body.app-ready .app-header,body.app-ready main,body.app-ready .bottom-nav{animat
   .sticky-actions{grid-template-columns:1.15fr .9fr .72fr;gap:6px;padding:8px}.sticky-actions button{padding:10px 7px;font-size:12px}
   .history-exercise{grid-template-columns:86px 1fr;gap:6px}.history-set-list{gap:4px}.history-set-chip{padding:4px 6px;font-size:10px}
   .grid2{grid-template-columns:1fr}.body-history-row{flex-direction:column;gap:4px}.body-history-row span{text-align:left}
+  .boot-brand{width:min(100%,300px)}.boot-lockup{gap:10px}.boot-logo{width:136px;gap:8px}.boot-bar{height:27px}.boot-name{font-size:28px;letter-spacing:.05em}.boot-status{margin-top:16px;font-size:11px}
 }
 
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.app-header,.bottom-nav,button,.app-toast{transition:none!important}body.app-ready .app-header,body.app-ready main,body.app-ready .bottom-nav{animation:none}}

@@ -1,4 +1,4 @@
-const SHELL_CACHE = "fitness-pwa-shell-v26";
+const SHELL_CACHE = "fitness-pwa-shell-v27";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
@@ -57,7 +57,10 @@ async function staleWhileRevalidate(request) {
     return response;
   }).catch(() => null);
 
-  if (cached) return cached;
+  if (cached) {
+    network.catch(() => {});
+    return cached;
+  }
   return (await network) || Response.error();
 }
 
@@ -65,7 +68,6 @@ self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
-
   if (url.origin !== self.location.origin) return;
   if (request.mode === "navigate") {
     event.respondWith(networkFirstNavigation(request));
