@@ -1,4 +1,4 @@
-/* Low-chroma liquid-glass card layer. Layout and interaction logic remain untouched. */
+/* Low-chroma liquid-glass visual system. Interaction logic lives in JS modules. */
 
 :root{
   --card-glass-border:rgba(255,255,255,.82);
@@ -28,7 +28,7 @@ body{
     var(--bg);
 }
 
-/* Main sheets: higher body opacity and stronger inner edge contrast create thicker glass. */
+/* Main sheets: higher body opacity and inner edge contrast create thicker glass. */
 .card:not(.today-boot-card){
   background:
     radial-gradient(118% 84% at 12% -2%,rgba(255,255,255,.56) 0%,rgba(255,255,255,0) 58%),
@@ -177,6 +177,12 @@ textarea::placeholder{
   font-variant-numeric:tabular-nums;
 }
 
+/* Planned values should read like working numbers instead of faint hints. */
+#workoutContainer .set-row input::placeholder{
+  color:#171a21;
+  opacity:1;
+}
+
 input:focus,
 select:focus,
 textarea:focus{
@@ -187,7 +193,7 @@ textarea:focus{
     inset 0 1px 0 rgba(255,255,255,1);
 }
 
-/* Completion is a compact glass control; the completed state carries more visual weight. */
+/* Completion is a compact glass control; completed state carries more visual weight. */
 #workoutContainer .set-complete{
   border:1px solid rgba(255,255,255,.72);
   background:rgba(255,255,255,.60);
@@ -292,6 +298,10 @@ canvas{
   color:var(--workout-text-muted);
 }
 
+#progress #saveBodyBtn{
+  margin-top:16px;
+}
+
 #settings details{
   padding:12px 13px;
   border:1px solid rgba(255,255,255,.66);
@@ -391,6 +401,25 @@ canvas{
     border-radius:15px;
     font-size:12.5px;
     line-height:1;
+  }
+
+  /* Keep the add-exercise row and final workout-actions row on the same visual height. */
+  #workoutContainer .add-exercise-card,
+  #today .sticky-actions{
+    height:58px;
+    min-height:58px;
+    padding:7px;
+  }
+
+  #workoutContainer .add-exercise-card{
+    display:flex;
+    align-items:center;
+  }
+
+  #workoutContainer .add-exercise-card > button,
+  #today .sticky-actions > button{
+    height:42px;
+    min-height:42px;
   }
 
   #today .sticky-actions{
