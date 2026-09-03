@@ -12,12 +12,17 @@
 - `training-motion.css`：训练页滚动吸附、高亮和编辑状态对应的样式。
 - `nav-motion.css`：底部导航栏隐藏/出现与滑动玻璃胶囊样式。
 - `app.js`：应用启动、IndexedDB 基础读写、页面路由和通用事件。
-- `training.js`：训练计划渲染、训练草稿、进阶建议、历史记录和趋势图。
+- `training-progression.js`：训练次数区间、重量档位、历史上下文、进阶建议和上次记录摘要。
+- `training-insights.js`：历史记录页、趋势页、趋势时间范围状态和图表绘制。
+- `training-maintenance.js`：重复训练记录识别与维护清理。
+- `training.js`：训练草稿、动作卡渲染、计划编辑、训练保存以及训练模块之间的协调。
 - `training-motion.js`：训练页滚动吸附、快速滑动、卡片定位以及输入编辑时的吸附保护。
 - `nav-motion.js`：底部导航选中胶囊的位置和动画状态。
 - `sync.js`：Private GitHub 仓库同步、冲突检测和同步设置。
 - `sw.js`：静态 shell 缓存、离线回退和旧缓存清理。
 - `rescue.html`：只清理 Service Worker 和静态缓存的恢复入口，不删除 IndexedDB 数据。
+
+训练模块按依赖顺序加载：`training-progression.js` → `training-insights.js` / `training-maintenance.js` → `training.js` → `training-motion.js`。进阶算法、历史趋势和维护逻辑应继续留在各自模块，`training.js` 只协调训练主流程。
 
 已经验证并长期保留的功能应优先回收到对应正式模块中，避免新增只包含少量覆盖规则的临时补丁文件。每次发布统一使用同一个静态资源查询版本号，并同步更新 `SHELL_CACHE`，减少多文件版本混用。
 
