@@ -31,6 +31,14 @@ function fmtDate(d = new Date()) {
   return d.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" });
 }
 
+function normalizeState(next) {
+  return {
+    plans: Array.isArray(next?.plans) ? next.plans : [],
+    sessions: Array.isArray(next?.sessions) ? next.sessions : [],
+    body: Array.isArray(next?.body) ? next.body : []
+  };
+}
+
 function pageFromLocation() {
   const id = window.location.hash.slice(1).split("/")[0];
   return PAGE_IDS.has(id) ? id : "today";
@@ -47,8 +55,11 @@ async function loadState() {
 async function persist(reason = "data") {
   await Storage.writeState(db, state);
   for (const hook of persistHooks) {
-    try { await hook(reason); }
-    catch (error) { console.warn("persist hook failed", error); }
+    try {
+      await hook(reason);
+    } catch (error) {
+      console.warn("persist hook failed", error);
+    }
   }
 }
 
@@ -58,92 +69,9 @@ function toast(message, type = "info") {
   clearTimeout(toastTimer);
   el.textContent = message;
   el.className = `app-toast show ${type}`;
-  toastTimer = setTimeout(() => { el.className = "app-toast"; }, 2400);
-}
-
-function renderBodyHistory() {
-  const box = document.getElementById("bodyHistory");
-  if (!box) return;
-  const arr = [...state.body].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 12);
-  if (!arr.length) {
-    box.innerHTML = '<div class="empty">暂无身体数据</div>';
-    return;
-  }
-  box.innerHTML = arr.map(item => {
-    const details = [
-      ["体重", item.weight, "kg"], ["胸围", item.chest, "cm"],
-      ["腰围", item.waist, "cm"], ["臂围", item.arm, "cm"]
-    ].filter(x => x[1] !== null && x[1] !== undefined)
-      .map(x => `${x[0]} ${x[1]} ${x[2]}`).join(" · ");
-    return `<div class="body-history-row"><strong>${esc(item.date || "")}</strong><span>${esc(details)}</span></div>`;
-  }).join("");
-}
-
-function num(id) {
-  const el = document.getElementById(id);
-  if (!el || el.value === "") return null;
-  const value = Number(el.value);
-  return Number.isFinite(value) ? value : null;
-}
-
-async function saveBody() {
-  const item = {
-    id: crypto.randomUUID(),
-    date: isoDate(),
-    weight: num("bodyWeight"),
-    chest: num("chestCirc"),
-    waist: num("waistCirc"),
-    arm: num("armCirc")
-  };
-  if ([item.weight, item.chest, item.waist, item.arm].every(v => v === null)) {
-    toast("请至少输入一项身体数据", "error");
-    return;
-  }
-  state.body.push(item);
-  await persist("body");
-  ["bodyWeight", "chestCirc", "waistCirc", "armCirc"].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = "";
-  });
-  renderBodyHistory();
-  toast("身体数据已保存", "success");
-}
-
-async function exportData() {
-  const payload = { format: "fitness-pwa-backup-v3", exportedAt: new Date().toISOString(), ...state };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `fitness-backup-${isoDate()}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-
-async function importData(file) {
-  try {
-    const data = JSON.parse(await file.text());
-    if (data.format && !String(data.format).startsWith("fitness-pwa")) throw new Error("格式不支持");
-    state = {
-      plans: Array.isArray(data.plans) ? data.plans : [],
-      sessions: Array.isArray(data.sessions) ? data.sessions : [],
-      body: Array.isArray(data.body) ? data.body : []
-    };
-    await persist("import");
-    for (const module of appModules) if (module.onDataReset) await module.onDataReset("import");
-    await refresh("import");
-    toast("备份已导入", "success");
-  } catch (error) {
-    toast(`导入失败：${error.message}`, "error");
-  }
-}
-
-async function wipeData() {
-  if (!confirm("确定删除当前设备上的训练计划、训练记录和身体数据？GitHub 同步信息会保留。")) return;
-  for (const module of appModules) if (module.beforeWipe) await module.beforeWipe();
-  state = { plans: [], sessions: [], body: [] };
-  await persist("wipe");
-  for (const module of appModules) if (module.onDataReset) await module.onDataReset("wipe");
-  await refresh("wipe");
-  toast("本机训练数据已清空", "success");
+  toastTimer = setTimeout(() => {
+    el.className = "app-toast";
+  }, 2400);
 }
 
 async function refresh(reason = "refresh") {
@@ -152,7 +80,21 @@ async function refresh(reason = "refresh") {
   for (const module of appModules) {
     if (module.refresh) await module.refresh(reason);
   }
-  if (document.getElementById("progress")?.classList.contains("active")) renderBodyHistory();
+}
+
+async function resetData(next, reason = "reset") {
+  for (const module of appModules) {
+    if (module.beforeDataReset) await module.beforeDataReset(reason);
+    else if (reason === "wipe" && module.beforeWipe) await module.beforeWipe();
+  }
+
+  state = normalizeState(next);
+  await persist(reason);
+
+  for (const module of appModules) {
+    if (module.onDataReset) await module.onDataReset(reason);
+  }
+  await refresh(reason);
 }
 
 async function switchPage(id, { historyMode = "replace", scroll = true } = {}) {
@@ -168,8 +110,10 @@ async function switchPage(id, { historyMode = "replace", scroll = true } = {}) {
   document.querySelectorAll(".page").forEach(page => page.classList.toggle("active", page.id === pageId));
   document.querySelectorAll(".bottom-nav button").forEach(button => button.classList.toggle("active", button.dataset.page === pageId));
   document.body.classList.remove("chrome-hidden");
-  for (const module of appModules) if (module.onPage) await module.onPage(pageId);
-  if (pageId === "progress") renderBodyHistory();
+
+  for (const module of appModules) {
+    if (module.onPage) await module.onPage(pageId);
+  }
   if (scroll) window.scrollTo(0, 0);
 }
 
@@ -177,19 +121,12 @@ function bindCoreEvents() {
   document.querySelectorAll(".bottom-nav button").forEach(button => {
     button.onclick = () => switchPage(button.dataset.page, { historyMode: "replace" });
   });
-  document.getElementById("saveBodyBtn").onclick = saveBody;
-  document.getElementById("exportBtn").onclick = exportData;
-  document.getElementById("importInput").onchange = event => {
-    const file = event.target.files?.[0];
-    if (file) importData(file);
-    event.target.value = "";
-  };
-  document.getElementById("wipeBtn").onclick = wipeData;
 }
 
 function initChromeAutoHide() {
   let lastY = window.scrollY;
   let ticking = false;
+
   const update = () => {
     const y = window.scrollY;
     const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
@@ -199,8 +136,12 @@ function initChromeAutoHide() {
     lastY = y;
     ticking = false;
   };
+
   window.addEventListener("scroll", () => {
-    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(update);
+    }
   }, { passive: true });
 }
 
@@ -215,8 +156,11 @@ function initAuxiliaryModules(modules) {
   auxiliaryInitStarted = true;
   requestAnimationFrame(() => setTimeout(async () => {
     for (const module of modules) {
-      try { await initModule(module); }
-      catch (error) { console.warn("auxiliary module init", error); }
+      try {
+        await initModule(module);
+      } catch (error) {
+        console.warn("auxiliary module init", error);
+      }
     }
   }, 0));
 }
@@ -231,12 +175,13 @@ function revealApp() {
 async function start() {
   if (appStarted) return;
   appStarted = true;
+
   try {
     db = await Storage.open();
     await loadState();
     bindCoreEvents();
 
-    const criticalModules = appModules.filter(module => typeof module.refresh === "function");
+    const criticalModules = appModules.filter(module => module.critical === true || typeof module.refresh === "function");
     const auxiliaryModules = appModules.filter(module => !criticalModules.includes(module));
     for (const module of criticalModules) await initModule(module);
 
@@ -258,19 +203,32 @@ async function start() {
 }
 
 window.FitnessApp = {
-  get state() { return state; },
-  get db() { return db; },
-  esc, isoDate, fmtDate, idbGet, idbSet, idbDelete, persist, toast,
-  refresh, switchPage, renderBodyHistory,
-  replaceState(next) {
-    state = {
-      plans: Array.isArray(next?.plans) ? next.plans : [],
-      sessions: Array.isArray(next?.sessions) ? next.sessions : [],
-      body: Array.isArray(next?.body) ? next.body : []
-    };
+  get state() {
+    return state;
   },
-  registerModule(module) { appModules.push(module); },
-  registerPersistHook(hook) { persistHooks.push(hook); },
+  get db() {
+    return db;
+  },
+  esc,
+  isoDate,
+  fmtDate,
+  idbGet,
+  idbSet,
+  idbDelete,
+  persist,
+  toast,
+  refresh,
+  resetData,
+  switchPage,
+  replaceState(next) {
+    state = normalizeState(next);
+  },
+  registerModule(module) {
+    appModules.push(module);
+  },
+  registerPersistHook(hook) {
+    persistHooks.push(hook);
+  },
   start
 };
 
