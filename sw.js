@@ -1,7 +1,8 @@
-const SHELL_CACHE = "fitness-pwa-shell-v23";
+const SHELL_CACHE = "fitness-pwa-shell-v24";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
+  "./rescue.html",
   "./styles.css",
   "./training-ux-v13.css",
   "./training-ux-v14.css",
@@ -41,6 +42,23 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
+async function networkFirstNavigation(request) {
+  const cache = await caches.open(SHELL_CACHE);
+  try {
+    const response = await fetch(request);
+    if (response && response.ok && response.type === "basic") {
+      cache.put(request, response.clone()).catch(() => {});
+      cache.put("./index.html", response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (_) {
+    return (await cache.match(request)) ||
+      (await cache.match("./index.html")) ||
+      (await cache.match("./")) ||
+      Response.error();
+  }
+}
+
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(SHELL_CACHE);
   const cached = await cache.match(request);
@@ -57,13 +75,7 @@ async function staleWhileRevalidate(request) {
   }
 
   const fresh = await network;
-  if (fresh) return fresh;
-
-  if (request.mode === "navigate") {
-    return (await cache.match("./index.html")) || (await cache.match("./"));
-  }
-
-  return Response.error();
+  return fresh || Response.error();
 }
 
 self.addEventListener("fetch", event => {
@@ -74,6 +86,11 @@ self.addEventListener("fetch", event => {
 
   // Never cache authenticated/private API responses or other cross-origin data.
   if (url.origin !== self.location.origin) return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirstNavigation(request));
+    return;
+  }
 
   event.respondWith(staleWhileRevalidate(request));
 });
