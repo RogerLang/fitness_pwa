@@ -1,6 +1,6 @@
-const DB_NAME = "fitness-pwa-db";
-const DB_VERSION = 1;
-const STORE = "kv";
+const Storage = window.FitnessStorage;
+if (!Storage) throw new Error("FitnessStorage must load before app.js");
+
 const PAGE_IDS = new Set(["today", "history", "progress", "settings"]);
 
 let db = null;
@@ -36,66 +36,16 @@ function pageFromLocation() {
   return PAGE_IDS.has(id) ? id : "today";
 }
 
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const database = req.result;
-      if (!database.objectStoreNames.contains(STORE)) database.createObjectStore(STORE);
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function idbGet(key) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readonly");
-    const req = tx.objectStore(STORE).get(key);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function idbSet(key, value) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put(value, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-function idbDelete(key) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).delete(key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
+const idbGet = key => Storage.get(db, key);
+const idbSet = (key, value) => Storage.set(db, key, value);
+const idbDelete = key => Storage.remove(db, key);
 
 async function loadState() {
-  const [plans, sessions, body] = await Promise.all([
-    idbGet("plans"), idbGet("sessions"), idbGet("body")
-  ]);
-  state = {
-    plans: Array.isArray(plans) ? plans : [],
-    sessions: Array.isArray(sessions) ? sessions : [],
-    body: Array.isArray(body) ? body : []
-  };
+  state = await Storage.readState(db);
 }
 
 async function persist(reason = "data") {
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    const store = tx.objectStore(STORE);
-    store.put(state.plans, "plans");
-    store.put(state.sessions, "sessions");
-    store.put(state.body, "body");
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  await Storage.writeState(db, state);
   for (const hook of persistHooks) {
     try { await hook(reason); }
     catch (error) { console.warn("persist hook failed", error); }
@@ -254,15 +204,6 @@ function initChromeAutoHide() {
   }, { passive: true });
 }
 
-function registerServiceWorker() {
-  if (!("serviceWorker" in navigator) || window.__fitnessSwRegisterStarted) return;
-  window.__fitnessSwRegisterStarted = true;
-  navigator.serviceWorker.register("./sw.js").catch(error => {
-    window.__fitnessSwRegisterStarted = false;
-    console.warn("service worker", error);
-  });
-}
-
 async function initModule(module) {
   if (!module?.init || initializedModules.has(module)) return;
   await module.init();
@@ -290,9 +231,8 @@ function revealApp() {
 async function start() {
   if (appStarted) return;
   appStarted = true;
-  registerServiceWorker();
   try {
-    db = await openDB();
+    db = await Storage.open();
     await loadState();
     bindCoreEvents();
 
