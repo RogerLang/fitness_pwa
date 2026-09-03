@@ -1,0 +1,164 @@
+/* Low-chroma liquid-glass card layer. Layout and interaction logic remain untouched. */
+
+:root{
+  --card-glass-border:rgba(255,255,255,.70);
+  --card-glass-shadow:
+    0 18px 46px rgba(30,35,44,.075),
+    0 2px 8px rgba(30,35,44,.035),
+    inset 0 1px 0 rgba(255,255,255,.90),
+    inset 0 -1px 0 rgba(111,123,140,.045);
+  --card-glass-shadow-current:
+    0 22px 54px rgba(30,35,44,.095),
+    0 3px 10px rgba(30,35,44,.045),
+    inset 0 1px 0 rgba(255,255,255,.96),
+    inset 0 -1px 0 rgba(111,123,140,.05);
+}
+
+body{
+  background:
+    radial-gradient(70% 48% at 8% 7%,rgba(176,202,232,.13) 0%,rgba(176,202,232,0) 72%),
+    radial-gradient(62% 48% at 94% 37%,rgba(205,192,230,.10) 0%,rgba(205,192,230,0) 72%),
+    radial-gradient(62% 44% at 48% 96%,rgba(199,220,226,.11) 0%,rgba(199,220,226,0) 72%),
+    var(--bg);
+}
+
+/* Main glass sheets. The boot card keeps its original startup treatment. */
+.card:not(.today-boot-card){
+  background:
+    radial-gradient(115% 82% at 12% 0%,rgba(255,255,255,.42) 0%,rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,rgba(255,255,255,.68) 0%,rgba(255,255,255,.57) 48%,rgba(246,249,252,.51) 100%);
+  border-color:var(--card-glass-border);
+  -webkit-backdrop-filter:blur(18px) saturate(142%);
+  backdrop-filter:blur(18px) saturate(142%);
+  box-shadow:var(--card-glass-shadow);
+}
+
+/* The overview is slightly calmer than the exercise cards. */
+#today .today-overview{
+  background:
+    radial-gradient(118% 86% at 10% 0%,rgba(255,255,255,.44) 0%,rgba(255,255,255,0) 60%),
+    linear-gradient(180deg,rgba(255,255,255,.66) 0%,rgba(255,255,255,.56) 52%,rgba(247,249,252,.50) 100%);
+  border-color:rgba(255,255,255,.72);
+  transition:
+    opacity .18s ease,
+    transform .18s ease,
+    box-shadow .22s ease,
+    border-color .22s ease;
+}
+
+/* Exercise cards carry the clearest glass depth in the interface. */
+#workoutContainer .exercise-card{
+  background:
+    radial-gradient(120% 88% at 11% 0%,rgba(255,255,255,.48) 0%,rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,rgba(255,255,255,.70) 0%,rgba(255,255,255,.58) 48%,rgba(244,248,251,.50) 100%);
+  border-color:rgba(255,255,255,.72);
+  -webkit-backdrop-filter:blur(20px) saturate(146%);
+  backdrop-filter:blur(20px) saturate(146%);
+  transition:
+    opacity .18s ease,
+    transform .18s ease,
+    box-shadow .22s ease,
+    border-color .22s ease;
+}
+
+#workoutContainer .exercise-card.is-current,
+#today .today-overview.is-current{
+  border-color:rgba(255,255,255,.88);
+  box-shadow:var(--card-glass-shadow-current);
+}
+
+/* Thin inner-glass surfaces: keep them translucent without stacking extra blur. */
+.workout-context,
+.history-card{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.56),rgba(247,249,252,.42));
+  border-color:rgba(255,255,255,.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.74),
+    0 1px 2px rgba(30,35,44,.025);
+}
+
+.warmup-callout{
+  background:
+    linear-gradient(180deg,rgba(241,249,249,.66),rgba(233,244,245,.48));
+  border:1px solid rgba(255,255,255,.52);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.68);
+}
+
+.context-chip,
+.badge{
+  border-color:rgba(255,255,255,.62);
+  background:rgba(255,255,255,.54);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+.warmup-badge{
+  background:rgba(235,247,248,.62);
+}
+
+/* Inputs stay more opaque than their parent glass so numbers remain easy to scan. */
+input,
+select,
+textarea{
+  background:rgba(255,255,255,.74);
+  border-color:rgba(199,208,220,.66);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.80);
+}
+
+input:focus,
+select:focus,
+textarea:focus{
+  background:rgba(255,255,255,.88);
+  border-color:rgba(159,171,188,.78);
+  box-shadow:
+    0 0 0 3px rgba(98,109,124,.08),
+    inset 0 1px 0 rgba(255,255,255,.92);
+}
+
+canvas{
+  background:rgba(255,255,255,.62);
+  border-color:rgba(255,255,255,.62);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+/* The bottom action card already behaved like glass; harmonize it with the new sheets. */
+#today .sticky-actions{
+  background:
+    radial-gradient(110% 110% at 12% 0%,rgba(255,255,255,.34),rgba(255,255,255,0) 58%),
+    rgba(246,248,251,.62);
+  border-color:rgba(255,255,255,.74);
+  -webkit-backdrop-filter:blur(22px) saturate(152%);
+  backdrop-filter:blur(22px) saturate(152%);
+  box-shadow:
+    0 18px 48px rgba(30,35,44,.085),
+    0 2px 8px rgba(30,35,44,.04),
+    inset 0 1px 0 rgba(255,255,255,.88);
+}
+
+@media(max-width:680px){
+  .card:not(.today-boot-card){
+    -webkit-backdrop-filter:blur(16px) saturate(140%);
+    backdrop-filter:blur(16px) saturate(140%);
+  }
+
+  #workoutContainer .exercise-card{
+    -webkit-backdrop-filter:blur(18px) saturate(144%);
+    backdrop-filter:blur(18px) saturate(144%);
+  }
+
+  #today .sticky-actions{
+    -webkit-backdrop-filter:blur(20px) saturate(150%);
+    backdrop-filter:blur(20px) saturate(150%);
+  }
+}
+
+@media(prefers-reduced-transparency:reduce){
+  .card:not(.today-boot-card),
+  #today .today-overview,
+  #workoutContainer .exercise-card,
+  #today .sticky-actions{
+    background:rgba(250,251,253,.94);
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+}
