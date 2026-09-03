@@ -12,12 +12,13 @@
   const SNAP_BOTTOM = 126;
   const OVERVIEW_TOP = 68;
   const OVERVIEW_TOLERANCE = 26;
-  const OVERVIEW_FOCUS_RATIO = .32;
+  const OVERVIEW_FOCUS_ACQUIRE_RATIO = .34;
+  const OVERVIEW_FOCUS_RELEASE_RATIO = .18;
   const SCROLL_SETTLE_DELAY = 140;
-  const FAST_GLIDE_DISTANCE = 84;
-  const FAST_GLIDE_MAX_DURATION = 460;
-  const FAST_GLIDE_MIN_VELOCITY = .28;
-  const FAST_GLIDE_SCROLL_DISTANCE = 140;
+  const FAST_GLIDE_DISTANCE = 150;
+  const FAST_GLIDE_MAX_DURATION = 380;
+  const FAST_GLIDE_MIN_VELOCITY = .5;
+  const FAST_GLIDE_SCROLL_DISTANCE = 220;
   const TARGET_TOLERANCE = 6;
 
   let enabled = false;
@@ -25,7 +26,7 @@
   let ticking = false;
   let settleTimer = null;
   let lastY = window.scrollY;
-  let scrollDirection = 0;
+  let overviewFocusLocked = true;
   let programmaticTarget = null;
   let freeGlideDirection = null;
   let touchGesture = null;
@@ -57,10 +58,6 @@
     return Math.min(1, visible / rect.height);
   }
 
-  function overviewClaimsFocus() {
-    return mode === "exercise" && scrollDirection < 0 && overviewVisibleRatio() >= OVERVIEW_FOCUS_RATIO;
-  }
-
   function actionsSettled(geometry = snapGeometry()) {
     const rect = actions.getBoundingClientRect();
     return Math.abs(rect.bottom - geometry.snapBottom) <= TARGET_TOLERANCE;
@@ -76,6 +73,28 @@
 
   function setOverviewCurrent(active) {
     overview.classList.toggle("is-current", active);
+  }
+
+  function updateOverviewFocusLock(delta = 0) {
+    if (mode === "overview" || overviewSettled()) {
+      overviewFocusLocked = true;
+      return;
+    }
+
+    const ratio = overviewVisibleRatio();
+
+    if (!overviewFocusLocked) {
+      const returningUp = delta < -1 || freeGlideDirection === "up";
+      if (returningUp && ratio >= OVERVIEW_FOCUS_ACQUIRE_RATIO) {
+        overviewFocusLocked = true;
+      }
+      return;
+    }
+
+    const leavingDown = delta > 1 || freeGlideDirection === "down";
+    if (leavingDown && ratio <= OVERVIEW_FOCUS_RELEASE_RATIO) {
+      overviewFocusLocked = false;
+    }
   }
 
   function classifyCards(geometry = snapGeometry()) {
@@ -120,7 +139,7 @@
     programmaticTarget = null;
     freeGlideDirection = null;
     touchGesture = null;
-    scrollDirection = 0;
+    overviewFocusLocked = false;
     root.classList.remove(
       "training-snap-ready",
       "training-overview-mode",
@@ -142,9 +161,9 @@
 
     classifyCards();
     setMode(overviewSettled() ? "overview" : "exercise", true);
-    setOverviewCurrent(mode === "overview");
+    overviewFocusLocked = mode === "overview";
+    setOverviewCurrent(overviewFocusLocked);
     lastY = window.scrollY;
-    scrollDirection = 0;
     scheduleUpdate();
   }
 
@@ -156,6 +175,7 @@
     classifyCards(geometry);
 
     if (mode === "overview") {
+      overviewFocusLocked = true;
       setOverviewCurrent(true);
       setCurrentCard(null);
       return;
@@ -163,27 +183,21 @@
 
     /* Keep the tapped card highlighted throughout its smooth movement. */
     if (programmaticTarget?.isConnected) {
+      overviewFocusLocked = false;
       setOverviewCurrent(false);
       setCurrentCard(programmaticTarget);
       return;
     }
 
-    /* A manual upward return hands focus to the overview before the final snap.
-       Header/layout mode still changes only after the overview actually settles. */
-    if (overviewClaimsFocus()) {
+    /* Once the overview wins focus on the return path, it keeps focus until it is clearly left again. */
+    if (overviewFocusLocked) {
       setOverviewCurrent(true);
       setCurrentCard(null);
       return;
     }
 
     /* Free glides do not flash focus through every intermediate exercise. */
-    if (freeGlideDirection) {
-      if (freeGlideDirection === "up" && overviewVisibleRatio() >= OVERVIEW_FOCUS_RATIO) {
-        setOverviewCurrent(true);
-        setCurrentCard(null);
-      }
-      return;
-    }
+    if (freeGlideDirection) return;
 
     setOverviewCurrent(false);
 
@@ -231,8 +245,8 @@
     root.classList.remove("training-free-glide");
     programmaticTarget = null;
     setMode(overviewSettled() ? "overview" : "exercise");
-    setOverviewCurrent(mode === "overview");
-    scrollDirection = 0;
+    overviewFocusLocked = mode === "overview";
+    setOverviewCurrent(overviewFocusLocked);
     scheduleUpdate();
   }
 
@@ -260,16 +274,17 @@
       }
       programmaticTarget = null;
       setMode("exercise");
+      overviewFocusLocked = false;
       setOverviewCurrent(false);
       classifyCards();
       setCurrentCard(target);
-      scrollDirection = 0;
       return;
     }
 
     setMode(overviewSettled() ? "overview" : "exercise");
-    setOverviewCurrent(mode === "overview" || overviewClaimsFocus());
-    scrollDirection = 0;
+    if (mode === "overview") overviewFocusLocked = true;
+    else if (overviewVisibleRatio() <= OVERVIEW_FOCUS_RELEASE_RATIO) overviewFocusLocked = false;
+    setOverviewCurrent(overviewFocusLocked);
     scheduleUpdate();
   }
 
@@ -280,6 +295,7 @@
     root.classList.remove("training-free-glide");
     classifyCards();
     setMode("exercise");
+    overviewFocusLocked = false;
     setOverviewCurrent(false);
     body.classList.add("chrome-hidden");
     programmaticTarget = card;
@@ -307,6 +323,7 @@
 
     if (direction === "down") {
       setMode("exercise");
+      overviewFocusLocked = false;
       setOverviewCurrent(false);
       body.classList.add("chrome-hidden");
     }
@@ -322,6 +339,7 @@
     programmaticTarget = null;
     freeGlideDirection = "up";
     root.classList.add("training-free-glide");
+    overviewFocusLocked = true;
     setOverviewCurrent(true);
     setCurrentCard(null);
 
@@ -341,18 +359,16 @@
     const y = window.scrollY;
     const delta = y - lastY;
     lastY = y;
-    if (Math.abs(delta) > .5) scrollDirection = Math.sign(delta);
 
     /* Leaving the overview downward immediately switches to the final hidden-header layout. */
     if (!freeGlideDirection && !programmaticTarget && mode === "overview" && delta > 1) {
       setMode("exercise");
-      setOverviewCurrent(false);
       body.classList.add("chrome-hidden");
     } else if (!freeGlideDirection && !programmaticTarget && mode === "exercise" && delta < -1 && overviewSettled()) {
       setMode("overview");
-      setOverviewCurrent(true);
     }
 
+    updateOverviewFocusLock(delta);
     scheduleUpdate();
     armSettle();
   }
@@ -364,6 +380,9 @@
     if (freeGlideDirection) {
       freeGlideDirection = null;
       root.classList.remove("training-free-glide");
+      setMode(overviewSettled() ? "overview" : "exercise");
+      if (mode === "overview") overviewFocusLocked = true;
+      else if (overviewVisibleRatio() <= OVERVIEW_FOCUS_RELEASE_RATIO) overviewFocusLocked = false;
     }
     programmaticTarget = null;
 
