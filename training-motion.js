@@ -5,18 +5,19 @@
   const todayPage = document.getElementById("today");
   const overview = document.querySelector("#today .today-overview");
   const container = document.getElementById("workoutContainer");
-  if (!todayPage || !overview || !container) return;
+  const actions = document.querySelector("#today .sticky-actions");
+  if (!todayPage || !overview || !container || !actions) return;
 
   const SNAP_TOP = 10;
   const SNAP_BOTTOM = 126;
   const OVERVIEW_TOP = 68;
   const OVERVIEW_TOLERANCE = 26;
+  const OVERVIEW_FOCUS_RATIO = .32;
   const SCROLL_SETTLE_DELAY = 140;
-  const MOTION_SETTLE_GUARD = 90;
-  const FAST_RETURN_DISTANCE = 84;
-  const FAST_RETURN_MAX_DURATION = 460;
-  const FAST_RETURN_MIN_VELOCITY = .28;
-  const FAST_RETURN_SCROLL_DISTANCE = 140;
+  const FAST_GLIDE_DISTANCE = 84;
+  const FAST_GLIDE_MAX_DURATION = 460;
+  const FAST_GLIDE_MIN_VELOCITY = .28;
+  const FAST_GLIDE_SCROLL_DISTANCE = 140;
   const TARGET_TOLERANCE = 6;
 
   let enabled = false;
@@ -24,10 +25,10 @@
   let ticking = false;
   let settleTimer = null;
   let lastY = window.scrollY;
+  let scrollDirection = 0;
   let programmaticTarget = null;
-  let fastReturning = false;
+  let freeGlideDirection = null;
   let touchGesture = null;
-  let motionStartedAt = 0;
 
   const cards = () => [...container.querySelectorAll(".exercise-card")];
   const todayActive = () => todayPage.classList.contains("active");
@@ -49,14 +50,32 @@
     return Math.abs(overview.getBoundingClientRect().top - OVERVIEW_TOP) <= OVERVIEW_TOLERANCE;
   }
 
+  function overviewVisibleRatio() {
+    const rect = overview.getBoundingClientRect();
+    if (rect.height <= 0) return 0;
+    const visible = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+    return Math.min(1, visible / rect.height);
+  }
+
+  function overviewClaimsFocus() {
+    return mode === "exercise" && scrollDirection < 0 && overviewVisibleRatio() >= OVERVIEW_FOCUS_RATIO;
+  }
+
+  function actionsSettled(geometry = snapGeometry()) {
+    const rect = actions.getBoundingClientRect();
+    return Math.abs(rect.bottom - geometry.snapBottom) <= TARGET_TOLERANCE;
+  }
+
   function setMode(nextMode, force = false) {
     if (!force && mode === nextMode) return;
     mode = nextMode;
     root.classList.toggle("training-overview-mode", mode === "overview");
     root.classList.toggle("training-exercise-mode", mode === "exercise");
-    overview.classList.toggle("is-current", mode === "overview");
-
     if (mode === "overview") body.classList.remove("chrome-hidden");
+  }
+
+  function setOverviewCurrent(active) {
+    overview.classList.toggle("is-current", active);
   }
 
   function classifyCards(geometry = snapGeometry()) {
@@ -89,20 +108,26 @@
     return Math.max(0, window.scrollY + overview.getBoundingClientRect().top - OVERVIEW_TOP);
   }
 
+  function targetScrollForActions(geometry = snapGeometry()) {
+    const rect = actions.getBoundingClientRect();
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    return Math.min(maxScroll, Math.max(0, window.scrollY + rect.bottom - geometry.snapBottom));
+  }
+
   function clearTrainingState() {
     clearTimeout(settleTimer);
     settleTimer = null;
     programmaticTarget = null;
-    fastReturning = false;
+    freeGlideDirection = null;
     touchGesture = null;
-    motionStartedAt = 0;
+    scrollDirection = 0;
     root.classList.remove(
       "training-snap-ready",
       "training-overview-mode",
       "training-exercise-mode",
-      "training-free-return"
+      "training-free-glide"
     );
-    overview.classList.remove("is-current");
+    setOverviewCurrent(false);
     for (const card of cards()) card.classList.remove("is-current", "snap-start");
   }
 
@@ -117,7 +142,9 @@
 
     classifyCards();
     setMode(overviewSettled() ? "overview" : "exercise", true);
+    setOverviewCurrent(mode === "overview");
     lastY = window.scrollY;
+    scrollDirection = 0;
     scheduleUpdate();
   }
 
@@ -129,26 +156,40 @@
     classifyCards(geometry);
 
     if (mode === "overview") {
+      setOverviewCurrent(true);
       setCurrentCard(null);
       return;
     }
 
     /* Keep the tapped card highlighted throughout its smooth movement. */
     if (programmaticTarget?.isConnected) {
+      setOverviewCurrent(false);
       setCurrentCard(programmaticTarget);
       return;
     }
 
-    /* During a fast return, avoid flashing focus through every card on the way up. */
-    if (fastReturning) return;
+    /* A manual upward return hands focus to the overview before the final snap.
+       Header/layout mode still changes only after the overview actually settles. */
+    if (overviewClaimsFocus()) {
+      setOverviewCurrent(true);
+      setCurrentCard(null);
+      return;
+    }
 
-    const actions = document.querySelector("#today .sticky-actions");
-    if (actions) {
-      const rect = actions.getBoundingClientRect();
-      if (Math.abs(rect.bottom - geometry.snapBottom) <= 54 && rect.top < geometry.snapBottom) {
+    /* Free glides do not flash focus through every intermediate exercise. */
+    if (freeGlideDirection) {
+      if (freeGlideDirection === "up" && overviewVisibleRatio() >= OVERVIEW_FOCUS_RATIO) {
+        setOverviewCurrent(true);
         setCurrentCard(null);
-        return;
       }
+      return;
+    }
+
+    setOverviewCurrent(false);
+
+    if (actionsSettled(geometry)) {
+      setCurrentCard(null);
+      return;
     }
 
     let bestCard = null;
@@ -179,19 +220,19 @@
     settleTimer = setTimeout(settleScrollState, SCROLL_SETTLE_DELAY);
   }
 
-  function beginMotion() {
-    motionStartedAt = performance.now();
+  function freeGlideSettled() {
+    if (freeGlideDirection === "up") return overviewSettled();
+    if (freeGlideDirection === "down") return actionsSettled();
+    return true;
   }
 
-  function motionGuardActive() {
-    return performance.now() - motionStartedAt < MOTION_SETTLE_GUARD;
-  }
-
-  function finishFastReturn() {
-    fastReturning = false;
-    root.classList.remove("training-free-return");
+  function finishFreeGlide() {
+    freeGlideDirection = null;
+    root.classList.remove("training-free-glide");
     programmaticTarget = null;
     setMode(overviewSettled() ? "overview" : "exercise");
+    setOverviewCurrent(mode === "overview");
+    scrollDirection = 0;
     scheduleUpdate();
   }
 
@@ -200,43 +241,46 @@
     settleTimer = null;
     if (!enabled) return;
 
-    if (fastReturning) {
-      /* Ignore a stale scrollend from the native gesture that preceded smooth return. */
-      if (motionGuardActive() && !overviewSettled()) {
+    if (freeGlideDirection) {
+      /* Ignore stale/native scrollend events until the smooth glide reaches its real target. */
+      if (!freeGlideSettled()) {
         armSettle();
         return;
       }
-      finishFastReturn();
+      finishFreeGlide();
       return;
     }
 
     if (programmaticTarget?.isConnected) {
       const target = programmaticTarget;
       const distance = cardDistance(target);
-      /* The same stale-scrollend guard is needed for tap-to-focus smooth movement. */
-      if (motionGuardActive() && distance > TARGET_TOLERANCE) {
+      if (distance > TARGET_TOLERANCE) {
         armSettle();
         return;
       }
       programmaticTarget = null;
       setMode("exercise");
+      setOverviewCurrent(false);
       classifyCards();
-      if (distance <= TARGET_TOLERANCE) setCurrentCard(target);
-      else scheduleUpdate();
+      setCurrentCard(target);
+      scrollDirection = 0;
       return;
     }
 
     setMode(overviewSettled() ? "overview" : "exercise");
+    setOverviewCurrent(mode === "overview" || overviewClaimsFocus());
+    scrollDirection = 0;
     scheduleUpdate();
   }
 
   function focusCard(card) {
     if (!enabled || !card?.isConnected) return;
 
-    fastReturning = false;
-    root.classList.remove("training-free-return");
+    freeGlideDirection = null;
+    root.classList.remove("training-free-glide");
     classifyCards();
     setMode("exercise");
+    setOverviewCurrent(false);
     body.classList.add("chrome-hidden");
     programmaticTarget = card;
     setCurrentCard(card);
@@ -248,19 +292,27 @@
       return;
     }
 
-    beginMotion();
     window.scrollTo({ top: targetTop, behavior: "smooth" });
     armSettle();
   }
 
-  function startFastReturn() {
-    if (!enabled || mode !== "exercise" || overviewSettled()) return;
+  function startFreeGlide(direction) {
+    if (!enabled) return;
+    if (direction === "up" && (mode !== "exercise" || overviewSettled())) return;
+    if (direction === "down" && actionsSettled()) return;
 
     programmaticTarget = null;
-    fastReturning = true;
-    root.classList.add("training-free-return");
-    beginMotion();
-    window.scrollTo({ top: targetScrollForOverview(), behavior: "smooth" });
+    freeGlideDirection = direction;
+    root.classList.add("training-free-glide");
+
+    if (direction === "down") {
+      setMode("exercise");
+      setOverviewCurrent(false);
+      body.classList.add("chrome-hidden");
+    }
+
+    const targetTop = direction === "up" ? targetScrollForOverview() : targetScrollForActions();
+    window.scrollTo({ top: targetTop, behavior: "smooth" });
     armSettle();
   }
 
@@ -268,17 +320,17 @@
     if (!enabled) return;
 
     programmaticTarget = null;
-    fastReturning = true;
-    root.classList.add("training-free-return");
-    setMode("overview");
+    freeGlideDirection = "up";
+    root.classList.add("training-free-glide");
+    setOverviewCurrent(true);
+    setCurrentCard(null);
 
     const targetTop = targetScrollForOverview();
     if (Math.abs(targetTop - window.scrollY) <= TARGET_TOLERANCE) {
-      finishFastReturn();
+      finishFreeGlide();
       return;
     }
 
-    beginMotion();
     window.scrollTo({ top: targetTop, behavior: "smooth" });
     armSettle();
   }
@@ -289,13 +341,16 @@
     const y = window.scrollY;
     const delta = y - lastY;
     lastY = y;
+    if (Math.abs(delta) > .5) scrollDirection = Math.sign(delta);
 
-    /* As soon as the overview is left downward, use the final no-header exercise layout. */
-    if (!fastReturning && !programmaticTarget && mode === "overview" && delta > 1) {
+    /* Leaving the overview downward immediately switches to the final hidden-header layout. */
+    if (!freeGlideDirection && !programmaticTarget && mode === "overview" && delta > 1) {
       setMode("exercise");
+      setOverviewCurrent(false);
       body.classList.add("chrome-hidden");
-    } else if (!fastReturning && !programmaticTarget && mode === "exercise" && delta < -1 && overviewSettled()) {
+    } else if (!freeGlideDirection && !programmaticTarget && mode === "exercise" && delta < -1 && overviewSettled()) {
       setMode("overview");
+      setOverviewCurrent(true);
     }
 
     scheduleUpdate();
@@ -305,12 +360,12 @@
   function onTouchStart(event) {
     if (!enabled || event.touches.length !== 1) return;
 
-    /* A new direct gesture takes ownership from an in-progress fast return. */
-    if (fastReturning) {
-      fastReturning = false;
-      root.classList.remove("training-free-return");
-      setMode(overviewSettled() ? "overview" : "exercise");
+    /* A new direct gesture takes ownership from any in-progress smooth movement. */
+    if (freeGlideDirection) {
+      freeGlideDirection = null;
+      root.classList.remove("training-free-glide");
     }
+    programmaticTarget = null;
 
     const touch = event.touches[0];
     touchGesture = {
@@ -331,21 +386,30 @@
 
     const gesture = touchGesture;
     touchGesture = null;
-    if (!enabled || programmaticTarget || mode !== "exercise" || overviewSettled()) return;
+    if (!enabled || programmaticTarget) return;
 
     const touch = event.changedTouches?.[0];
     const endY = touch?.clientY ?? gesture.lastY;
     const duration = Math.max(1, performance.now() - gesture.startTime);
     const fingerDistance = endY - gesture.startY;
     const velocity = fingerDistance / duration;
-    const scrollUpDistance = gesture.startScrollY - window.scrollY;
+    const scrollDelta = window.scrollY - gesture.startScrollY;
 
-    const isFastReturn =
-      fingerDistance >= FAST_RETURN_DISTANCE &&
-      duration <= FAST_RETURN_MAX_DURATION &&
-      (velocity >= FAST_RETURN_MIN_VELOCITY || scrollUpDistance >= FAST_RETURN_SCROLL_DISTANCE);
+    const fastUpReturn =
+      mode === "exercise" &&
+      !overviewSettled() &&
+      fingerDistance >= FAST_GLIDE_DISTANCE &&
+      duration <= FAST_GLIDE_MAX_DURATION &&
+      (velocity >= FAST_GLIDE_MIN_VELOCITY || -scrollDelta >= FAST_GLIDE_SCROLL_DISTANCE);
 
-    if (isFastReturn) startFastReturn();
+    const fastDownAdvance =
+      !actionsSettled() &&
+      fingerDistance <= -FAST_GLIDE_DISTANCE &&
+      duration <= FAST_GLIDE_MAX_DURATION &&
+      (-velocity >= FAST_GLIDE_MIN_VELOCITY || scrollDelta >= FAST_GLIDE_SCROLL_DISTANCE);
+
+    if (fastUpReturn) startFreeGlide("up");
+    else if (fastDownAdvance) startFreeGlide("down");
   }
 
   function isInteractiveTarget(target) {
