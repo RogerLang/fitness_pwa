@@ -1,7 +1,7 @@
 /* Workout-card presentation polish.
  * Keeps frequently used set inputs visible while moving low-frequency set-count controls
- * behind the existing adjustment toggle. Also presents previous performance, generated
- * plans, and optional warm-up prescriptions with a consistent visual hierarchy.
+ * behind the existing adjustment toggle. Also presents previous performance and the
+ * generated plan with the same visual hierarchy.
  */
 (function(){
   function uiEsc(value=''){
@@ -45,47 +45,14 @@
       : '';
     return {target,detail};
   }
-  function warmupSummary(ex){
-    const sets=Array.isArray(ex?.warmupSets)?ex.warmupSets:[];
-    return sets
-      .map(set=>{
-        const weight=valueOrNull(set?.weight);
-        const reps=String(set?.reps??'').trim();
-        if(weight===null&&!reps)return null;
-        const weightText=weight!==null?`${weight} kg`:'自选重量';
-        return `${weightText} × ${reps||'自选次数'}`;
-      })
-      .filter(Boolean);
-  }
-  function renderWarmup(card,ex){
-    const lines=warmupSummary(ex);
-    let box=card.querySelector('.warmup-plan');
-    if(!lines.length){
-      if(box)box.remove();
-      return;
-    }
-    if(!box){
-      box=document.createElement('div');
-      box.className='warmup-plan';
-      const setHeader=card.querySelector('.set-header');
-      if(setHeader)setHeader.insertAdjacentElement('beforebegin',box);
-      else card.querySelector('.exercise-head')?.insertAdjacentElement('afterend',box);
-    }
-    box.innerHTML=`<div class="warmup-plan-head"><strong>专项热身</strong><span class="progression-chip">不计入正式组</span></div>`+
-      `<div class="warmup-plan-sets">${lines.map((line,index)=>`<span><b>${index+1}</b>${uiEsc(line)}</span>`).join('')}</div>`+
-      `<div class="warmup-plan-note">按顺序完成，保留余力，随后进入正式工作组。</div>`;
-  }
   function polishCard(card,plan){
     const editor=card.querySelector('.exercise-inline-editor');
     card.classList.toggle('adjustments-open',!!editor&&!editor.classList.contains('hidden'));
 
     const ei=Number(card.dataset.e);
     const ex=plan?.exercises?.[ei];
-    if(!ex)return;
-    renderWarmup(card,ex);
-
     const last=card.querySelector('.last-performance');
-    if(last&&last.dataset.unifiedContext!=='1'){
+    if(last&&ex&&last.dataset.unifiedContext!=='1'){
       const summary=previousSummary(ex,plan.name);
       if(summary){
         last.dataset.unifiedContext='1';
