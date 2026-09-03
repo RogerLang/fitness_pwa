@@ -1,6 +1,7 @@
 const DB_NAME = "fitness-pwa-db";
 const DB_VERSION = 1;
 const STORE = "kv";
+const PAGE_IDS = new Set(["today", "history", "progress", "settings"]);
 
 let db = null;
 let state = { plans: [], sessions: [], body: [] };
@@ -26,6 +27,11 @@ function isoDate(d = new Date()) {
 
 function fmtDate(d = new Date()) {
   return d.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" });
+}
+
+function pageFromLocation() {
+  const id = window.location.hash.slice(1).split("/")[0];
+  return PAGE_IDS.has(id) ? id : "today";
 }
 
 function openDB() {
@@ -197,13 +203,22 @@ async function refresh(reason = "refresh") {
   if (document.getElementById("progress")?.classList.contains("active")) renderBodyHistory();
 }
 
-async function switchPage(id) {
-  document.querySelectorAll(".page").forEach(page => page.classList.toggle("active", page.id === id));
-  document.querySelectorAll(".bottom-nav button").forEach(button => button.classList.toggle("active", button.dataset.page === id));
+async function switchPage(id, { historyMode = "push", scroll = true } = {}) {
+  const pageId = PAGE_IDS.has(id) ? id : "today";
+  const nextHash = `#${pageId}`;
+
+  if (historyMode === "replace") {
+    window.history.replaceState(null, "", nextHash);
+  } else if (historyMode === "push" && window.location.hash !== nextHash) {
+    window.history.pushState(null, "", nextHash);
+  }
+
+  document.querySelectorAll(".page").forEach(page => page.classList.toggle("active", page.id === pageId));
+  document.querySelectorAll(".bottom-nav button").forEach(button => button.classList.toggle("active", button.dataset.page === pageId));
   document.body.classList.remove("chrome-hidden");
-  for (const module of appModules) if (module.onPage) await module.onPage(id);
-  if (id === "progress") renderBodyHistory();
-  window.scrollTo(0, 0);
+  for (const module of appModules) if (module.onPage) await module.onPage(pageId);
+  if (pageId === "progress") renderBodyHistory();
+  if (scroll) window.scrollTo(0, 0);
 }
 
 function bindCoreEvents() {
@@ -246,6 +261,11 @@ async function start() {
     bindCoreEvents();
     for (const module of appModules) if (module.init) await module.init();
     await refresh("boot");
+
+    const initialPage = pageFromLocation();
+    const hasValidHash = window.location.hash === `#${initialPage}`;
+    await switchPage(initialPage, { historyMode: hasValidHash ? "none" : "replace", scroll: false });
+
     initChromeAutoHide();
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(error => console.warn("service worker", error));
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -275,6 +295,11 @@ window.FitnessApp = {
   registerPersistHook(hook) { persistHooks.push(hook); },
   start
 };
+
+window.addEventListener("popstate", () => {
+  if (!appStarted) return;
+  switchPage(pageFromLocation(), { historyMode: "none" }).catch(error => console.warn("page route", error));
+});
 
 window.addEventListener("beforeinstallprompt", event => {
   event.preventDefault();
