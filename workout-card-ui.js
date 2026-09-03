@@ -63,7 +63,7 @@
     }
   }
   function polishWorkoutCards(){
-    if(!window.state?.plans?.length)return;
+    if(typeof state==='undefined'||!state.plans?.length)return;
     const pi=typeof v3CurrentPlanIndex==='function'?v3CurrentPlanIndex():0;
     const plan=state.plans[pi];
     if(!plan)return;
