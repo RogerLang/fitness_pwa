@@ -1,5 +1,5 @@
 /* Simple same-level warm-up card support.
- * Warm-up exercises stay in the normal exercise list. This file only removes progression
+ * Warm-up exercises stay in the normal exercise list. This file only removes history/progression
  * decoration from them and applies per-set placeholder targets. No MutationObserver.
  */
 (function(){
@@ -18,6 +18,7 @@
       const card=document.querySelector(`#workoutContainer .exercise-card[data-e="${ei}"]`);
       if(!card)return;
 
+      card.querySelector('.last-performance')?.remove();
       card.querySelector('.progression-plan')?.remove();
       const meta=card.querySelector('.exercise-meta');
       if(meta)meta.textContent=ex.note||'专项热身；不计入正式组与进阶';
