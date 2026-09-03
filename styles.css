@@ -147,7 +147,7 @@ body.app-ready .app-header,body.app-ready main,body.app-ready .bottom-nav{animat
   .set-row{grid-template-columns:24px minmax(0,1fr) minmax(0,.78fr) minmax(0,.66fr) 52px;gap:5px}.set-row input{padding:9px 4px}.set-complete{padding:9px 2px;font-size:11px}
   .inline-editor-grid{grid-template-columns:1fr 1fr}.inline-editor-grid .wide{grid-column:1/-1}.editor-actions{align-items:stretch}.editor-actions>.row{flex:1}
   .sticky-actions{grid-template-columns:1.15fr .9fr .72fr;gap:6px;padding:7px;border-radius:25px}.sticky-actions button{padding:10px 7px;font-size:12px;border-radius:18px}
-  .bottom-nav{width:calc(100% - 20px);bottom:calc(8px + env(safe-area-inset-bottom));padding:6px;border-radius:27px}.bottom-nav button{padding:10px 4px;border-radius:20px;font-size:12px}
+  .bottom-nav{width:calc(100% - 20px);bottom:calc(8px + env(safe-area-inset-bottom));padding:6px;border-radius:27px}.bottom-nav button{padding:10px 4px;border-radius:20px;font-size:13px}
   .history-exercise{grid-template-columns:86px 1fr;gap:6px}.history-set-list{gap:4px}.history-set-chip{padding:4px 6px;font-size:10px}
   .grid2{grid-template-columns:1fr}.body-history-row{flex-direction:column;gap:4px}.body-history-row span{text-align:left}
   .boot-brand{width:min(100%,300px)}.boot-lockup{gap:10px}.boot-logo{width:136px;gap:8px}.boot-bar{height:27px}.boot-name{font-size:28px;letter-spacing:.05em}.boot-status{margin-top:16px;font-size:11px}
