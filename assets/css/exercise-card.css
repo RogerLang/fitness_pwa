@@ -1,0 +1,207 @@
+/* Exercise-card interior layout. Loaded after glass-cards.css so the three content blocks stay visually distinct. */
+
+#workoutContainer .exercise-card{
+  padding:16px;
+}
+
+#workoutContainer .exercise-head{
+  margin-bottom:12px;
+  padding:1px 2px 0;
+}
+
+#workoutContainer .exercise-meta:empty{
+  display:none;
+}
+
+#workoutContainer .exercise-card-layout{
+  display:grid;
+  gap:10px;
+}
+
+#workoutContainer .exercise-summary-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  align-items:stretch;
+}
+
+#workoutContainer .exercise-panel{
+  min-width:0;
+  border:1px solid rgba(151,164,181,.34);
+  border-radius:20px;
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(246,249,252,.58));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    inset 0 -1px 0 rgba(88,103,123,.045),
+    0 2px 7px rgba(30,35,44,.035);
+}
+
+#workoutContainer .exercise-summary-panel{
+  padding:12px 13px;
+}
+
+#workoutContainer .exercise-plan-panel{
+  background:linear-gradient(180deg,rgba(250,252,255,.78),rgba(242,247,252,.62));
+}
+
+#workoutContainer .exercise-panel .context-head{
+  min-height:22px;
+  margin-bottom:7px;
+}
+
+#workoutContainer .exercise-panel .context-head strong{
+  color:#4f5966;
+  font-size:12px;
+  font-weight:780;
+  letter-spacing:.01em;
+}
+
+#workoutContainer .exercise-panel .context-chip{
+  border:1px solid rgba(151,164,181,.28);
+  background:rgba(255,255,255,.72);
+  color:#66717f;
+}
+
+#workoutContainer .exercise-panel .context-target{
+  color:#28303a;
+  font-size:15px;
+  font-weight:790;
+  line-height:1.38;
+  overflow-wrap:anywhere;
+}
+
+#workoutContainer .exercise-panel .context-target.is-empty{
+  color:#7a8491;
+  font-weight:680;
+}
+
+#workoutContainer .exercise-panel .context-detail{
+  margin-top:5px;
+  color:#78828f;
+  font-size:12px;
+  line-height:1.45;
+}
+
+#workoutContainer .exercise-sets-panel{
+  padding:12px 12px 13px;
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(247,249,252,.62));
+}
+
+#workoutContainer .exercise-panel-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:0 1px 9px;
+  margin-bottom:3px;
+  border-bottom:1px solid rgba(151,164,181,.20);
+}
+
+#workoutContainer .exercise-panel-title{
+  color:#4f5966;
+  font-size:12px;
+  font-weight:790;
+  letter-spacing:.01em;
+}
+
+#workoutContainer .exercise-panel-meta{
+  color:#858e9a;
+  font-size:11px;
+  font-weight:620;
+  white-space:nowrap;
+}
+
+#workoutContainer .exercise-sets-panel .set-header{
+  margin-top:8px;
+}
+
+#workoutContainer .exercise-sets-panel .workout-set-row{
+  margin-top:7px;
+}
+
+#workoutContainer .exercise-inline-editor{
+  margin-top:12px;
+}
+
+@media(max-width:680px){
+  #workoutContainer .exercise-card{
+    padding:13px;
+  }
+
+  #workoutContainer .exercise-head{
+    margin-bottom:10px;
+  }
+
+  #workoutContainer .exercise-card-layout{
+    gap:8px;
+  }
+
+  #workoutContainer .exercise-summary-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+
+  #workoutContainer .exercise-panel{
+    border-radius:18px;
+  }
+
+  #workoutContainer .exercise-summary-panel{
+    padding:10px 11px;
+  }
+
+  #workoutContainer .exercise-panel .context-head{
+    min-height:20px;
+    margin-bottom:6px;
+  }
+
+  #workoutContainer .exercise-panel .context-head strong{
+    font-size:12px;
+  }
+
+  #workoutContainer .exercise-panel .context-chip{
+    padding:2px 6px;
+    font-size:10px;
+  }
+
+  #workoutContainer .exercise-panel .context-target{
+    font-size:14px;
+    line-height:1.36;
+  }
+
+  #workoutContainer .exercise-panel .context-detail{
+    margin-top:4px;
+    font-size:11.5px;
+    line-height:1.4;
+  }
+
+  #workoutContainer .exercise-sets-panel{
+    padding:10px 9px 11px;
+  }
+
+  #workoutContainer .exercise-panel-heading{
+    padding:0 2px 8px;
+    margin-bottom:2px;
+  }
+
+  #workoutContainer .exercise-panel-title{
+    font-size:12px;
+  }
+
+  #workoutContainer .exercise-panel-meta{
+    font-size:11px;
+  }
+}
+
+@media(max-width:380px){
+  #workoutContainer .exercise-summary-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(prefers-reduced-transparency:reduce){
+  #workoutContainer .exercise-panel{
+    background:#f8f9fb;
+    border-color:#dfe3e9;
+    box-shadow:none;
+  }
+}
