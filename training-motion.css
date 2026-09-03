@@ -14,6 +14,16 @@
     scroll-snap-type:y mandatory;
   }
 
+  /* During the overview -> first exercise gesture, keep chrome visually fixed even if
+     the base auto-hide logic has already marked it hidden. It is released after snap settles. */
+  body.training-chrome-lock.chrome-hidden .app-header{
+    transform:none;
+  }
+  body.training-chrome-lock.chrome-hidden .bottom-nav{
+    transform:translateX(-50%);
+    opacity:1;
+  }
+
   /* The overview remains below the visible app header, independent of exercise snap geometry. */
   #today .today-overview{
     scroll-snap-align:start;
