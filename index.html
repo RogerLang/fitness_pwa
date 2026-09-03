@@ -3,150 +3,146 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" content="#f5f6f8" />
   <meta name="application-name" content="练了么" />
   <meta name="apple-mobile-web-app-title" content="练了么" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="description" content="练了么：本地优先、可同步到 Private GitHub 仓库的个人训练记录应用" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <link rel="manifest" href="manifest.webmanifest?v=18" />
-  <link rel="icon" href="icon-192.png?v=18" />
-  <link rel="apple-touch-icon" href="icon-192.png?v=18" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="training-ux-v13.css" />
-  <link rel="stylesheet" href="training-ux-v14.css" />
-  <link rel="stylesheet" href="performance-v16.css" />
-  <link rel="stylesheet" href="progression.css" />
-  <link rel="stylesheet" href="boot-v25.css" />
   <title>练了么</title>
 </head>
-<body class="app-booting app-settling">
+<body class="app-booting">
 <header class="app-header">
-  <div><h1>练了么</h1><p class="muted">默认本机保存 · 可选 Private GitHub 同步</p></div>
+  <div>
+    <h1>练了么</h1>
+    <p class="muted">默认本机保存 · 可选 Private GitHub 同步</p>
+  </div>
   <button id="installBtn" class="secondary hidden">安装</button>
 </header>
 
 <main>
-<section id="today" class="page active">
-  <div class="card today-boot-card" role="status" aria-live="polite">
-    <div class="boot-brand" aria-label="练了么，正在恢复训练状态">
-      <div class="boot-logo" aria-hidden="true">
-        <span class="boot-bar boot-bar-blue"></span>
-        <span class="boot-bar boot-bar-purple"></span>
-        <span class="boot-bar boot-bar-mint"></span>
+  <section id="today" class="page active">
+    <div class="card today-boot-card" role="status" aria-live="polite">
+      <div class="boot-brand" aria-label="练了么，正在恢复训练状态">
+        <div class="boot-logo" aria-hidden="true">
+          <span class="boot-bar boot-bar-blue"></span>
+          <span class="boot-bar boot-bar-purple"></span>
+          <span class="boot-bar boot-bar-mint"></span>
+        </div>
+        <div class="boot-name">练了么</div>
+        <div class="boot-status">正在恢复训练状态…</div>
       </div>
-      <div class="boot-name">练了么</div>
-      <div class="boot-status">正在恢复训练状态…</div>
     </div>
-  </div>
-  <div class="card">
-    <div class="row between wrap">
-      <div><h2>今日训练</h2><p id="todayDate" class="muted"></p></div>
-      <select id="planSelect" aria-label="选择训练计划"></select>
-    </div>
-  </div>
-  <div id="workoutContainer"></div>
-  <div class="card sticky-actions">
-    <button id="saveWorkoutBtn">保存本次训练</button>
-    <button id="resetWorkoutBtn" class="secondary">清空本次输入</button>
-  </div>
-</section>
 
-<section id="history" class="page">
-  <div class="card"><h2>历史记录</h2><div id="historyList"></div></div>
-</section>
+    <div class="card today-overview">
+      <div class="today-heading">
+        <div>
+          <h2>今日训练</h2>
+          <p id="todayDate" class="muted"></p>
+        </div>
+      </div>
+      <div class="today-plan-bar">
+        <button id="pullPlansTodayBtn" type="button" class="small secondary">拉取最新计划</button>
+        <select id="planSelect" aria-label="选择训练计划"></select>
+      </div>
+      <p id="todaySyncStatus" class="today-sync-status" aria-live="polite"></p>
+    </div>
 
-<section id="progress" class="page">
-  <div class="card">
-    <h2>进步趋势</h2>
-    <label>动作<select id="progressExercise"></select></label>
-    <div id="progressRange" aria-label="趋势时间范围">
-      <button class="v16-range-btn" data-range="3m">3个月</button>
-      <button class="v16-range-btn" data-range="6m">6个月</button>
-      <button class="v16-range-btn active" data-range="1y">1年</button>
-      <button class="v16-range-btn" data-range="all">全部</button>
-    </div>
-    <canvas id="progressChart" width="800" height="360"></canvas>
-    <p id="progressSummary" class="muted"></p>
-  </div>
-  <div class="card">
-    <h3>身体数据</h3>
-    <div class="grid2">
-      <label>体重 kg<input id="bodyWeight" type="number" step="0.1" inputmode="decimal"></label>
-      <label>胸围 cm<input id="chestCirc" type="number" step="0.1" inputmode="decimal"></label>
-      <label>腰围 cm<input id="waistCirc" type="number" step="0.1" inputmode="decimal"></label>
-      <label>上臂围 cm<input id="armCirc" type="number" step="0.1" inputmode="decimal"></label>
-    </div>
-    <button id="saveBodyBtn">保存身体数据</button>
-    <div id="bodyHistory"></div>
-  </div>
-</section>
+    <div id="workoutContainer"></div>
 
-<section id="settings" class="page">
-  <div class="card hidden legacy-plan-editor" aria-hidden="true">
-    <div class="row between wrap">
-      <div><h2>训练计划</h2><p class="muted">计划保存在当前设备；同步时会写入 Private GitHub 仓库。</p></div>
-      <button id="addPlanBtn">+ 新建计划</button>
+    <div class="card sticky-actions">
+      <button id="saveWorkoutBtn" type="button">保存本次训练</button>
+      <button id="syncTodayBtn" type="button" class="secondary">增量同步</button>
+      <button id="resetWorkoutBtn" type="button" class="secondary">清空输入</button>
     </div>
-    <div id="planEditor"></div>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2>GitHub 同步</h2>
-    <p class="muted">使用单独的 Private GitHub 仓库。训练记录和身体记录按条目增量同步；训练计划使用 revision 检测多设备修改冲突。</p>
-    <div class="grid2">
-      <label>GitHub 用户名<input id="syncOwner" autocomplete="off" placeholder="例如 yourname"></label>
-      <label>Private 仓库名<input id="syncRepo" autocomplete="off" placeholder="例如 fitness-data-private"></label>
+  <section id="history" class="page">
+    <div class="card">
+      <h2>历史记录</h2>
+      <div id="historyList"></div>
     </div>
-    <label>Fine-grained token
-      <input id="syncToken" type="password" autocomplete="off" placeholder="仅授权该 Private 仓库 Contents 读写">
-    </label>
-    <input id="syncPath" type="hidden" value="fitness-sync.json">
-    <div class="row wrap top-gap">
-      <button id="pullSyncBtn">从 GitHub 合并</button>
-      <button id="pushSyncBtn">增量同步</button>
-      <button id="rememberSyncBtn" class="secondary">保存本机同步信息</button>
-    </div>
-    <p id="syncStatus" class="muted"></p>
-    <details>
-      <summary>隐私与冲突说明</summary>
-      <p class="muted">GitHub 用户名、仓库名和 Token 可保存在当前浏览器的 IndexedDB 中，不会进入公开 Pages 仓库或导出的训练备份。同步数据在 Private 仓库中以普通 JSON 保存，因此任何能访问该 Private 仓库的人都可以读取训练内容。应用会强制检查目标仓库必须是 Private。记录文件名使用本地记录 ID 的 SHA-256，不直接暴露训练日期。若两台设备都修改过训练计划，应用会检测 revision 冲突并阻止静默覆盖。</p>
-    </details>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2>本地备份</h2>
-    <div class="stack">
-      <button id="exportBtn">导出明文备份 JSON</button>
-      <label class="file-btn">导入备份 JSON<input id="importInput" type="file" accept="application/json,.json"></label>
-      <button id="wipeBtn" class="danger">删除本机全部训练和身体数据</button>
+  <section id="progress" class="page">
+    <div class="card">
+      <h2>进步趋势</h2>
+      <label>动作<select id="progressExercise"></select></label>
+      <div id="progressRange" aria-label="趋势时间范围">
+        <button class="v16-range-btn" data-range="3m" type="button">3个月</button>
+        <button class="v16-range-btn" data-range="6m" type="button">6个月</button>
+        <button class="v16-range-btn active" data-range="1y" type="button">1年</button>
+        <button class="v16-range-btn" data-range="all" type="button">全部</button>
+      </div>
+      <canvas id="progressChart" width="800" height="360"></canvas>
+      <p id="progressSummary" class="muted"></p>
     </div>
-    <p class="muted">训练中的未保存输入会自动保存在当前浏览器，并在刷新后恢复。</p>
-  </div>
-</section>
+
+    <div class="card">
+      <h3>身体数据</h3>
+      <div class="grid2">
+        <label>体重 kg<input id="bodyWeight" type="number" step="0.1" inputmode="decimal"></label>
+        <label>胸围 cm<input id="chestCirc" type="number" step="0.1" inputmode="decimal"></label>
+        <label>腰围 cm<input id="waistCirc" type="number" step="0.1" inputmode="decimal"></label>
+        <label>上臂围 cm<input id="armCirc" type="number" step="0.1" inputmode="decimal"></label>
+      </div>
+      <button id="saveBodyBtn" type="button">保存身体数据</button>
+      <div id="bodyHistory"></div>
+    </div>
+  </section>
+
+  <section id="settings" class="page">
+    <div class="card">
+      <h2>GitHub 同步</h2>
+      <p class="muted">使用单独的 Private GitHub 仓库。训练记录和身体记录按条目增量同步；训练计划使用 revision 检测多设备修改冲突。</p>
+      <div class="grid2">
+        <label>GitHub 用户名<input id="syncOwner" autocomplete="off" placeholder="例如 yourname"></label>
+        <label>Private 仓库名<input id="syncRepo" autocomplete="off" placeholder="例如 fitness-data-private"></label>
+      </div>
+      <label>Fine-grained token
+        <input id="syncToken" type="password" autocomplete="off" placeholder="仅授权该 Private 仓库 Contents 读写">
+      </label>
+      <div class="row wrap top-gap">
+        <button id="pullSyncBtn" type="button">从 GitHub 合并</button>
+        <button id="pushSyncBtn" type="button">增量同步</button>
+        <button id="rememberSyncBtn" type="button" class="secondary">保存本机同步信息</button>
+      </div>
+      <p id="syncStatus" class="muted sync-status" aria-live="polite"></p>
+      <details>
+        <summary>隐私与冲突说明</summary>
+        <p class="muted">GitHub 用户名、仓库名和 Token 可保存在当前浏览器的 IndexedDB 中，不会进入公开 Pages 仓库或导出的训练备份。同步数据在 Private 仓库中以普通 JSON 保存，因此任何能访问该 Private 仓库的人都可以读取训练内容。应用会检查同步目标必须为 Private repository。记录文件名使用本地记录 ID 的 SHA-256，不直接暴露训练日期。若两台设备都修改过训练计划，应用会检测 revision 冲突并阻止静默覆盖。</p>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>本地备份</h2>
+      <div class="stack">
+        <button id="exportBtn" type="button">导出明文备份 JSON</button>
+        <label class="file-btn">导入备份 JSON<input id="importInput" type="file" accept="application/json,.json"></label>
+        <button id="wipeBtn" type="button" class="danger">删除本机全部训练和身体数据</button>
+      </div>
+      <p class="muted">训练中的未保存输入会自动保存在当前浏览器，并在刷新后恢复。</p>
+    </div>
+  </section>
 </main>
 
-<nav class="bottom-nav">
-  <button data-page="today" class="active">训练</button>
-  <button data-page="history">历史</button>
-  <button data-page="progress">趋势</button>
-  <button data-page="settings">设置</button>
+<nav class="bottom-nav" aria-label="主导航">
+  <button data-page="today" class="active" type="button">训练</button>
+  <button data-page="history" type="button">历史</button>
+  <button data-page="progress" type="button">趋势</button>
+  <button data-page="settings" type="button">设置</button>
 </nav>
+
+<div id="appToast" class="app-toast" role="status" aria-live="polite"></div>
+
 <script src="app.js"></script>
-<script src="v2.js"></script>
-<script src="v2-fix.js"></script>
-<script src="v3-ui.js"></script>
-<script src="sync-v4.js"></script>
-<script src="local-v7.js"></script>
-<script src="today-sync-v12.js"></script>
-<script src="training-ux-v13.js"></script>
-<script src="training-ux-v14.js"></script>
-<script src="recovery-v15.js"></script>
-<script src="performance-v16.js"></script>
-<script src="progression.js"></script>
-<script src="warmup-card.js"></script>
-<script src="boot-v25.js"></script>
+<script src="training.js"></script>
+<script src="sync.js"></script>
 </body>
 </html>
