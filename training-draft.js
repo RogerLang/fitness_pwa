@@ -115,13 +115,25 @@
   }
 
   async function init() {
-    draftStore = await App.idbGet(DRAFTS_KEY) || {};
-    let pi = Number(await App.idbGet(ACTIVE_PLAN_KEY));
-    if (!Number.isInteger(pi) || pi < 0 || pi >= App.state.plans.length) pi = 0;
-    const saved = draftStore[String(pi)];
-    draft = saved
-      ? { planIndex: pi, sets: clone(saved.sets || {}), completed: clone(saved.completed || {}) }
-      : emptyDraft(pi);
+    try {
+      const [storedDrafts, storedPlanIndex] = await Promise.all([
+        App.idbGet(DRAFTS_KEY),
+        App.idbGet(ACTIVE_PLAN_KEY)
+      ]);
+      draftStore = storedDrafts && typeof storedDrafts === "object" && !Array.isArray(storedDrafts)
+        ? storedDrafts
+        : {};
+      let pi = Number(storedPlanIndex);
+      if (!Number.isInteger(pi) || pi < 0 || pi >= App.state.plans.length) pi = 0;
+      const saved = draftStore[String(pi)];
+      draft = saved
+        ? { planIndex: pi, sets: clone(saved.sets || {}), completed: clone(saved.completed || {}) }
+        : emptyDraft(pi);
+    } catch (error) {
+      console.warn("draft restore", error);
+      draftStore = {};
+      draft = emptyDraft(0);
+    }
   }
 
   async function setActivePlan(index) {
