@@ -1,6 +1,6 @@
 # 练了么：技术文档
 
-本文记录 `fitness_pwa` 当前的目录结构、模块职责、本地数据、PWA 缓存和 GitHub 同步实现。日常使用与配置见 [README.md](./README.md)。
+本文记录 `fitness_pwa` 当前目录结构、模块职责、本地数据、训练计划生命周期、PWA 缓存和 GitHub 同步实现。日常使用与配置见 [README.md](./README.md)。
 
 ## 1. 总体架构
 
@@ -9,7 +9,8 @@
 主要设计：
 
 - local-first：训练数据优先保存到浏览器 IndexedDB
-- 模块化：核心状态、训练逻辑、同步、界面交互分别维护
+- 单向训练流程：训练模板 → 当前待训练计划 → 训练记录
+- 模块化：核心状态、训练逻辑、同步和界面交互分别维护
 - 可离线：Service Worker 缓存完整静态 shell
 - 可选同步：通过 GitHub REST API 与单独的 Private repository 交换数据
 - 增量记录：训练记录和身体记录按独立条目同步
@@ -28,6 +29,9 @@ fitness_pwa/
 │  ├─ css/
 │  │  ├─ styles.css
 │  │  ├─ glass-cards.css
+│  │  ├─ exercise-card.css
+│  │  ├─ page-unification.css
+│  │  ├─ planning.css
 │  │  ├─ training-motion.css
 │  │  └─ nav-motion.css
 │  └─ icons/
@@ -43,12 +47,15 @@ fitness_pwa/
    │  └─ app-backup.js
    ├─ training/
    │  ├─ training-progression.js
+   │  ├─ training-next-workout.js
    │  ├─ training-draft.js
    │  ├─ training-render.js
    │  ├─ training-insights.js
    │  ├─ training-maintenance.js
    │  ├─ training.js
-   │  └─ training-motion.js
+   │  ├─ planning.js
+   │  ├─ training-motion.js
+   │  └─ training-keyboard-viewport.js
    ├─ sync/
    │  ├─ sync-remote.js
    │  └─ sync.js
@@ -58,7 +65,7 @@ fitness_pwa/
       └─ sw-register.js
 ```
 
-`sw.js` 保留在根目录，使 Service Worker 默认 scope 覆盖整个应用。`manifest.webmanifest` 也保留在根目录，因此 `start_url: ./` 和 `scope: ./` 继续对应 GitHub Pages 项目根路径。
+`sw.js` 位于根目录，使 Service Worker 默认 scope 覆盖整个应用。`manifest.webmanifest` 也保留在根目录，因此 `start_url: ./` 和 `scope: ./` 对应 GitHub Pages 项目根路径。
 
 ## 3. 模块职责
 
@@ -67,36 +74,48 @@ fitness_pwa/
 - `index.html`：页面结构、CSP、CSS/JS 加载入口
 - `manifest.webmanifest`：PWA 名称、图标、启动地址和 display 配置
 - `sw.js`：静态 shell 缓存、离线导航、旧缓存清理
-- `rescue.html`：注销 Service Worker 并清理应用静态缓存，不操作 IndexedDB
+- `rescue.html`：注销 Service Worker 并清理静态缓存，不操作 IndexedDB
 
 ### `assets/css`
 
-- `styles.css`：基础布局、通用组件和移动端样式
+- `styles.css`：基础布局和通用组件
 - `glass-cards.css`：卡片视觉层级和玻璃效果
-- `training-motion.css`：训练页滚动吸附和编辑相关样式
-- `nav-motion.css`：底部导航运动效果
+- `exercise-card.css`：训练动作卡片和组输入布局
+- `page-unification.css`：各页面共用的版式统一层
+- `planning.css`：计划页和模板编辑样式
+- `training-motion.css`：训练页滚动吸附相关样式
+- `nav-motion.css`：底部导航运动和液体玻璃相关样式
 
 ### `js/core`
 
 - `app-storage.js`：IndexedDB 打开、KV 读写和主状态读写
-- `app.js`：应用状态、启动流程、页面切换、模块生命周期和持久化协调
-- `app-body.js`：身体数据录入、保存和历史渲染
+- `app.js`：应用状态、启动流程、路由、模块生命周期和持久化协调
+- `app-body.js`：身体数据录入和历史渲染
 - `app-backup.js`：本地 JSON 导出、导入和本机数据清理
+
+核心层只公开跨模块确实需要的能力。身体数据和备份模块通过 `FitnessApp.registerModule()` 参与生命周期，不额外挂载全局业务 API。
 
 ### `js/training`
 
 - `training-progression.js`：历史上下文、次数区间、重量档位和进阶建议
-- `training-draft.js`：训练草稿、当前计划索引、组输入值和完成状态
-- `training-render.js`：计划选择器、动作卡和动作编辑器渲染
+- `training-next-workout.js`：全局唯一当前待训练计划的选择、归一化和替换
+- `training-draft.js`：未保存训练输入、完成状态和本次临时组数
+- `training-render.js`：训练页动作卡和组输入渲染
 - `training-insights.js`：历史记录、趋势区间和图表
-- `training-maintenance.js`：重复训练记录识别与清理
-- `training.js`：训练页事件、计划调整、训练保存和流程协调
-- `training-motion.js`：训练页滚动吸附、快速滑动和卡片定位交互
+- `training-maintenance.js`：旧重复训练记录识别与清理
+- `training.js`：训练页事件、训练保存和流程协调
+- `planning.js`：候选计划生成/编辑/推送，以及训练模板编辑
+- `training-motion.js`：训练页卡片吸附、手势来源判断和顶/底栏交互
+- `training-keyboard-viewport.js`：Android 软键盘 viewport 恢复检测，结束编辑保护后通知 motion 重建状态
+
+`training-motion.js` 和 `training-keyboard-viewport.js` 当前仍分开保留。前者属于高敏感交互代码；键盘兼容逻辑在真机验证充分前不与主 motion 文件合并。
 
 ### `js/sync`
 
 - `sync-remote.js`：GitHub API、Base64、SHA-256、远端格式校验和文件读写
-- `sync.js`：push/pull 流程、计划冲突、本机同步元数据和页面交互
+- `sync.js`：凭据、本机同步元数据、push/pull、自动检查、页面同步交互和计划冲突
+
+自动检查已经并入 `sync.js`，不再维护单独的自动同步脚本。训练记录和身体记录共用同一套 immutable push/pull 辅助流程。
 
 ### `js/ui` 与 `js/pwa`
 
@@ -105,7 +124,7 @@ fitness_pwa/
 
 ## 4. 脚本加载顺序
 
-`index.html` 保持以下依赖顺序：
+`index.html` 保持依赖顺序：
 
 ```text
 js/pwa/sw-register.js
@@ -114,12 +133,15 @@ js/core/app.js
 js/core/app-body.js
 js/core/app-backup.js
 js/training/training-progression.js
+js/training/training-next-workout.js
 js/training/training-draft.js
 js/training/training-render.js
 js/training/training-insights.js
 js/training/training-maintenance.js
 js/training/training.js
+js/training/planning.js
 js/training/training-motion.js
+js/training/training-keyboard-viewport.js
 js/ui/nav-motion.js
 js/sync/sync-remote.js
 js/sync/sync.js
@@ -129,52 +151,63 @@ js/sync/sync.js
 
 `app.js` 负责统一启动和跨模块状态协调。导入或清空训练数据统一经过 `FitnessApp.resetData()`。
 
-## 5. IndexedDB
+## 5. 训练数据模型
 
-数据库配置：
+### 训练模板
 
-```text
-DB_NAME: fitness-pwa-db
-DB_VERSION: 1
-Object Store: kv
-```
-
-主状态：
+模板位于 `plans[]`。单个动作通常包含：
 
 ```text
-plans
-sessions
-body
+name
+sets
+repRange
+defaultWeight
+weightStep
+note
+optional
 ```
 
-训练草稿、同步配置和同步元数据也保存在 IndexedDB 中。
+专项热身动作还可包含：
 
-### 训练计划
-
-计划结构示例：
-
-```json
-{
-  "name": "计划名称",
-  "exercises": [
-    {
-      "name": "动作名称",
-      "sets": 3,
-      "repRange": [8, 12],
-      "defaultWeight": 40,
-      "weightStep": 5,
-      "note": "",
-      "optional": false
-    }
-  ]
-}
+```text
+warmup
+setPresets
 ```
 
-动作还可包含 `warmup`、`setPresets` 等字段。
+模板只负责以后如何生成候选计划。
+
+### 当前待训练计划
+
+当前待训练计划保存在对应模板的 `plannedWorkout` 中。全局只允许一个 `status: confirmed` 的待训练计划。
+
+主要字段：
+
+```text
+id
+revision
+status
+planName
+generatedAt
+confirmedAt
+exercises
+```
+
+计划页可以生成和修改候选快照；只有点击“推送训练计划”才写入 `plannedWorkout` 并替换之前的待训练计划。训练已经产生实际输入时禁止替换。
 
 ### 训练记录
 
-每次保存训练时生成随机 UUID。记录包含日期、计划名称、动作以及各组：
+每次保存训练时生成 UUID，写入 `sessions[]`。记录包含：
+
+```text
+id
+date
+plan
+plannedWorkoutId
+plannedRevision
+exercises
+```
+
+每组包含：
 
 ```text
 weight
@@ -183,7 +216,7 @@ rir
 completed
 ```
 
-正式动作还会保存当次进阶建议快照。
+正式动作还保存本次计划快照，便于之后判断计划重量与实际重量是否不同。
 
 ### 身体数据
 
@@ -198,7 +231,37 @@ waist
 arm
 ```
 
-## 6. 本地备份
+## 6. IndexedDB
+
+数据库配置：
+
+```text
+DB_NAME: fitness-pwa-db
+DB_VERSION: 1
+Object Store: kv
+```
+
+主状态键：
+
+```text
+plans
+sessions
+body
+```
+
+其他当前使用键：
+
+```text
+workoutDraftsV8
+workoutActivePlanV7
+syncCredentialsV7
+syncConfig            # 旧凭据结构兼容，仅 owner/repo
+syncMetaV11
+```
+
+`training-draft.js` 仍读取旧 `workoutDraftsV7` 作为迁移兼容入口。兼容键删除前需要先确认所有常用设备都已运行过新版本并完成迁移。
+
+## 7. 本地备份
 
 导出格式：
 
@@ -221,9 +284,9 @@ body
 fitness-backup-YYYY-MM-DD.json
 ```
 
-同步凭据不进入训练备份。
+同步凭据和未保存训练草稿不进入训练备份。
 
-## 7. GitHub 远端数据协议
+## 8. GitHub 远端数据协议
 
 Private 数据仓库结构：
 
@@ -234,7 +297,7 @@ sessions/<sha256(session-id)>.json
 body/<sha256(record-id)>.json
 ```
 
-当前格式标识：
+格式标识：
 
 ```text
 manifest: fitness-pwa-manifest-v3
@@ -245,41 +308,43 @@ body entry: fitness-body-entry-v2
 
 训练记录和身体记录使用本地 UUID 的 SHA-256 作为远端文件名。下载时重新计算哈希并校验记录 ID。
 
-训练计划保存在 `plans.json`，每次更新生成新的随机 revision。
+训练模板和当前待训练计划一起保存在 `plans.json`，每次更新生成新的随机 revision。
 
-## 8. 增量同步
+## 9. 增量同步
 
 ### Push
 
 主要流程：
 
-1. 检查同步目标仓库权限和可用性
-2. 确保本地旧记录具有 UUID
-3. 读取本地计划同步元数据
+1. 检查同步目标仓库权限和 Private 状态
+2. 为缺少 UUID 的旧训练/身体记录补 ID
+3. 更新本地计划同步元数据
 4. 下载 `manifest.json`
-5. 计算训练记录和身体记录哈希
-6. 上传远端缺少的独立条目
-7. 必要时更新 `plans.json`
-8. 更新 `manifest.json`
-
-已存在的条目文件会经过格式和记录 ID 校验。
+5. 上传远端缺少的 immutable 训练记录和身体记录
+6. 必要时更新 `plans.json`
+7. 更新 `manifest.json`
 
 ### Pull
 
 主要流程：
 
 1. 保存当前训练草稿
-2. 读取远端 manifest
-3. 判断训练计划 revision 是否变化
+2. 检查同步目标并读取远端 manifest
+3. 判断 `plans.json` revision 是否变化
 4. 下载本机缺少的训练和身体记录
-5. 合并历史数据
-6. 必要时处理训练计划版本
-7. 清理旧重复记录
-8. 写入 IndexedDB 并刷新界面
+5. 必要时使用远端计划集合
+6. 清理旧重复训练记录
+7. 写入 IndexedDB 并刷新界面
 
-## 9. 训练计划冲突
+### 自动检查
 
-本机维护三个关键字段：
+`sync.js` 在初始化完成且当前页面为训练页时安排一次检查；之后进入训练页时按 60 秒冷却时间判断是否再次检查。存在未保存训练输入时跳过自动拉取。
+
+自动检查必须等同步模块完成凭据恢复后才能执行，避免页面生命周期早于同步初始化时使用空表单配置。
+
+## 10. 训练计划冲突
+
+本机维护：
 
 ```text
 plansBaseRevision
@@ -288,12 +353,12 @@ plansSig
 ```
 
 - `plansBaseRevision`：本机最后确认的远端 revision
-- `plansDirty`：该 revision 之后本机计划是否修改
+- `plansDirty`：该 revision 之后本机 plans 是否修改
 - `plansSig`：当前 plans JSON 的 SHA-256 签名
 
-云端和本机同时修改计划时，直接 push 会被阻止；pull 时由用户明确选择计划版本。训练历史和身体数据继续按集合方式合并。
+云端和本机同时修改计划时，直接 push 会被阻止；pull 时由用户明确确认是否使用 GitHub 最新计划。训练历史和身体数据继续按集合方式合并。
 
-## 10. PWA 与 Service Worker
+## 11. PWA 与 Service Worker
 
 `manifest.webmanifest`：
 
@@ -303,54 +368,56 @@ start_url: ./
 scope: ./
 ```
 
-`js/pwa/sw-register.js` 从页面注册 `./sw.js`。由于 `sw.js` 位于根目录，默认 scope 可以覆盖根目录及所有子目录中的资源。
+`js/pwa/sw-register.js` 注册 `./sw.js`。由于 `sw.js` 位于根目录，默认 scope 覆盖整个应用。
 
-`sw.js` 安装时缓存静态 shell，激活时删除旧的 `fitness-pwa-*` 缓存。导航请求优先返回缓存中的 `index.html`，其他同源 GET 使用 cache-first。GitHub API 为跨域请求，不进入该静态缓存流程。
+`sw.js` 安装时缓存静态 shell，激活时删除旧的 `fitness-pwa-*` 缓存。导航请求优先返回缓存中的 `index.html`，其他同源 GET 使用 cache-first。GitHub API 为跨域请求，不进入静态 shell 缓存。
 
-## 11. 静态资源版本
+## 12. 静态资源版本
 
-当前静态资源版本为：
+当前 shell 缓存名：
 
 ```text
-v68
+fitness-pwa-shell-v98
 ```
 
-发布新版本时同步修改：
+各 CSS/JS 文件的 `?v=` 参数独立变化，只在文件内容实际修改时更新。发布时必须保证：
 
-1. `index.html` 中 CSS/JS 的 `?v=` 参数
-2. `sw.js` 中 `SHELL_ASSETS` 的对应路径和 `?v=` 参数
-3. `sw.js` 中 `SHELL_CACHE` 名称
+1. `index.html` 中被修改资源的 `?v=` 已更新
+2. `sw.js` 的 `SHELL_ASSETS` 使用完全相同的资源 URL
+3. `SHELL_CACHE` 更新到新的发布版本
+4. 删除脚本后同时从 `index.html` 和 `SHELL_ASSETS` 删除引用
 
-目录调整时也需要同时检查 `manifest.webmanifest` 中的图标路径。
+## 13. 发布检查
 
-## 12. 发布检查
+项目没有 npm、打包器或编译步骤。每次发布至少检查：
 
-项目没有 npm、打包器或编译步骤。修改后可通过静态 HTTP 服务测试。
+- 首页能正常加载全部 CSS 和 JavaScript
+- PWA manifest 和图标正常
+- Service Worker 成功安装新 shell cache
+- IndexedDB 旧数据可以读取
+- 当前待训练计划能恢复
+- 未保存训练草稿刷新后能恢复
+- 计划页可生成、编辑并推送候选计划
+- 训练页可输入、临时增减组数和保存训练
+- 保存训练后历史和趋势更新
+- Android 软键盘关闭后训练卡片吸附仍可继续
+- 身体数据可以保存
+- 本地 JSON 导入导出正常
+- GitHub pull/push 正常
+- 自动同步不会在同步模块初始化前执行
+- 双设备 plans 修改会触发 revision 冲突
+- `rescue.html` 只清理静态缓存
 
-每次发布至少检查：
-
-- 首页是否能正常加载全部 CSS 和 JavaScript
-- PWA 图标和 manifest 是否返回成功
-- Service Worker 是否成功安装新的 shell cache
-- IndexedDB 旧数据是否可以读取
-- 训练草稿刷新后是否恢复
-- 保存训练后历史和趋势是否更新
-- 身体数据是否可以保存
-- 本地 JSON 导入导出是否正常
-- GitHub pull/push 是否正常
-- 双设备计划修改是否触发 revision 冲突
-- `rescue.html` 是否只清理静态缓存
-
-## 13. 后续维护原则
+## 14. 后续维护原则
 
 - 根目录只保留页面/PWA 入口和项目文档
 - 样式统一放入 `assets/css`
-- 图标统一放入 `assets/icons`
-- 核心应用模块放入 `js/core`
-- 训练业务模块放入 `js/training`
-- GitHub 同步模块放入 `js/sync`
+- 核心状态和生命周期放入 `js/core`
+- 训练业务放入 `js/training`
+- GitHub HTTP 与远端格式集中在 `js/sync/sync-remote.js`
+- 同步流程、凭据和自动检查集中在 `js/sync/sync.js`
 - 独立 UI 行为放入 `js/ui`
 - PWA 注册辅助代码放入 `js/pwa`
-- `app.js` 继续只负责核心状态和跨模块生命周期
-- GitHub HTTP、远端格式与完整性校验继续集中在 `js/sync/sync-remote.js`
-- 同步交互和计划冲突继续集中在 `js/sync/sync.js`
+- 不为了减少文件数量合并职责清晰的模块
+- 删除公开 API 前先确认没有跨模块调用者
+- `training-motion.js`、`training-motion.css` 和 `nav-motion.js` 属于高回归风险区域，整理时保持小范围、可回退修改
