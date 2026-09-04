@@ -9,7 +9,7 @@
     throw new Error("Training modules must load before training.js");
   }
 
-  const { valueOrNull, workingWeight, buildHistoryContext } = Progression;
+  const { valueOrNull, loadType, usesWeight, workingWeight, buildHistoryContext } = Progression;
 
   function currentPlan() {
     const active = Renderer.currentWorkoutEntry();
@@ -98,6 +98,8 @@
     const sessionPlanName = workout.planName || plan.name;
     const historyContext = buildHistoryContext(sessionPlanName);
     const exercises = (workout.exercises || []).map((ex, ei) => {
+      const type = loadType(ex);
+      const weighted = usesWeight(ex);
       const previous = historyContext.latest(ex.name);
       const baseCount = Math.max(1, ex.sets?.length || 1);
       const count = Draft.effectiveSetCount(ei, baseCount);
@@ -105,7 +107,7 @@
 
       for (let si = 0; si < count; si++) {
         const raw = {
-          weight: Draft.getValue(ei, si, "weight"),
+          weight: weighted ? Draft.getValue(ei, si, "weight") : "",
           reps: Draft.getValue(ei, si, "reps"),
           rir: Draft.getValue(ei, si, "rir")
         };
@@ -115,11 +117,11 @@
 
         const target = plannedTarget(ex, si);
         const prev = previous?.sets?.[si] || null;
-        let weight = valueOrNull(raw.weight);
+        let weight = weighted ? valueOrNull(raw.weight) : null;
         let reps = valueOrNull(raw.reps);
         const rir = valueOrNull(raw.rir);
 
-        if (weight === null && (reps !== null || completed)) {
+        if (weighted && weight === null && (reps !== null || completed)) {
           if (valueOrNull(target.weight) !== null) weight = valueOrNull(target.weight);
           else if (valueOrNull(prev?.weight) !== null) weight = valueOrNull(prev.weight);
         }
@@ -132,15 +134,20 @@
 
       const result = {
         name: ex.name,
+        loadType: type,
         sets,
         planned: {
           workoutId: workout.id,
           revision: workout.revision,
-          sets: Array.from({ length: count }, (_, si) => ({ ...plannedTarget(ex, si) }))
+          sets: Array.from({ length: count }, (_, si) => {
+            const target = { ...plannedTarget(ex, si) };
+            if (!weighted) target.weight = null;
+            return target;
+          })
         }
       };
 
-      if (sets.length && !ex.warmup) {
+      if (sets.length && !ex.warmup && weighted) {
         const plannedWeight = workingWeight(result.planned.sets);
         const actualWeight = workingWeight(sets);
         result.weightOverride = plannedWeight !== null && actualWeight !== null && actualWeight !== plannedWeight;

@@ -1,0 +1,329 @@
+/* v105 refinements: relaxed page heroes, vertical exercise hierarchy and load-aware rows. */
+
+/* Training overview: more breathing room between the three information levels. */
+#today .today-overview{
+  padding:17px 16px 15px;
+}
+
+#today .today-heading{
+  margin-bottom:15px;
+}
+
+#today .today-plan-bar{
+  gap:12px;
+  align-items:end;
+}
+
+#today .today-plan-current{
+  display:grid;
+  gap:0;
+}
+
+#today .today-plan-current > span{
+  margin-bottom:5px;
+}
+
+#today .today-plan-current > strong{
+  margin:0 0 6px;
+  line-height:1.32;
+}
+
+#today .today-plan-current > small{
+  margin:0;
+  line-height:1.42;
+}
+
+#today #pullPlansTodayBtn{
+  align-self:end;
+  min-width:116px;
+  min-height:42px;
+  height:42px;
+  padding:0 13px;
+  border-radius:14px;
+  font-size:12px;
+}
+
+/* Training exercise cards return to the vertical reading order. */
+#workoutContainer .exercise-head{
+  margin-bottom:11px;
+}
+
+#workoutContainer .exercise-meta{
+  margin-top:7px;
+}
+
+#workoutContainer .exercise-summary-grid{
+  grid-template-columns:1fr;
+  gap:8px;
+}
+
+#workoutContainer .exercise-summary-panel{
+  width:100%;
+  min-height:0;
+  padding:11px 12px;
+}
+
+#workoutContainer .exercise-card-layout{
+  gap:9px;
+}
+
+#workoutContainer .exercise-panel .context-head{
+  margin-bottom:5px;
+}
+
+#workoutContainer .exercise-panel .context-target{
+  font-size:14px;
+}
+
+#workoutContainer .exercise-sets-panel{
+  margin-top:0;
+}
+
+#workoutContainer .exercise-sets-panel .bodyweight-set-row{
+  grid-template-columns:30px minmax(0,1.25fr) minmax(0,.72fr) 80px;
+}
+
+#workoutContainer .exercise-sets-panel .bodyweight-set-row.set-header > span:first-child{
+  text-align:center;
+}
+
+/* Planning hero: selection -> actions -> current pending workout. */
+#plan .planning-hero{
+  padding:17px 15px 15px;
+}
+
+#plan .planning-heading{
+  margin-bottom:16px;
+}
+
+#plan .planning-select-field{
+  gap:7px;
+}
+
+#plan .planning-select-field select{
+  min-height:48px;
+  padding-top:10px;
+  padding-bottom:10px;
+}
+
+#plan .planning-actions-top{
+  grid-template-columns:.88fr 1fr 1.18fr;
+  gap:8px;
+  margin-top:15px;
+}
+
+#plan .planning-actions-top button{
+  min-height:44px;
+}
+
+#plan #planningRegenerateBtn{
+  background:rgba(255,255,255,.46);
+  color:#66717f;
+}
+
+#plan #planningPushTopBtn,
+#plan #planningPushBottomBtn{
+  border-color:rgba(255,255,255,.62);
+  background:rgba(255,255,255,.72);
+  color:#404a57;
+}
+
+#plan #planningGoTrainTopBtn,
+#plan #planningGoTrainBtn{
+  border-color:rgba(255,255,255,.24);
+  background:rgba(39,45,55,.90);
+  color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 4px 12px rgba(29,34,42,.08);
+}
+
+#plan .planning-current{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:0;
+  margin-top:16px;
+  padding:13px 2px 1px;
+}
+
+#plan .planning-current > .planning-current-label{
+  justify-self:start;
+  margin:0 0 6px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  color:#929ca8;
+  font-size:10.5px;
+  font-weight:650;
+}
+
+#plan .planning-current > strong{
+  margin:0 0 5px;
+  color:#38434f;
+  font-size:14px;
+  font-weight:790;
+  line-height:1.32;
+}
+
+#plan .planning-current > small{
+  color:#87929f;
+  font-size:10.5px;
+  line-height:1.4;
+}
+
+#plan .planning-current.is-empty > strong{
+  color:#87929f;
+}
+
+/* Planning exercise cards mirror Training's vertical hierarchy. */
+#plan .planning-exercise-head{
+  margin-bottom:11px;
+}
+
+#plan .planning-exercise-head p{
+  margin-top:7px;
+}
+
+#plan .planning-context-grid{
+  grid-template-columns:1fr;
+  gap:8px;
+}
+
+#plan .planning-context{
+  width:100%;
+  padding:10px 11px;
+}
+
+#plan .planning-target-panel{
+  margin-top:8px;
+  padding:11px;
+}
+
+#plan .planning-set-header.bodyweight-plan-row,
+#plan .planning-set-row.bodyweight-plan-row{
+  grid-template-columns:24px minmax(0,1fr);
+}
+
+#plan .template-card select[data-template-edit="loadType"]{
+  width:100%;
+}
+
+#plan .template-preset-row.bodyweight-template-preset{
+  grid-template-columns:22px minmax(0,1fr);
+}
+
+/* Bottom plan actions use the same semantic priority. */
+#plan .planning-actions{
+  grid-template-columns:1fr 1.18fr;
+  gap:9px;
+}
+
+/* History details should read like a compact log, not separate floating blocks. */
+#history .history-details-body{
+  display:grid;
+  gap:5px;
+}
+
+#history .history-exercise{
+  margin-top:0;
+  padding:7px 9px;
+}
+
+#history .history-exercise + .history-exercise{
+  margin-top:0;
+}
+
+#history .history-exercise-name{
+  margin-bottom:5px;
+  line-height:1.25;
+}
+
+#history .history-set-list{
+  gap:4px;
+}
+
+/* Body inputs are intentionally smaller than workout inputs. */
+#progress .body-input-grid{
+  gap:9px 10px;
+  padding:10px;
+}
+
+#progress .body-input-grid label{
+  gap:5px;
+}
+
+#progress .body-input-wrap{
+  min-height:38px;
+}
+
+#progress .body-input-wrap input{
+  min-height:38px!important;
+  height:38px!important;
+  padding:6px 34px 6px 9px!important;
+  border-radius:13px!important;
+  font-size:15px!important;
+  line-height:1!important;
+}
+
+#progress .body-input-wrap small{
+  right:10px;
+  font-size:10.5px;
+}
+
+@media(max-width:680px){
+  #today .today-overview{
+    padding:16px 14px 14px;
+  }
+
+  #today .today-heading{
+    margin-bottom:14px;
+  }
+
+  #today #pullPlansTodayBtn{
+    min-width:112px;
+    min-height:40px;
+    height:40px;
+  }
+
+  #workoutContainer .exercise-summary-grid{
+    grid-template-columns:1fr;
+  }
+
+  #workoutContainer .exercise-sets-panel .bodyweight-set-row{
+    grid-template-columns:30px minmax(0,1.18fr) minmax(0,.68fr) 80px;
+    gap:5px;
+  }
+
+  #plan .planning-hero{
+    padding:16px 13px 14px;
+  }
+
+  #plan .planning-actions-top{
+    grid-template-columns:.88fr 1fr 1.18fr;
+  }
+
+  #plan .planning-context-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:390px){
+  #today .today-plan-bar{
+    grid-template-columns:minmax(0,1fr) auto;
+  }
+
+  #today #pullPlansTodayBtn{
+    width:auto;
+    min-width:104px;
+    padding-inline:10px;
+  }
+
+  #plan .planning-actions-top button{
+    padding-inline:5px;
+    font-size:11.5px;
+  }
+
+  #workoutContainer .exercise-sets-panel .bodyweight-set-row{
+    grid-template-columns:28px minmax(0,1fr) minmax(0,.64fr) 72px;
+    gap:4px;
+  }
+}

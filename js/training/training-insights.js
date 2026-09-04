@@ -34,7 +34,7 @@
         setCount++;
         const weight = Number(set.weight);
         const reps = Number(set.reps);
-        if (weight > 0 && reps > 0) volume += weight * reps;
+        if (Progression.usesWeight(ex) && weight > 0 && reps > 0) volume += weight * reps;
       }
     }
     return { exerciseCount: exercises.length, setCount, volume };
@@ -55,7 +55,7 @@
     box.innerHTML = shown.map(session => {
       const stats = sessionStats(session);
       const exercises = (session.exercises || []).map(ex => {
-        const chips = (ex.sets || []).map((set, index) => `<span class="history-set-chip"><b>${index + 1}</b>${App.esc(Progression.setText(set) || "未记录")}</span>`).join("");
+        const chips = (ex.sets || []).map((set, index) => `<span class="history-set-chip"><b>${index + 1}</b>${App.esc(Progression.setText(set, ex) || "未记录")}</span>`).join("");
         return `<div class="history-exercise"><div class="history-exercise-name">${App.esc(ex.name || "")}</div><div class="history-set-list">${chips}</div></div>`;
       }).join("");
       const volumeText = stats.volume > 0 ? `<span>训练量 ${Math.round(stats.volume).toLocaleString("zh-CN")} kg</span>` : "";
@@ -98,12 +98,15 @@
       .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")))
       .map(session => ({ date: session.date, ex: (session.exercises || []).find(ex => ex.name === name) }))
       .filter(item => item.ex);
-    const weighted = history.some(item => (item.ex.sets || []).some(set => Number(set.weight) > 0 && Number(set.reps) > 0));
+    const typed = [...history].reverse().find(item => item.ex?.loadType)?.ex || history.at(-1)?.ex || null;
+    const type = Progression.loadType(typed);
+    const metricType = type === "bodyweight" ? "reps" : type === "added-weight" ? "added-weight" : "e1rm";
     const points = [];
+
     for (const item of history) {
       const sets = (item.ex.sets || []).filter(set => Number(set.reps) > 0);
       if (!sets.length) continue;
-      if (weighted) {
+      if (metricType === "e1rm") {
         let best = null;
         for (const set of sets) {
           const weight = Number(set.weight), reps = Number(set.reps);
@@ -113,11 +116,15 @@
           }
         }
         if (best !== null) points.push({ date: item.date, value: best });
+      } else if (metricType === "added-weight") {
+        const weights = sets.map(set => Number(set.weight)).filter(weight => weight > 0);
+        if (weights.length) points.push({ date: item.date, value: Math.max(...weights) });
+        else points.push({ date: item.date, value: 0 });
       } else {
         points.push({ date: item.date, value: sets.reduce((sum, set) => sum + Number(set.reps || 0), 0) });
       }
     }
-    return { history, weighted, points };
+    return { history, metricType, points };
   }
 
   function renderProgressOptions() {
@@ -145,7 +152,8 @@
     const canvas = document.getElementById("progressChart");
     const summary = document.getElementById("progressSummary");
     if (!canvas || !summary) return;
-    const { history, weighted, points } = progressData(name);
+    const { history, metricType, points } = progressData(name);
+    const weighted = metricType !== "reps";
     const ctx = canvas.getContext("2d");
     const W = canvas.width, H = canvas.height;
     const L = 78, R = 24, T = 28, B = 66, plotW = W - L - R, plotH = H - T - B;
@@ -158,7 +166,7 @@
       ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L, H - B); ctx.lineTo(W - R, H - B); ctx.stroke();
       ctx.fillStyle = "#7a8290"; ctx.textAlign = "center"; ctx.font = "22px system-ui";
       ctx.fillText("该时间范围暂无可计算数据", L + plotW / 2, T + plotH / 2);
-      summary.textContent = history.length ? `${rangeLabel()}内已有记录，但缺少可计算的重量/次数组合。` : `${rangeLabel()}内暂无该动作记录。`;
+      summary.textContent = history.length ? `${rangeLabel()}内已有记录，但缺少可计算的数据。` : `${rangeLabel()}内暂无该动作记录。`;
       return;
     }
 
@@ -188,14 +196,16 @@
       ctx.fillStyle = "#7a8290"; ctx.textAlign = "center"; ctx.fillText(shortDate(points[index].date), xx, H - B + 20);
     }
 
+    const axisLabel = metricType === "e1rm" ? "估算 1RM (kg)" : metricType === "added-weight" ? "附加重量 (kg)" : "总次数";
     ctx.fillStyle = "#4b5563"; ctx.textAlign = "center"; ctx.fillText("日期", L + plotW / 2, H - 14);
-    ctx.save(); ctx.translate(18, T + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(weighted ? "估算 1RM (kg)" : "总次数", 0, 0); ctx.restore();
+    ctx.save(); ctx.translate(18, T + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(axisLabel, 0, 0); ctx.restore();
     ctx.strokeStyle = "#171a21"; ctx.lineWidth = 3; ctx.beginPath();
     points.forEach((point, index) => { const xx = x(index), yy = y(point.value); index ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); }); ctx.stroke();
     ctx.fillStyle = "#171a21";
     points.forEach((point, index) => { ctx.beginPath(); ctx.arc(x(index), y(point.value), 5.5, 0, Math.PI * 2); ctx.fill(); });
 
-    const metric = weighted ? "估算 1RM" : "总次数", unit = weighted ? " kg" : " 次";
+    const metric = metricType === "e1rm" ? "估算 1RM" : metricType === "added-weight" ? "附加重量" : "总次数";
+    const unit = weighted ? " kg" : " 次";
     summary.textContent = points.length === 1
       ? `${name} · ${rangeLabel()}：1 次有效记录，${metric} ${points[0].value.toFixed(weighted ? 1 : 0)}${unit}。`
       : `${name} · ${rangeLabel()}：${metric}从 ${points[0].value.toFixed(weighted ? 1 : 0)}${unit} 到 ${points.at(-1).value.toFixed(weighted ? 1 : 0)}${unit}。`;

@@ -6,6 +6,9 @@
 
   const {
     valueOrNull,
+    loadType,
+    usesWeight,
+    loadLabel,
     repRange,
     setCount,
     weightStep,
@@ -44,11 +47,13 @@
   function suggestionSnapshot(plan) {
     const historyContext = buildHistoryContext(plan.name);
     const exercises = (plan.exercises || []).map(ex => {
+      const type = loadType(ex);
       if (ex.warmup) {
         const count = setCount(ex);
         return {
           name: ex.name,
           warmup: true,
+          loadType: type,
           note: ex.note || "",
           repRange: null,
           weightStep: 0,
@@ -57,7 +62,7 @@
           sets: Array.from({ length: count }, (_, si) => {
             const preset = warmupSet(ex, si);
             return {
-              weight: valueOrNull(preset.weight),
+              weight: usesWeight(ex) ? valueOrNull(preset.weight) : null,
               reps: valueOrNull(preset.reps ?? preset.repsLabel)
             };
           })
@@ -69,13 +74,14 @@
       return {
         name: ex.name,
         warmup: false,
+        loadType: type,
         note: ex.note || "",
         repRange: [...suggestion.repRange],
         weightStep: suggestion.weightStep,
         suggestionLabel: suggestion.statusLabel,
         suggestionStatus: suggestion.status,
         reason: suggestion.reason,
-        sets: suggestion.reps.map(reps => ({ weight: suggestion.weight, reps }))
+        sets: suggestion.reps.map(reps => ({ weight: type === "bodyweight" ? null : suggestion.weight, reps }))
       };
     });
 
@@ -98,6 +104,7 @@
     const draft = active?.index === index
       ? { ...clone(active.workout), status: "draft", revision: null }
       : suggestionSnapshot(plan);
+    for (const ex of draft.exercises || []) ex.loadType = loadType(ex);
     drafts.set(index, draft);
     return draft;
   }
@@ -112,12 +119,17 @@
   }
 
   function plannedRows(ex, ei) {
-    const rows = (ex.sets || []).map((set, si) => `<div class="planning-set-row">
+    const weighted = usesWeight(ex);
+    const loadName = loadLabel(ex);
+    const rows = (ex.sets || []).map((set, si) => `<div class="planning-set-row${weighted ? "" : " bodyweight-plan-row"}">
       <span class="planning-set-number">${si + 1}</span>
-      <input type="text" inputmode="decimal" ${AUTOFILL_GUARD} aria-label="第 ${si + 1} 组重量" data-plan-e="${ei}" data-plan-s="${si}" data-plan-key="weight" value="${App.esc(set.weight ?? "")}">
+      ${weighted ? `<input type="text" inputmode="decimal" ${AUTOFILL_GUARD} aria-label="第 ${si + 1} 组${App.esc(loadName)}" data-plan-e="${ei}" data-plan-s="${si}" data-plan-key="weight" value="${App.esc(set.weight ?? "")}">` : ""}
       <input type="text" inputmode="numeric" ${AUTOFILL_GUARD} aria-label="第 ${si + 1} 组次数" data-plan-e="${ei}" data-plan-s="${si}" data-plan-key="reps" value="${App.esc(set.reps ?? "")}">
     </div>`).join("");
-    return `<div class="planning-set-header"><span>组</span><span>重量 kg</span><span>次数</span></div>${rows}`;
+    const header = weighted
+      ? `<div class="planning-set-header"><span>组</span><span>${App.esc(loadName)} kg</span><span>次数</span></div>`
+      : '<div class="planning-set-header bodyweight-plan-row"><span>组</span><span>次数</span></div>';
+    return `${header}${rows}`;
   }
 
   function renderCurrentBanner() {
@@ -125,7 +137,15 @@
     if (!root) return;
     const active = confirmed();
     root.className = `planning-current${active ? " is-confirmed" : " is-empty"}`;
-    root.innerHTML = `<span>当前待训练</span><strong>${App.esc(active?.plan?.name || active?.workout?.planName || "暂无")}</strong>`;
+    if (!active) {
+      root.innerHTML = '<span class="planning-current-label">当前待训练</span><strong>暂无</strong><small>推送后会显示在训练页</small>';
+      return;
+    }
+    const count = Array.isArray(active.workout?.exercises) ? active.workout.exercises.length : 0;
+    const time = active.workout?.confirmedAt
+      ? new Date(active.workout.confirmedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+      : "已推送";
+    root.innerHTML = `<span class="planning-current-label">当前待训练</span><strong>${App.esc(active.plan?.name || active.workout?.planName || "本次训练")}</strong><small>${count ? `${count} 个动作 · ` : ""}${App.esc(time)} 推送</small>`;
   }
 
   function renderCurrentPlan() {
@@ -141,9 +161,9 @@
     const historyContext = buildHistoryContext(plan.name);
     root.innerHTML = draft.exercises.map((ex, ei) => {
       const previous = historyContext.latest(ex.name);
-      const summary = previousSummary(previous);
+      const summary = previousSummary(previous, ex);
       const count = Math.max(1, ex.sets?.length || 1);
-      return `<article class="planning-exercise-card">
+      return `<article class="planning-exercise-card" data-load-type="${App.esc(loadType(ex))}">
         <div class="planning-exercise-head">
           <div><h3>${App.esc(ex.name || "未命名动作")}</h3><p>${App.esc(ex.note || (ex.warmup ? "专项热身" : ""))}</p></div>
           ${ex.warmup ? '<span class="badge warmup-badge">热身</span>' : ""}
@@ -152,7 +172,7 @@
           ${previousPanel(summary)}
           ${suggestionPanel(ex)}
         </div>
-        <div class="planning-target-panel">
+        <div class="planning-target-panel${usesWeight(ex) ? "" : " bodyweight-target-panel"}">
           <div class="planning-target-head">
             <div><strong>本次计划</strong><small>${count} 组${ex.repRange ? ` · 模板 ${ex.repRange[0]}–${ex.repRange[1]} 次` : ""}</small></div>
             <div class="planning-set-control">
@@ -169,7 +189,6 @@
 
   function renderActions() {
     const hasPlan = !!currentPlan();
-    const hasActive = !!confirmed();
     for (const id of ["planningPushTopBtn", "planningPushBottomBtn"]) {
       const button = document.getElementById(id);
       if (button) button.disabled = !hasPlan;
@@ -177,8 +196,8 @@
     for (const id of ["planningGoTrainTopBtn", "planningGoTrainBtn"]) {
       const button = document.getElementById(id);
       if (!button) continue;
-      button.classList.toggle("hidden", !hasActive);
-      button.disabled = !hasActive;
+      button.classList.remove("hidden");
+      button.disabled = !hasPlan;
     }
     const regenerateButton = document.getElementById("planningRegenerateBtn");
     if (regenerateButton) regenerateButton.disabled = !hasPlan;
@@ -188,12 +207,22 @@
     return `<label>${label}<input data-template-edit="${edit}" ${extra} value="${App.esc(value ?? "")}"></label>`;
   }
 
+  function loadTypeField(ex) {
+    const type = loadType(ex);
+    return `<label>负重类型<select data-template-edit="loadType">
+      <option value="weight"${type === "weight" ? " selected" : ""}>常规重量</option>
+      <option value="bodyweight"${type === "bodyweight" ? " selected" : ""}>徒手</option>
+      <option value="added-weight"${type === "added-weight" ? " selected" : ""}>附加重量</option>
+    </select></label>`;
+  }
+
   function renderWarmupPresets(ex, ei) {
     const count = setCount(ex);
+    const weighted = usesWeight(ex);
     return `<div class="template-preset-list">${Array.from({ length: count }, (_, si) => {
       const preset = warmupSet(ex, si);
-      return `<div class="template-preset-row"><span>${si + 1}</span>
-        <label>重量<input type="number" step="0.5" inputmode="decimal" autocomplete="off" data-template-preset="weight" data-e="${ei}" data-s="${si}" value="${App.esc(preset.weight ?? "")}"></label>
+      return `<div class="template-preset-row${weighted ? "" : " bodyweight-template-preset"}"><span>${si + 1}</span>
+        ${weighted ? `<label>${App.esc(loadLabel(ex))}<input type="number" step="0.5" inputmode="decimal" autocomplete="off" data-template-preset="weight" data-e="${ei}" data-s="${si}" value="${App.esc(preset.weight ?? "")}"></label>` : ""}
         <label>次数<input type="number" step="1" inputmode="numeric" autocomplete="off" data-template-preset="reps" data-e="${ei}" data-s="${si}" value="${App.esc(preset.reps ?? "")}"></label>
       </div>`;
     }).join("")}</div>`;
@@ -211,11 +240,15 @@
     root.innerHTML = (plan.exercises || []).map((ex, ei) => {
       const [min, max] = repRange(ex);
       const sets = setCount(ex);
+      const weighted = usesWeight(ex);
+      const loadName = loadLabel(ex);
       const common = `<div class="template-card-head"><div><strong>${App.esc(ex.name || "未命名动作")}</strong><small>${ex.warmup ? "专项热身模板" : "长期训练模板"}</small></div><span>${sets} 组</span></div>`;
       const countControl = `<div class="template-setting-row"><span>计划组数</span><div class="planning-set-control"><button type="button" class="small secondary template-remove-set" data-e="${ei}" ${sets <= 1 ? "disabled" : ""}>−</button><span>${sets}</span><button type="button" class="small secondary template-add-set" data-e="${ei}">+</button></div></div>`;
+      const repsFields = `<div class="template-grid"><label>目标次数下限<input data-template-edit="repMin" type="number" min="1" step="1" inputmode="numeric" value="${min}"></label><label>目标次数上限<input data-template-edit="repMax" type="number" min="1" step="1" inputmode="numeric" value="${max}"></label></div>`;
+      const loadFields = weighted ? `<div class="template-grid"><label>起始${App.esc(loadName)} kg<input data-template-edit="defaultWeight" type="number" step="0.5" inputmode="decimal" value="${App.esc(ex.defaultWeight ?? "")}"></label><label>升档重量 kg<input data-template-edit="weightStep" type="number" min="0" step="0.5" inputmode="decimal" value="${weightStep(ex)}"></label></div>` : "";
       const body = ex.warmup
-        ? `${templateField("动作名称", "name", ex.name, 'autocomplete="off"')}${countControl}${renderWarmupPresets(ex, ei)}<label>备注<textarea data-template-edit="note" rows="2">${App.esc(ex.note || "")}</textarea></label>`
-        : `${templateField("动作名称", "name", ex.name, 'autocomplete="off"')}<div class="template-grid"><label>目标次数下限<input data-template-edit="repMin" type="number" min="1" step="1" inputmode="numeric" value="${min}"></label><label>目标次数上限<input data-template-edit="repMax" type="number" min="1" step="1" inputmode="numeric" value="${max}"></label><label>起始重量 kg<input data-template-edit="defaultWeight" type="number" step="0.5" inputmode="decimal" value="${App.esc(ex.defaultWeight ?? "")}"></label><label>升档重量 kg<input data-template-edit="weightStep" type="number" min="0" step="0.5" inputmode="decimal" value="${weightStep(ex)}"></label></div>${countControl}<label>备注<textarea data-template-edit="note" rows="2">${App.esc(ex.note || "")}</textarea></label><p class="template-hint">修改动作名称会影响历史记录的名称匹配。</p>`;
+        ? `${templateField("动作名称", "name", ex.name, 'autocomplete="off"')}${loadTypeField(ex)}${countControl}${renderWarmupPresets(ex, ei)}<label>备注<textarea data-template-edit="note" rows="2">${App.esc(ex.note || "")}</textarea></label>`
+        : `${templateField("动作名称", "name", ex.name, 'autocomplete="off"')}${loadTypeField(ex)}${repsFields}${loadFields}${countControl}<label>备注<textarea data-template-edit="note" rows="2">${App.esc(ex.note || "")}</textarea></label><p class="template-hint">修改动作名称会影响历史记录的名称匹配。</p>`;
       return `<article class="template-card" data-e="${ei}">${common}${body}<button type="button" class="small template-delete" data-e="${ei}">删除动作</button></article>`;
     }).join("");
   }
@@ -265,6 +298,7 @@
     if (!ex) return;
     const field = input.dataset.templateEdit;
     if (field === "name") ex.name = input.value.trim() || "未命名动作";
+    else if (field === "loadType") ex.loadType = loadType(input.value);
     else if (field === "repMin") { ex.repRange ??= [8, 12]; ex.repRange[0] = Math.max(1, Number(input.value) || 1); }
     else if (field === "repMax") { ex.repRange ??= [8, 12]; ex.repRange[1] = Math.max(1, Number(input.value) || 1); }
     else if (field === "defaultWeight") ex.defaultWeight = valueOrNull(input.value);
@@ -324,16 +358,16 @@
     const plan = App.state.plans[index];
     const draft = draftFor(index);
     const active = confirmed();
-    if (!plan || !draft) return;
+    if (!plan || !draft) return false;
 
     if (active && App.training?.hasDraft?.()) {
       App.toast("当前训练已经开始记录，请先保存或清空后再推送新计划", "error");
-      return;
+      return false;
     }
 
     if (active && active.index !== index) {
       const replace = confirm(`当前待训练计划是“${active.plan?.name || active.workout.planName}”。推送后将替换为“${plan.name}”。继续？`);
-      if (!replace) return;
+      if (!replace) return false;
     }
 
     NextWorkout.replaceOthers(index, { replacedByPlanName: plan.name || "" });
@@ -346,7 +380,7 @@
       planName: plan.name,
       generatedAt: draft.generatedAt || now,
       confirmedAt: now,
-      exercises: clone(draft.exercises || [])
+      exercises: clone((draft.exercises || []).map(ex => ({ ...ex, loadType: loadType(ex) })))
     };
 
     drafts.delete(index);
@@ -355,12 +389,17 @@
     App.toast("训练计划已推送", "success");
 
     if (App.sync?.push && await App.sync.hasCredentials?.()) {
-      await App.sync.push();
-      const syncStatus = document.getElementById("todaySyncStatus");
-      if (syncStatus?.classList.contains("sync-error")) {
-        App.toast(syncStatus.textContent || "训练计划已保存在本机，GitHub 同步未完成", "error");
+      try {
+        await App.sync.push();
+        const syncStatus = document.getElementById("todaySyncStatus");
+        if (syncStatus?.classList.contains("sync-error")) {
+          App.toast(syncStatus.textContent || "训练计划已保存在本机，GitHub 同步未完成", "error");
+        }
+      } catch (error) {
+        App.toast(error?.message || "训练计划已保存在本机，GitHub 同步未完成", "error");
       }
     }
+    return true;
   }
 
   function regenerate() {
@@ -370,7 +409,7 @@
     drafts.set(index, suggestionSnapshot(plan));
     renderCurrentPlan();
     renderActions();
-    App.toast("已按最新历史重新生成计划", "success");
+    App.toast("已恢复为系统推荐计划", "success");
   }
 
   async function deleteTemplateExercise(ei) {
@@ -389,14 +428,16 @@
     const plan = App.state.plans[index];
     if (!plan) return;
     plan.exercises ??= [];
-    plan.exercises.push({ name: "新动作", sets: 3, repRange: [8, 12], defaultWeight: null, weightStep: 5, note: "", optional: false });
+    plan.exercises.push({ name: "新动作", loadType: "weight", sets: 3, repRange: [8, 12], defaultWeight: null, weightStep: 5, note: "", optional: false });
     await App.persist("plans");
     drafts.delete(index);
     render();
   }
 
-  function goTrain() {
-    App.switchPage("today", { historyMode: "replace" });
+  async function goTrain() {
+    const pushed = await pushPlan();
+    if (!pushed) return;
+    await App.switchPage("today", { historyMode: "replace" });
   }
 
   function bindEvents() {
@@ -430,7 +471,7 @@
       document.getElementById(id)?.addEventListener("click", () => pushPlan().catch(error => App.toast(error.message, "error")));
     }
     for (const id of ["planningGoTrainTopBtn", "planningGoTrainBtn"]) {
-      document.getElementById(id)?.addEventListener("click", goTrain);
+      document.getElementById(id)?.addEventListener("click", () => goTrain().catch(error => App.toast(error.message, "error")));
     }
     document.getElementById("planningAddExerciseBtn")?.addEventListener("click", addTemplateExercise);
   }
