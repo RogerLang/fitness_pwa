@@ -1,4 +1,4 @@
-/* Planning page: separates long-term templates from the confirmed next workout. */
+/* v92 planning flow: one confirmed next workout across the whole app. */
 
 .bottom-nav{
   grid-template-columns:repeat(5,minmax(0,1fr));
@@ -51,6 +51,62 @@
   color:#557066;
 }
 
+#plan .planning-status.is-warning{
+  color:#8a6846;
+}
+
+#plan .planning-status.is-editing{
+  color:#667482;
+}
+
+#plan .planning-current{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:10px;
+  padding:10px 11px;
+  border:1px solid rgba(255,255,255,.42);
+  border-radius:18px;
+  background:rgba(255,255,255,.36);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+}
+
+#plan .planning-current > div{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:2px;
+}
+
+#plan .planning-current span,
+#plan .planning-current small{
+  color:#8c96a2;
+  font-size:10.5px;
+  line-height:1.35;
+}
+
+#plan .planning-current strong{
+  color:#3d4754;
+  font-size:14px;
+  line-height:1.35;
+}
+
+#plan .planning-current-badge{
+  flex:0 0 auto;
+  padding:5px 8px;
+  border:1px solid rgba(104,128,118,.13);
+  border-radius:999px;
+  background:rgba(122,151,138,.10);
+  color:#607b6f!important;
+  font-size:10px!important;
+  font-weight:700;
+}
+
+#plan .planning-current.is-empty{
+  background:rgba(255,255,255,.28);
+}
+
 #planningWorkoutList{
   display:grid;
   gap:12px;
@@ -65,6 +121,12 @@
     linear-gradient(180deg,rgba(255,255,255,.70),rgba(245,248,252,.55));
   box-shadow:
     0 7px 19px rgba(37,48,64,.045),
+    inset 0 1.5px 0 rgba(255,255,255,.96);
+}
+
+#plan .planning-exercise-card.is-locked{
+  box-shadow:
+    0 5px 15px rgba(37,48,64,.035),
     inset 0 1.5px 0 rgba(255,255,255,.96);
 }
 
@@ -128,6 +190,10 @@
   border-radius:19px;
   background:rgba(255,255,255,.42);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.82);
+}
+
+#plan .planning-exercise-card.is-locked .planning-target-panel{
+  background:rgba(255,255,255,.30);
 }
 
 #plan .planning-target-head{
@@ -220,6 +286,13 @@
   font-variant-numeric:tabular-nums;
 }
 
+#plan .planning-set-row input[readonly]{
+  color:#65717f;
+  -webkit-text-fill-color:#65717f;
+  background:rgba(255,255,255,.36);
+  cursor:default;
+}
+
 #plan .planning-actions{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -263,6 +336,10 @@
 
 #plan .planning-template-shell[open] > summary::after{
   content:"收起";
+}
+
+#plan .planning-template-shell > p{
+  margin-bottom:0;
 }
 
 #planningTemplateList{
@@ -357,6 +434,46 @@
   margin-top:9px;
 }
 
+#today .today-plan-bar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+}
+
+#today .today-plan-current{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:2px;
+  padding:9px 10px;
+  border:1px solid rgba(255,255,255,.40);
+  border-radius:16px;
+  background:rgba(255,255,255,.32);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.74);
+}
+
+#today .today-plan-current > span,
+#today .today-plan-current > small{
+  color:#8b95a1;
+  font-size:10.5px;
+  line-height:1.3;
+}
+
+#today .today-plan-current > strong{
+  overflow:hidden;
+  color:#3d4754;
+  font-size:13.5px;
+  line-height:1.35;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+#today #pullPlansTodayBtn{
+  min-height:42px;
+  white-space:nowrap;
+}
+
 #workoutContainer .training-set-heading{
   align-items:center;
 }
@@ -398,6 +515,10 @@
   #plan .planning-context-grid{
     grid-template-columns:1fr 1fr;
   }
+
+  #today .today-plan-bar{
+    grid-template-columns:minmax(0,1fr) auto;
+  }
 }
 
 @media(max-width:390px){
@@ -412,13 +533,23 @@
   #plan #planningGoTrainBtn{
     grid-column:auto;
   }
+
+  #today .today-plan-bar{
+    grid-template-columns:1fr;
+  }
+
+  #today #pullPlansTodayBtn{
+    width:100%;
+  }
 }
 
 @media(prefers-reduced-transparency:reduce){
   #plan .planning-exercise-card,
   #plan .planning-context,
   #plan .planning-target-panel,
-  #plan .template-card{
+  #plan .planning-current,
+  #plan .template-card,
+  #today .today-plan-current{
     background:#f8f9fb;
     border-color:rgba(205,211,220,.42);
     box-shadow:none;

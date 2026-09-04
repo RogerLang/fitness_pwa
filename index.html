@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="assets/css/glass-cards.css?v=72" />
   <link rel="stylesheet" href="assets/css/exercise-card.css?v=72" />
   <link rel="stylesheet" href="assets/css/page-unification.css?v=90" />
-  <link rel="stylesheet" href="assets/css/planning.css?v=91" />
+  <link rel="stylesheet" href="assets/css/planning.css?v=92" />
   <title>练了么</title>
 </head>
 <body class="app-booting">
@@ -59,8 +59,12 @@
         </div>
       </div>
       <div class="today-plan-bar">
+        <div class="today-plan-current">
+          <span>当前本次计划</span>
+          <strong id="todayPlanName">尚未确认下一次训练</strong>
+          <small id="todayPlanMeta">正在检查本地计划…</small>
+        </div>
         <button id="pullPlansTodayBtn" type="button" class="small secondary">检查最新计划</button>
-        <select id="planSelect" aria-label="选择训练模板"></select>
       </div>
       <p id="todaySyncStatus" class="today-sync-status" aria-live="polite"></p>
     </div>
@@ -78,14 +82,15 @@
     <div class="card planning-hero">
       <div class="planning-heading">
         <div>
-          <h2>本次计划</h2>
-          <p class="muted">根据训练模板和最近记录生成建议，确认后训练页只执行这一版。</p>
+          <h2>制定下一次训练</h2>
+          <p class="muted">选择训练模板，根据最近记录生成建议；确认后训练页只执行这一份。</p>
         </div>
       </div>
       <div class="planning-plan-bar">
         <select id="planningPlanSelect" aria-label="选择训练模板"></select>
         <button id="planningRegenerateBtn" type="button" class="small secondary">重新生成</button>
       </div>
+      <div id="planningCurrentPlan" class="planning-current"></div>
       <p id="planningStatus" class="planning-status" aria-live="polite"></p>
     </div>
 
@@ -93,13 +98,14 @@
 
     <div class="card planning-actions">
       <button id="planningConfirmBtn" type="button">确认本次计划</button>
-      <button id="planningConfirmSyncBtn" type="button" class="secondary">确认并同步</button>
-      <button id="planningGoTrainBtn" type="button" class="secondary">进入训练</button>
+      <button id="planningReplanBtn" type="button" class="secondary hidden">重新制定</button>
+      <button id="planningCancelEditBtn" type="button" class="secondary hidden">放弃修改</button>
+      <button id="planningGoTrainBtn" type="button" class="secondary hidden">进入训练</button>
     </div>
 
     <details class="card planning-template-shell">
       <summary>编辑训练模板</summary>
-      <p class="muted">模板负责长期结构；修改模板不会改动已经确认的本次计划。</p>
+      <p class="muted">模板只负责以后如何生成新计划；修改这里不会改变已经确认的本次计划。</p>
       <div id="planningTemplateList"></div>
       <button id="planningAddExerciseBtn" type="button" class="secondary">+ 添加模板动作</button>
     </details>
@@ -142,7 +148,7 @@
   <section id="settings" class="page">
     <div class="card">
       <h2>GitHub 同步</h2>
-      <p class="muted">使用单独的 Private GitHub 仓库。训练记录和身体记录按条目增量同步；训练模板和已确认的本次计划使用 revision 检测多设备修改冲突。</p>
+      <p class="muted">使用单独的 Private GitHub 仓库。训练记录和身体记录按条目增量同步；训练模板和当前本次计划使用 revision 检测多设备修改冲突。</p>
       <div class="grid2">
         <label>GitHub 用户名<input id="syncOwner" autocomplete="off" placeholder="例如 yourname"></label>
         <label>Private 仓库名<input id="syncRepo" autocomplete="off" placeholder="例如 fitness-data-private"></label>
@@ -201,12 +207,13 @@
 <script src="js/core/app-body.js?v=72"></script>
 <script src="js/core/app-backup.js?v=72"></script>
 <script src="js/training/training-progression.js?v=72"></script>
-<script src="js/training/training-draft.js?v=91"></script>
-<script src="js/training/training-render.js?v=91"></script>
+<script src="js/training/training-next-workout.js?v=92"></script>
+<script src="js/training/training-draft.js?v=92"></script>
+<script src="js/training/training-render.js?v=92"></script>
 <script src="js/training/training-insights.js?v=72"></script>
 <script src="js/training/training-maintenance.js?v=72"></script>
-<script src="js/training/training.js?v=91"></script>
-<script src="js/training/planning.js?v=91"></script>
+<script src="js/training/training.js?v=92"></script>
+<script src="js/training/planning.js?v=92"></script>
 <script src="js/training/training-motion.js?v=72"></script>
 <script src="js/ui/nav-motion.js?v=72"></script>
 <script src="js/sync/sync-remote.js?v=72"></script>
