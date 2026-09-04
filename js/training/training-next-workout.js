@@ -60,7 +60,6 @@
   }
 
   window.TrainingNextWorkout = Object.freeze({
-    confirmedEntries,
     current,
     normalizeSingle,
     replaceOthers
