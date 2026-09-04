@@ -51,7 +51,7 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
 @media (max-width:680px){
   html{
     --training-snap-top:10px;
-    --training-overview-offset:58px;
+    --training-overview-offset:68px;
     --training-snap-bottom:126px;
     scroll-padding-top:var(--training-snap-top);
     scroll-padding-bottom:var(--training-snap-bottom);
