@@ -11,85 +11,221 @@
     inset 0 -1px 0 rgba(96,112,134,.026);
 }
 
-/* Completed sets remain legible only as a faint trace until the row is edited again. */
+/* Completed sets retreat into a pale cool-gray trace. Button focus must not restore row contrast. */
 html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed .set-number{
-  color:rgba(90,101,114,.11)!important;
+  color:rgba(148,161,176,.20)!important;
+  font-weight:520!important;
 }
 
 html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed input{
-  color:rgba(34,41,51,.09)!important;
-  -webkit-text-fill-color:rgba(34,41,51,.09)!important;
-  caret-color:rgba(34,41,51,.48);
+  color:rgba(148,161,176,.18)!important;
+  -webkit-text-fill-color:rgba(148,161,176,.18)!important;
+  caret-color:rgba(83,96,112,.50);
+  font-weight:520!important;
 }
 
 html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed input::placeholder{
-  color:rgba(23,26,33,.07)!important;
+  color:rgba(148,161,176,.13)!important;
   opacity:1;
 }
 
-html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:focus-within .set-number{
-  color:rgba(90,101,114,.58)!important;
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed input:focus{
+  color:rgba(52,62,75,.68)!important;
+  -webkit-text-fill-color:rgba(52,62,75,.68)!important;
+  font-weight:600!important;
 }
 
-html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:focus-within input{
-  color:rgba(34,41,51,.62)!important;
-  -webkit-text-fill-color:rgba(34,41,51,.62)!important;
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed input:focus::placeholder{
+  color:rgba(92,104,119,.48)!important;
 }
 
-html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:focus-within input::placeholder{
-  color:rgba(23,26,33,.42)!important;
+@supports selector(:has(*)){
+  html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:has(input:focus) .set-number{
+    color:rgba(90,101,114,.55)!important;
+  }
 }
 
 html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed="true"]{
-  background:rgba(255,255,255,.22);
-  border-color:rgba(151,164,181,.14);
-  color:rgba(92,104,119,.38);
-  opacity:.48;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.68);
+  background:rgba(255,255,255,.18);
+  border-color:rgba(151,164,181,.11);
+  color:rgba(108,120,135,.30);
+  opacity:.38;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.62);
 }
 
-/* Workout value fields use the mobile keyboard without browser number steppers or autofill styling. */
+/* Workout value fields use the mobile numeric keyboard without browser number steppers or autofill styling. */
 #workoutContainer .workout-number-input{
   appearance:none;
   -webkit-appearance:none;
   font-variant-numeric:tabular-nums;
 }
 
-/* Exercise editor: low-risk controls above, destructive action left, completion action right. */
-#workoutContainer .editor-actions{
+/* Exercise editor: compact settings panel with grouped parameters. */
+#workoutContainer .exercise-inline-editor{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid rgba(126,145,169,.12);
+}
+
+#workoutContainer .exercise-editor-panel{
   display:grid;
   gap:11px;
-  margin-top:13px;
+  padding:12px;
+  border:1px solid var(--ui-panel-border);
+  border-radius:22px;
+  background:var(--ui-panel-bg);
+  box-shadow:var(--ui-panel-shadow);
 }
 
-#workoutContainer .editor-set-actions{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
+#workoutContainer .editor-section-label{
+  color:#4e5967;
+  font-size:13px;
+  font-weight:760;
+  letter-spacing:.01em;
 }
 
+#workoutContainer .editor-name-field,
+#workoutContainer .editor-note-field{
+  margin:0;
+}
+
+#workoutContainer .editor-name-field > input{
+  margin-top:1px;
+}
+
+#workoutContainer .editor-parameter-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+}
+
+#workoutContainer .editor-parameter-card{
+  min-width:0;
+  padding:10px;
+  border:1px solid rgba(255,255,255,.42);
+  border-radius:18px;
+  background:rgba(255,255,255,.34);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.76);
+}
+
+#workoutContainer .editor-parameter-title{
+  margin-bottom:8px;
+  color:#66717f;
+  font-size:12px;
+  font-weight:700;
+}
+
+#workoutContainer .editor-range-fields{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  gap:7px;
+  align-items:end;
+}
+
+#workoutContainer .editor-weight-fields{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+
+#workoutContainer .editor-range-fields label,
+#workoutContainer .editor-weight-fields label{
+  min-width:0;
+  margin:0;
+  gap:5px;
+}
+
+#workoutContainer .editor-range-fields label span,
+#workoutContainer .editor-weight-fields label span{
+  color:#8a94a1;
+  font-size:11px;
+  line-height:1.2;
+}
+
+#workoutContainer .editor-range-fields input,
+#workoutContainer .editor-weight-fields input{
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+
+#workoutContainer .editor-range-divider{
+  align-self:end;
+  padding-bottom:11px;
+  color:#9aa3ae;
+  font-size:14px;
+}
+
+#workoutContainer .editor-option-list{
+  display:grid;
+  gap:7px;
+}
+
+#workoutContainer .editor-setting-row,
 #workoutContainer .optional-toggle{
   display:flex;
   flex-direction:row;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
-  min-width:154px;
+  gap:14px;
+  min-width:0;
+  min-height:52px;
   margin:0;
   padding:8px 9px 8px 12px;
-  border:1px solid rgba(255,255,255,.50);
+  border:1px solid rgba(255,255,255,.42);
   border-radius:17px;
-  background:rgba(255,255,255,.38);
-  color:#66717f;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.80);
+  background:rgba(255,255,255,.32);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
+}
+
+#workoutContainer .optional-toggle{
   cursor:pointer;
 }
 
-#workoutContainer .optional-toggle-label{
+#workoutContainer .editor-setting-copy{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:2px;
+  color:#65707e;
+}
+
+#workoutContainer .editor-setting-copy strong{
+  color:#4d5866;
   font-size:12.5px;
-  font-weight:690;
+  font-weight:720;
+}
+
+#workoutContainer .editor-setting-copy > span{
+  color:#929ba7;
+  font-size:10.5px;
   line-height:1.2;
+}
+
+#workoutContainer .set-count-control{
+  display:grid;
+  grid-template-columns:34px 34px 34px;
+  gap:5px;
+  align-items:center;
+}
+
+#workoutContainer .set-count-control button{
+  width:34px;
+  height:34px;
+  min-height:34px;
+  padding:0;
+  border-radius:12px;
+  font-size:18px;
+  line-height:1;
+}
+
+#workoutContainer .set-count-value{
+  display:grid;
+  place-items:center;
+  height:34px;
+  color:#323a45;
+  font-size:15px;
+  font-weight:760;
+  font-variant-numeric:tabular-nums;
 }
 
 #workoutContainer .optional-toggle-input{
@@ -128,24 +264,30 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
   outline-offset:2px;
 }
 
+#workoutContainer .editor-note-field textarea{
+  min-height:54px;
+  max-height:140px;
+  resize:vertical;
+  field-sizing:content;
+}
+
 #workoutContainer .editor-footer-actions{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding-top:10px;
-  border-top:1px solid rgba(126,145,169,.10);
+  padding-top:11px;
 }
 
 #workoutContainer .editor-delete{
-  border:1px solid rgba(159,47,47,.14);
-  background:rgba(159,47,47,.055);
-  color:rgba(143,45,45,.72);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+  border:1px solid rgba(159,47,47,.13);
+  background:rgba(159,47,47,.045);
+  color:rgba(143,45,45,.65);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.70);
 }
 
 #workoutContainer .editor-finish{
-  min-width:96px;
+  min-width:104px;
   border:1px solid rgba(255,255,255,.26);
   background:rgba(43,49,59,.90);
   color:#fff;
@@ -227,7 +369,7 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
   box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
 }
 
-/* Progress: control, chart summary and body history all use the same thin-panel material. */
+/* Progress: control, chart summary and body history use the same thin-panel material. */
 #progress > .card:first-child > label{
   margin-top:0;
   padding:11px 12px;
@@ -299,7 +441,7 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
   border-bottom-color:rgba(126,145,169,.10);
 }
 
-/* Settings: separate account, action and explanatory surfaces without adding blur inside blur. */
+/* Settings: account, actions, privacy and backup surfaces. */
 #settings .card > .grid2,
 #settings .card > label,
 #settings .card > .row.top-gap,
@@ -341,37 +483,86 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
   padding:10px;
 }
 
-#settings .file-btn{
+#settings .backup-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+}
+
+#settings .backup-action{
+  display:flex;
+  min-width:0;
+  min-height:70px;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:3px;
   margin:0;
-  border-color:rgba(255,255,255,.56);
-  background:rgba(255,255,255,.46);
+  padding:11px 13px;
+  border:1px solid rgba(181,192,206,.42);
+  border-radius:18px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.82),rgba(241,245,249,.70));
+  color:#38424f;
+  text-align:left;
+  box-shadow:
+    0 4px 12px rgba(37,48,64,.045),
+    inset 0 1.5px 0 rgba(255,255,255,.98),
+    inset 0 -1px 0 rgba(96,112,134,.035);
+  cursor:pointer;
+}
+
+#settings button.backup-action{
+  width:100%;
+}
+
+#settings .backup-action:active{
+  transform:scale(.985);
+}
+
+#settings .backup-action-title{
+  color:#313a46;
+  font-size:14px;
+  font-weight:760;
+  line-height:1.2;
+}
+
+#settings .backup-action-meta{
+  color:#8993a0;
+  font-size:11px;
+  font-weight:560;
+  line-height:1.2;
+}
+
+#settings .file-btn.backup-action input{
+  display:none;
 }
 
 #settings #wipeBtn{
   border:1px solid rgba(159,47,47,.14);
-  background:rgba(159,47,47,.075);
+  background:rgba(159,47,47,.065);
   color:#8f2d2d;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
 }
 
 @media(max-width:680px){
-  #workoutContainer .editor-set-actions{
-    align-items:stretch;
-    flex-direction:column;
+  #workoutContainer .exercise-editor-panel{
+    padding:11px;
+    border-radius:20px;
   }
 
-  #workoutContainer .editor-set-actions > .row{
-    width:100%;
+  #workoutContainer .editor-parameter-grid{
+    grid-template-columns:1fr;
+    gap:7px;
   }
 
-  #workoutContainer .editor-set-actions > .row button{
-    flex:1;
+  #workoutContainer .editor-parameter-card{
+    padding:9px;
   }
 
+  #workoutContainer .editor-setting-row,
   #workoutContainer .optional-toggle{
-    width:100%;
-    min-width:0;
-    min-height:44px;
+    min-height:50px;
   }
 
   #workoutContainer .editor-footer-actions{
@@ -383,7 +574,7 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
   }
 
   #workoutContainer .editor-finish{
-    min-width:112px;
+    min-width:116px;
   }
 
   #history > .card,
@@ -420,9 +611,28 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
   #settings .card > .row.top-gap button:last-child{
     grid-column:1/-1;
   }
+
+  #settings .backup-actions{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media(max-width:430px){
+  #settings .backup-action{
+    min-height:68px;
+    padding:10px 11px;
+  }
+
+  #settings .backup-action-title{
+    font-size:13px;
+  }
 }
 
 @media(prefers-reduced-transparency:reduce){
+  #workoutContainer .exercise-editor-panel,
+  #workoutContainer .editor-parameter-card,
+  #workoutContainer .editor-setting-row,
+  #workoutContainer .optional-toggle,
   #history .history-card,
   #history .history-exercise,
   #progress > .card:first-child > label,
