@@ -24,17 +24,6 @@
   margin:0;
 }
 
-#plan .planning-plan-bar{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  gap:8px;
-  align-items:center;
-}
-
-#plan .planning-plan-bar select{
-  min-width:0;
-}
-
 #plan .planning-actions-top{
   display:grid;
   grid-template-columns:1fr 1fr;
