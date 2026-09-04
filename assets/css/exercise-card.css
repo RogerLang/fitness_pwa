@@ -3,6 +3,9 @@
 #workoutContainer .exercise-card{
   padding:15px 12px 12px;
   contain:layout style;
+  /* Avoid a late first paint when the next exercise approaches the viewport. */
+  content-visibility:visible;
+  contain-intrinsic-size:none;
 }
 
 #workoutContainer .exercise-head{
@@ -204,10 +207,10 @@
     padding:12px 10px 10px;
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
-    transition:opacity .16s ease,transform .16s ease;
+    transition:opacity .12s ease;
   }
 
-  /* Keep outer depth constant while the focus class changes; opacity/scale carry the focus transition. */
+  /* Keep outer depth constant while the focus class changes. */
   #workoutContainer .exercise-card,
   html.training-snap-ready #workoutContainer .exercise-card.is-current,
   html.training-form-editing #workoutContainer .exercise-card.form-editing-card{
