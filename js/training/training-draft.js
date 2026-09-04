@@ -136,40 +136,6 @@
     }
   }
 
-  function trimLastSet(ei, lastSi) {
-    trimFromSet(ei, lastSi);
-  }
-
-  function shiftAfterDeleteExercise(deletedEi) {
-    const nextSets = {};
-    const nextCompleted = {};
-    const nextCounts = {};
-
-    for (const [key, value] of Object.entries(draft.sets)) {
-      const [e, s, k] = key.split(":");
-      const ei = Number(e);
-      if (ei === deletedEi) continue;
-      nextSets[draftKey(ei > deletedEi ? ei - 1 : ei, s, k)] = value;
-    }
-
-    for (const [key, value] of Object.entries(draft.completed)) {
-      const [e, s] = key.split(":");
-      const ei = Number(e);
-      if (ei === deletedEi) continue;
-      nextCompleted[doneKey(ei > deletedEi ? ei - 1 : ei, s)] = value;
-    }
-
-    for (const [key, value] of Object.entries(draft.setCounts || {})) {
-      const ei = Number(key);
-      if (ei === deletedEi) continue;
-      nextCounts[countKey(ei > deletedEi ? ei - 1 : ei)] = value;
-    }
-
-    draft.sets = nextSets;
-    draft.completed = nextCompleted;
-    draft.setCounts = nextCounts;
-  }
-
   async function init() {
     try {
       const [storedDrafts, legacyDrafts, storedPlanIndex] = await Promise.all([
@@ -197,10 +163,6 @@
       const active = NextWorkout.current();
       draft = emptyDraft(active?.index ?? 0);
     }
-  }
-
-  async function setActivePlan(index) {
-    await App.idbSet(ACTIVE_PLAN_KEY, index);
   }
 
   async function resetPlan(index = currentPlanIndex()) {
@@ -239,7 +201,6 @@
     capture,
     flush,
     queueWrite,
-    clearPlan,
     hasData,
     getValue,
     setValue,
@@ -249,9 +210,6 @@
     setSetCount,
     clearSetCount,
     trimFromSet,
-    trimLastSet,
-    shiftAfterDeleteExercise,
-    setActivePlan,
     resetPlan,
     resetAll,
     prepareRemotePlans,

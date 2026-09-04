@@ -4,16 +4,10 @@
   let lastCheckAt = 0;
   let checking = false;
 
-  async function hasCredentials() {
-    const saved = await App.idbGet("syncCredentialsV7") || await App.idbGet("syncConfig") || {};
-    return !!(saved.owner && saved.repo && saved.token);
-  }
-
   async function checkLatest() {
     if (checking || Date.now() - lastCheckAt < COOLDOWN_MS) return;
     if (App.training?.hasDraft?.()) return;
-    if (!await hasCredentials()) return;
-    if (!App.sync?.pull) return;
+    if (!App.sync?.pull || !await App.sync.hasCredentials?.()) return;
 
     checking = true;
     lastCheckAt = Date.now();
