@@ -11,11 +11,6 @@
     return NextWorkout.current(Draft.planIndex);
   }
 
-  function confirmedWorkout(plan) {
-    const workout = plan?.plannedWorkout;
-    return workout?.status === "confirmed" && Array.isArray(workout.exercises) ? workout : null;
-  }
-
   function previousHtml(summary) {
     if (!summary) {
       return `<section class="exercise-panel exercise-summary-panel exercise-previous-panel">
@@ -141,19 +136,15 @@
     const active = currentWorkoutEntry();
     if (!name || !meta) return;
     if (!active) {
-      name.textContent = "尚未确认下一次训练";
-      meta.textContent = "先到计划页选择模板并确认本次计划";
+      name.textContent = "尚未推送下一次训练";
+      meta.textContent = "先到计划页选择模板并推送训练计划";
       return;
     }
     name.textContent = active.plan?.name || active.workout.planName || "本次训练";
     const time = active.workout.confirmedAt
       ? new Date(active.workout.confirmedAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
-      : "已确认";
-    meta.textContent = `${time} · 已锁定本次计划`;
-  }
-
-  function renderPlanSelect() {
-    renderPlanStatus();
+      : "已推送";
+    meta.textContent = `${time} · 当前待训练计划`;
   }
 
   function renderWorkout() {
@@ -168,8 +159,8 @@
     const active = currentWorkoutEntry();
     if (!active) {
       container.innerHTML = `<div class="card training-plan-empty">
-        <strong>还没有已确认的下一次训练</strong>
-        <span>在计划页选择训练模板，检查系统建议并确认后，这里会直接显示那一份计划。</span>
+        <strong>还没有待训练计划</strong>
+        <span>在计划页选择训练模板，检查系统建议并推送后，这里会直接显示那一份计划。</span>
         <button type="button" class="go-plan-page">去制定计划</button>
       </div>`;
       renderPlanStatus();
@@ -182,22 +173,8 @@
     renderPlanStatus();
   }
 
-  function clearEditors() {}
-  function toggleEditor() { return false; }
-  function shiftEditorsAfterDeleteExercise() {}
-  function warmupPreset(ex, si) {
-    return Array.isArray(ex?.sets) ? (ex.sets[si] || {}) : {};
-  }
-
   window.TrainingRenderer = Object.freeze({
-    renderPlanSelect,
-    renderPlanStatus,
     renderWorkout,
-    clearEditors,
-    toggleEditor,
-    shiftEditorsAfterDeleteExercise,
-    warmupPreset,
-    confirmedWorkout,
     currentWorkoutEntry
   });
 })();
