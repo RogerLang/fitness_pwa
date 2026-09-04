@@ -81,5 +81,4 @@
   }
 
   App.registerModule({ init, critical: true });
-  App.backup = Object.freeze({ exportData, importData, wipeData });
 })();
