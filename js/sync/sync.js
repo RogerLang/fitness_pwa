@@ -14,6 +14,9 @@
   let autoChecking = false;
   let lastAutoCheckAt = 0;
   let savedCredentials = null;
+  let suppressAutoPullCount = 0;
+  let syncRunning = false;
+  const syncQueue = [];
 
   function normalizeCredentials(value = {}) {
     return {
@@ -197,7 +200,39 @@
     fillCredentialInputs(saved, { onlyEmpty });
   }
 
-  async function push() {
+  function enqueueSync(kind, task, { priority = false } = {}) {
+    return new Promise(resolve => {
+      const entry = { kind, task, resolve };
+      if (priority) syncQueue.unshift(entry);
+      else syncQueue.push(entry);
+      runSyncQueue();
+    });
+  }
+
+  async function runSyncQueue() {
+    if (syncRunning) return;
+    syncRunning = true;
+    try {
+      while (syncQueue.length) {
+        const entry = syncQueue.shift();
+        let result;
+        try {
+          result = await entry.task();
+        } catch (error) {
+          console.warn(`sync ${entry.kind}`, error);
+          const message = error?.message || "同步失败";
+          status(message, false);
+          result = { ok: false, kind: entry.kind, message, error };
+        }
+        entry.resolve(result);
+      }
+    } finally {
+      syncRunning = false;
+      if (syncQueue.length) runSyncQueue();
+    }
+  }
+
+  async function performPush() {
     try {
       const c = await credentialsForSync();
       status("正在检查 Private 仓库…");
@@ -218,25 +253,36 @@
       const addedSessions = await pushImmutable(c, manifest, "sessions", App.state.sessions);
       const addedBody = await pushImmutable(c, manifest, "body", App.state.body);
       let changed = addedSessions > 0 || addedBody > 0;
+      let plansUploaded = false;
 
       if (!remoteRev || meta.plansDirty) {
         await Remote.uploadPlans(c, App.state.plans, manifest, meta);
         changed = true;
+        plansUploaded = true;
       }
+
+      const message = changed
+        ? `同步完成：新增 ${addedSessions} 条训练、${addedBody} 条身体记录。`
+        : "GitHub 已包含本机全部记录。";
 
       if (changed) {
         await Remote.saveManifest(c, manifest, remote.sha);
         await writeMeta(meta);
-        status(`同步完成：新增 ${addedSessions} 条训练、${addedBody} 条身体记录。`, true);
-      } else {
-        status("GitHub 已包含本机全部记录。", true);
       }
+      status(message, true);
+      return { ok: true, kind: "push", changed, plansUploaded, addedSessions, addedBody, message };
     } catch (error) {
-      status(error.message, false);
+      const message = error?.message || "同步失败";
+      status(message, false);
+      return { ok: false, kind: "push", message, error };
     }
   }
 
-  async function pull({ source = "settings" } = {}) {
+  function push({ priority = false } = {}) {
+    return enqueueSync("push", performPush, { priority });
+  }
+
+  async function performPull({ source = "settings" } = {}) {
     try {
       const c = await credentialsForSync();
       App.training?.captureDraft();
@@ -284,30 +330,49 @@
       await App.training?.prepareRemotePlans(oldPlanName, plansChanged);
       await App.refresh("remote");
 
-      const details = [
+      const message = [
         plansChanged ? "计划已更新" : "计划已是最新",
         addedSessions ? `新增 ${addedSessions} 条训练` : "训练记录已是最新",
         addedBody ? `新增 ${addedBody} 条身体记录` : "身体数据已是最新",
         removed ? `清理 ${removed} 条旧重复记录` : ""
       ].filter(Boolean).join(" · ");
-      status(details, true);
-      return true;
+      status(message, true);
+      return { ok: true, kind: "pull", plansChanged, addedSessions, addedBody, removed, message };
     } catch (error) {
       applyingRemote = false;
-      status(error.message, false);
-      return false;
+      const message = error?.message || "同步失败";
+      status(message, false);
+      return { ok: false, kind: "pull", message, error };
     }
   }
 
+  function pull({ source = "settings", priority = false } = {}) {
+    return enqueueSync("pull", () => performPull({ source }), { priority });
+  }
+
+  function suppressNextAutoPull() {
+    suppressAutoPullCount++;
+  }
+
+  async function plansAreDirty() {
+    const meta = await refreshMeta();
+    return !!meta.plansDirty;
+  }
+
   async function checkLatest() {
-    if (!autoInitialized || autoChecking || Date.now() - lastAutoCheckAt < AUTO_CHECK_COOLDOWN_MS) return;
-    if (App.training?.hasDraft?.()) return;
-    if (!await hasCredentials()) return;
+    if (!autoInitialized || autoChecking || Date.now() - lastAutoCheckAt < AUTO_CHECK_COOLDOWN_MS) return { ok: true, skipped: "cooldown" };
+    if (suppressAutoPullCount > 0) {
+      suppressAutoPullCount--;
+      return { ok: true, skipped: "suppressed" };
+    }
+    if (App.training?.hasDraft?.()) return { ok: true, skipped: "training-draft" };
+    if (!await hasCredentials()) return { ok: true, skipped: "no-credentials" };
+    if (await plansAreDirty()) return { ok: true, skipped: "local-plans-dirty" };
 
     autoChecking = true;
     lastAutoCheckAt = Date.now();
     try {
-      await pull({ source: "today" });
+      return await pull({ source: "today" });
     } finally {
       autoChecking = false;
     }
@@ -333,9 +398,9 @@
     const settingsPush = document.getElementById("pushSyncBtn");
     const remember = document.getElementById("rememberSyncBtn");
     if (quickPull) quickPull.onclick = () => runButton(quickPull, "刷新中…", () => pull({ source: "today" }));
-    if (quickPush) quickPush.onclick = () => runButton(quickPush, "同步中…", push);
+    if (quickPush) quickPush.onclick = () => runButton(quickPush, "同步中…", () => push());
     if (settingsPull) settingsPull.onclick = () => runButton(settingsPull, "合并中…", () => pull({ source: "settings" }));
-    if (settingsPush) settingsPush.onclick = () => runButton(settingsPush, "同步中…", push);
+    if (settingsPush) settingsPush.onclick = () => runButton(settingsPush, "同步中…", () => push());
     if (remember) remember.onclick = () => saveCredentials(true);
   }
 
@@ -363,5 +428,5 @@
     if (["plans", "import", "wipe"].includes(reason)) await refreshMeta();
   });
   App.registerModule({ init, onPage, onDataReset });
-  App.sync = { push, pull, hasCredentials };
+  App.sync = { push, pull, hasCredentials, suppressNextAutoPull };
 })();
