@@ -13,22 +13,85 @@
   let autoInitialized = false;
   let autoChecking = false;
   let lastAutoCheckAt = 0;
+  let savedCredentials = null;
 
-  function config() {
+  function normalizeCredentials(value = {}) {
     return {
-      owner: document.getElementById("syncOwner")?.value.trim() || "",
-      repo: document.getElementById("syncRepo")?.value.trim() || "",
-      token: document.getElementById("syncToken")?.value.trim() || ""
+      owner: String(value.owner || "").trim(),
+      repo: String(value.repo || "").trim(),
+      token: String(value.token || "").trim()
     };
   }
 
+  function completeCredentials(value) {
+    return !!(value?.owner && value?.repo && value?.token);
+  }
+
+  function formCredentials() {
+    return normalizeCredentials({
+      owner: document.getElementById("syncOwner")?.value,
+      repo: document.getElementById("syncRepo")?.value,
+      token: document.getElementById("syncToken")?.value
+    });
+  }
+
+  function fillCredentialInputs(credentials, { onlyEmpty = false } = {}) {
+    const values = {
+      syncOwner: credentials?.owner || "",
+      syncRepo: credentials?.repo || "",
+      syncToken: credentials?.token || ""
+    };
+    for (const [id, value] of Object.entries(values)) {
+      const input = document.getElementById(id);
+      if (!input || !value) continue;
+      if (onlyEmpty && input.value.trim()) continue;
+      input.value = value;
+    }
+  }
+
   async function readCredentials() {
-    return await App.idbGet(CREDS_KEY) || await App.idbGet(LEGACY_CONFIG_KEY) || {};
+    const primary = normalizeCredentials(await App.idbGet(CREDS_KEY) || {});
+    const legacy = normalizeCredentials(await App.idbGet(LEGACY_CONFIG_KEY) || {});
+    const merged = {
+      owner: primary.owner || legacy.owner,
+      repo: primary.repo || legacy.repo,
+      token: primary.token || legacy.token
+    };
+    savedCredentials = merged;
+
+    if (completeCredentials(merged) && !completeCredentials(primary)) {
+      await App.idbSet(CREDS_KEY, merged);
+    }
+    return merged;
+  }
+
+  async function persistCredentials(credentials) {
+    const value = normalizeCredentials(credentials);
+    if (!completeCredentials(value)) return false;
+    savedCredentials = value;
+    await App.idbSet(CREDS_KEY, value);
+    await App.idbSet(LEGACY_CONFIG_KEY, { owner: value.owner, repo: value.repo });
+    return true;
   }
 
   async function hasCredentials() {
-    const saved = await readCredentials();
-    return !!(saved.owner && saved.repo && saved.token);
+    if (completeCredentials(savedCredentials)) return true;
+    return completeCredentials(await readCredentials());
+  }
+
+  async function credentialsForSync() {
+    const form = formCredentials();
+    if (completeCredentials(form)) {
+      await persistCredentials(form);
+      return form;
+    }
+
+    const saved = completeCredentials(savedCredentials) ? savedCredentials : await readCredentials();
+    if (completeCredentials(saved)) {
+      fillCredentialInputs(saved, { onlyEmpty: true });
+      return saved;
+    }
+    return form;
   }
 
   function status(message, ok = null) {
@@ -119,30 +182,24 @@
   }
 
   async function saveCredentials(showStatus = false) {
-    const c = config();
-    if (showStatus && (!c.owner || !c.repo || !c.token)) {
-      status("请先填写 GitHub 用户名、Private 仓库和 Token。", false);
+    const value = formCredentials();
+    if (!completeCredentials(value)) {
+      if (showStatus) status("请先填写 GitHub 用户名、Private 仓库和 Token。", false);
       return false;
     }
-    await App.idbSet(CREDS_KEY, c);
-    await App.idbSet(LEGACY_CONFIG_KEY, { owner: c.owner, repo: c.repo });
+    await persistCredentials(value);
     if (showStatus) status("GitHub 同步信息已保存在当前设备。", true);
     return true;
   }
 
-  async function loadCredentials() {
+  async function loadCredentials({ onlyEmpty = false } = {}) {
     const saved = await readCredentials();
-    const values = { syncOwner: saved.owner, syncRepo: saved.repo, syncToken: saved.token };
-    for (const [id, value] of Object.entries(values)) {
-      const input = document.getElementById(id);
-      if (input && value !== undefined && value !== null) input.value = value;
-    }
+    fillCredentialInputs(saved, { onlyEmpty });
   }
 
   async function push() {
-    const c = config();
     try {
-      await saveCredentials(false);
+      const c = await credentialsForSync();
       status("正在检查 Private 仓库…");
       await Remote.privateCheck(c);
       await ensureIds();
@@ -180,9 +237,8 @@
   }
 
   async function pull({ source = "settings" } = {}) {
-    const c = config();
     try {
-      await saveCredentials(false);
+      const c = await credentialsForSync();
       App.training?.captureDraft();
       await App.training?.flushDraft();
       status(source === "today" ? "正在刷新训练计划和训练记录…" : "正在读取 GitHub 数据…");
@@ -299,6 +355,7 @@
   }
 
   async function onPage(id) {
+    if (id === "settings") await loadCredentials({ onlyEmpty: true });
     if (id === "today") checkLatest().catch(() => {});
   }
 
