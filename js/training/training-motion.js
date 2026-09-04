@@ -1,5 +1,6 @@
 (() => {
   const MOBILE_QUERY = window.matchMedia("(max-width:680px)");
+  const REDUCED_MOTION_QUERY = window.matchMedia("(prefers-reduced-motion: reduce)");
   const root = document.documentElement;
   const body = document.body;
   const todayPage = document.getElementById("today");
@@ -14,7 +15,10 @@
   const OVERVIEW_TOLERANCE = 26;
   const TARGET_TOLERANCE = 8;
   const AREA_TIE_TOLERANCE = 18;
-  const SETTLE_TOLERANCE = 4;
+  const SETTLE_TOLERANCE = 3;
+  const SETTLE_MIN_DURATION = 96;
+  const SETTLE_MAX_DURATION = 168;
+  const SETTLE_DISTANCE_FOR_MAX = 220;
   const FALLBACK_SETTLE_DELAY = 120;
   const SUPPORTS_SCROLLEND = "onscrollend" in window;
   const SUPPORTS_VIEW_TIMELINE = !!window.CSS?.supports?.("animation-timeline: view()");
@@ -23,7 +27,9 @@
   let enabled = false;
   let runtimeListening = false;
   let settleTimer = null;
+  let settleFrame = 0;
   let metricsFrame = 0;
+  let gestureActive = false;
   let mode = "overview";
   let cards = [];
   let targets = [];
@@ -210,19 +216,67 @@
     }
   }
 
-  function smoothSettleTo(targetY) {
-    if (Math.abs(window.scrollY - targetY) <= SETTLE_TOLERANCE) {
-      settlingTargetY = null;
+  function cancelSettle() {
+    if (settleFrame) cancelAnimationFrame(settleFrame);
+    settleFrame = 0;
+    settlingTargetY = null;
+  }
+
+  function settleDuration(distance) {
+    const ratio = Math.min(1, Math.abs(distance) / SETTLE_DISTANCE_FOR_MAX);
+    return SETTLE_MIN_DURATION + (SETTLE_MAX_DURATION - SETTLE_MIN_DURATION) * ratio;
+  }
+
+  function animateSettleTo(targetY) {
+    cancelSettle();
+
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+    if (Math.abs(distance) <= SETTLE_TOLERANCE) return;
+
+    if (REDUCED_MOTION_QUERY.matches) {
+      window.scrollTo({ top: targetY, behavior: "instant" });
       return;
     }
+
     settlingTargetY = targetY;
-    window.scrollTo({ top: targetY, behavior: "smooth" });
+    const duration = settleDuration(distance);
+    const startedAt = performance.now();
+
+    const step = now => {
+      if (
+        !enabled ||
+        document.hidden ||
+        gestureActive ||
+        settlingTargetY !== targetY
+      ) {
+        settleFrame = 0;
+        return;
+      }
+
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = progress * progress * (3 - 2 * progress);
+      window.scrollTo({
+        top: startY + distance * eased,
+        behavior: "instant"
+      });
+
+      if (progress < 1) {
+        settleFrame = requestAnimationFrame(step);
+        return;
+      }
+
+      settleFrame = 0;
+      window.scrollTo({ top: targetY, behavior: "instant" });
+    };
+
+    settleFrame = requestAnimationFrame(step);
   }
 
   function settleScrollState({ allowAreaSettle = false } = {}) {
     clearTimeout(settleTimer);
     settleTimer = null;
-    if (!enabled || document.hidden) return;
+    if (!enabled || document.hidden || gestureActive) return;
 
     refreshCards();
     rebuildMetrics();
@@ -233,7 +287,7 @@
       setOverviewCurrent(true);
       setCurrentCard(null);
       if (allowAreaSettle && !root.classList.contains("training-form-editing")) {
-        smoothSettleTo(overviewTargetY);
+        animateSettleTo(overviewTargetY);
       }
       return;
     }
@@ -259,12 +313,12 @@
         settlingTargetY = null;
         return;
       }
-      settlingTargetY = null;
+      cancelSettle();
     }
 
     const winner = largestVisibleCard();
     if (!winner || winner.hold) return;
-    smoothSettleTo(winner.entry.targetY);
+    animateSettleTo(winner.entry.targetY);
   }
 
   function armFallbackSettle() {
@@ -278,11 +332,21 @@
   function onScroll() {
     if (!enabled) return;
     updateModeDuringScroll();
-    if (!SUPPORTS_SCROLLEND) armFallbackSettle();
+    if (!SUPPORTS_SCROLLEND && !settleFrame) armFallbackSettle();
   }
 
   function onScrollEnd() {
+    if (settleFrame) return;
     settleScrollState({ allowAreaSettle: SUPPORTS_VIEW_TIMELINE });
+  }
+
+  function onPointerDown() {
+    gestureActive = true;
+    cancelSettle();
+  }
+
+  function onPointerEnd() {
+    gestureActive = false;
   }
 
   function onResize() {
@@ -318,7 +382,8 @@
     settleTimer = null;
     if (metricsFrame) cancelAnimationFrame(metricsFrame);
     metricsFrame = 0;
-    settlingTargetY = null;
+    gestureActive = false;
+    cancelSettle();
     root.classList.remove(
       "training-snap-ready",
       "training-view-timeline",
@@ -353,6 +418,9 @@
       if (SUPPORTS_SCROLLEND) {
         window.addEventListener("scrollend", onScrollEnd, { passive: true });
       }
+      window.addEventListener("pointerdown", onPointerDown, { passive: true });
+      window.addEventListener("pointerup", onPointerEnd, { passive: true });
+      window.addEventListener("pointercancel", onPointerEnd, { passive: true });
       window.addEventListener("resize", onResize, { passive: true });
       contentObserver.observe(container, { childList: true, subtree: true });
       resizeObserver?.observe(container);
@@ -363,11 +431,16 @@
 
     window.removeEventListener("scroll", onScroll);
     if (SUPPORTS_SCROLLEND) window.removeEventListener("scrollend", onScrollEnd);
+    window.removeEventListener("pointerdown", onPointerDown);
+    window.removeEventListener("pointerup", onPointerEnd);
+    window.removeEventListener("pointercancel", onPointerEnd);
     window.removeEventListener("resize", onResize);
     contentObserver.disconnect();
     resizeObserver?.disconnect();
     clearTimeout(settleTimer);
     settleTimer = null;
+    gestureActive = false;
+    cancelSettle();
   }
 
   function resumeTrainingMotion({ hard = false } = {}) {
@@ -393,7 +466,6 @@
 
     if (document.hidden) {
       setRuntimeListening(false);
-      settlingTargetY = null;
       return;
     }
 
@@ -408,7 +480,6 @@
 
     if (document.hidden) {
       setRuntimeListening(false);
-      settlingTargetY = null;
       return;
     }
 
@@ -440,9 +511,7 @@
     setMode("exercise");
     setOverviewCurrent(false);
     if (!SUPPORTS_VIEW_TIMELINE) setCurrentCard(card);
-    settlingTargetY = SUPPORTS_VIEW_TIMELINE ? target.targetY : null;
-    window.scrollTo({ top: target.targetY, behavior: "smooth" });
-    if (!SUPPORTS_SCROLLEND) armFallbackSettle();
+    animateSettleTo(target.targetY);
   });
 
   overview.addEventListener("click", event => {
@@ -451,16 +520,13 @@
     setMode("overview");
     setOverviewCurrent(true);
     setCurrentCard(null);
-    settlingTargetY = SUPPORTS_VIEW_TIMELINE ? overviewTargetY : null;
-    window.scrollTo({ top: overviewTargetY, behavior: "smooth" });
-    if (!SUPPORTS_SCROLLEND) armFallbackSettle();
+    animateSettleTo(overviewTargetY);
   });
 
   document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("pageshow", () => syncState({ hardResume: true }), { passive: true });
   window.addEventListener("pagehide", () => {
     setRuntimeListening(false);
-    settlingTargetY = null;
   }, { passive: true });
   MOBILE_QUERY.addEventListener?.("change", () => syncState({ hardResume: true }));
 
