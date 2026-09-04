@@ -327,3 +327,45 @@
     gap:4px;
   }
 }
+
+/* v106: flatten history exercise rows and keep body measurements in two columns on phones. */
+#history .history-details-body{
+  gap:0;
+  margin-top:5px;
+}
+
+#history .history-exercise{
+  grid-template-columns:82px minmax(0,1fr);
+  gap:6px;
+  margin:0;
+  padding:5px 0;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+
+#history .history-exercise + .history-exercise{
+  border-top:1px solid rgba(126,145,169,.09)!important;
+}
+
+#history .history-exercise-name{
+  margin:0;
+  line-height:1.2;
+}
+
+#history .history-set-list{
+  margin-top:0;
+  gap:4px;
+}
+
+#progress .body-input-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:9px 10px;
+}
+
+#progress .body-input-grid > label,
+#progress .body-input-wrap,
+#progress .body-input-wrap input{
+  min-width:0;
+}
