@@ -374,7 +374,3 @@
 #today .sticky-actions{
   grid-template-columns:minmax(0,1.55fr) minmax(0,.72fr);
 }
-
-#today #syncTodayBtn{
-  display:none!important;
-}
