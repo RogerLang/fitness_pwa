@@ -20,6 +20,7 @@
   const SETTLE_MAX_DURATION = 168;
   const SETTLE_DISTANCE_FOR_MAX = 220;
   const FALLBACK_SETTLE_DELAY = 120;
+  const USER_SCROLL_THRESHOLD = 6;
   const SUPPORTS_SCROLLEND = "onscrollend" in window;
   const SUPPORTS_VIEW_TIMELINE = !!window.CSS?.supports?.("animation-timeline: view()");
   const INTERACTIVE_SELECTOR = "input,button,select,textarea,a,label,summary,details,[contenteditable='true'],[role='button']";
@@ -30,6 +31,8 @@
   let settleFrame = 0;
   let metricsFrame = 0;
   let gestureActive = false;
+  let pointerStartY = null;
+  let userScrollIntent = false;
   let mode = "overview";
   let cards = [];
   let targets = [];
@@ -189,12 +192,13 @@
     overview.classList.toggle("is-current", active);
   }
 
-  function setMode(nextMode) {
-    if (mode === nextMode) return;
-    mode = nextMode;
-    root.classList.toggle("training-overview-mode", mode === "overview");
-    root.classList.toggle("training-exercise-mode", mode === "exercise");
-    body.classList.toggle("chrome-hidden", mode === "exercise");
+  function setMode(nextMode, { syncChrome = false } = {}) {
+    if (mode !== nextMode) {
+      mode = nextMode;
+      root.classList.toggle("training-overview-mode", mode === "overview");
+      root.classList.toggle("training-exercise-mode", mode === "exercise");
+    }
+    if (syncChrome) body.classList.toggle("chrome-hidden", nextMode === "exercise");
   }
 
   function updateModeDuringScroll() {
@@ -204,16 +208,19 @@
     const returningOverview = y <= overviewTargetY + OVERVIEW_TOLERANCE;
 
     if (mode === "overview" && leavingOverview) {
-      setMode("exercise");
+      setMode("exercise", { syncChrome: true });
       setOverviewCurrent(false);
       return;
     }
 
     if (mode === "exercise" && returningOverview) {
-      setMode("overview");
+      setMode("overview", { syncChrome: true });
       setOverviewCurrent(true);
       setCurrentCard(null);
+      return;
     }
+
+    setMode(mode, { syncChrome: true });
   }
 
   function cancelSettle() {
@@ -234,7 +241,10 @@
     const distance = targetY - startY;
     if (Math.abs(distance) <= SETTLE_TOLERANCE) return;
 
+    userScrollIntent = false;
+
     if (REDUCED_MOTION_QUERY.matches) {
+      settlingTargetY = targetY;
       window.scrollTo({ top: targetY, behavior: "instant" });
       return;
     }
@@ -323,30 +333,39 @@
 
   function armFallbackSettle() {
     clearTimeout(settleTimer);
-    settleTimer = setTimeout(
-      () => settleScrollState({ allowAreaSettle: SUPPORTS_VIEW_TIMELINE }),
-      FALLBACK_SETTLE_DELAY
-    );
+    settleTimer = setTimeout(() => {
+      userScrollIntent = false;
+      settleScrollState({ allowAreaSettle: SUPPORTS_VIEW_TIMELINE });
+    }, FALLBACK_SETTLE_DELAY);
   }
 
   function onScroll() {
     if (!enabled) return;
-    updateModeDuringScroll();
+    if (userScrollIntent && settlingTargetY === null) updateModeDuringScroll();
     if (!SUPPORTS_SCROLLEND && !settleFrame) armFallbackSettle();
   }
 
   function onScrollEnd() {
     if (settleFrame) return;
+    userScrollIntent = false;
     settleScrollState({ allowAreaSettle: SUPPORTS_VIEW_TIMELINE });
   }
 
-  function onPointerDown() {
+  function onPointerDown(event) {
     gestureActive = true;
+    pointerStartY = Number.isFinite(event.clientY) ? event.clientY : null;
+    userScrollIntent = false;
     cancelSettle();
+  }
+
+  function onPointerMove(event) {
+    if (!gestureActive || pointerStartY === null || userScrollIntent) return;
+    if (Math.abs(event.clientY - pointerStartY) >= USER_SCROLL_THRESHOLD) userScrollIntent = true;
   }
 
   function onPointerEnd() {
     gestureActive = false;
+    pointerStartY = null;
   }
 
   function onResize() {
@@ -383,6 +402,8 @@
     if (metricsFrame) cancelAnimationFrame(metricsFrame);
     metricsFrame = 0;
     gestureActive = false;
+    pointerStartY = null;
+    userScrollIntent = false;
     cancelSettle();
     root.classList.remove(
       "training-snap-ready",
@@ -419,6 +440,7 @@
         window.addEventListener("scrollend", onScrollEnd, { passive: true });
       }
       window.addEventListener("pointerdown", onPointerDown, { passive: true });
+      window.addEventListener("pointermove", onPointerMove, { passive: true });
       window.addEventListener("pointerup", onPointerEnd, { passive: true });
       window.addEventListener("pointercancel", onPointerEnd, { passive: true });
       window.addEventListener("resize", onResize, { passive: true });
@@ -432,6 +454,7 @@
     window.removeEventListener("scroll", onScroll);
     if (SUPPORTS_SCROLLEND) window.removeEventListener("scrollend", onScrollEnd);
     window.removeEventListener("pointerdown", onPointerDown);
+    window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerEnd);
     window.removeEventListener("pointercancel", onPointerEnd);
     window.removeEventListener("resize", onResize);
@@ -440,6 +463,8 @@
     clearTimeout(settleTimer);
     settleTimer = null;
     gestureActive = false;
+    pointerStartY = null;
+    userScrollIntent = false;
     cancelSettle();
   }
 
@@ -486,6 +511,11 @@
     resumeTrainingMotion({ hard: true });
   }
 
+  function onFormEditingEnded() {
+    if (!enabled || document.hidden) return;
+    resumeTrainingMotion({ hard: true });
+  }
+
   const pageObserver = new MutationObserver(() => syncState());
   pageObserver.observe(todayPage, { attributes: true, attributeFilter: ["class"] });
 
@@ -524,6 +554,7 @@
   });
 
   document.addEventListener("visibilitychange", onVisibilityChange);
+  document.addEventListener("training-form-editing-ended", onFormEditingEnded);
   window.addEventListener("pageshow", () => syncState({ hardResume: true }), { passive: true });
   window.addEventListener("pagehide", () => {
     setRuntimeListening(false);
@@ -565,6 +596,14 @@
     root.classList.add("training-form-editing");
   }
 
+  function notifyMotionResume() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.dispatchEvent(new Event("training-form-editing-ended"));
+      });
+    });
+  }
+
   function finishEditing() {
     const active = focusedEditor();
     if (active) {
@@ -572,10 +611,12 @@
       return;
     }
 
+    const hadEditing = root.classList.contains("training-form-editing");
     releasePending = false;
     root.classList.remove("training-form-editing");
     activeCard?.classList.remove("form-editing-card");
     activeCard = null;
+    if (hadEditing) notifyMotionResume();
   }
 
   function scheduleFinish(delay = RELEASE_DELAY) {
