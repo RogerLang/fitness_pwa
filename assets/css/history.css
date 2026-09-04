@@ -1,0 +1,33 @@
+/* Canonical History refinements. Keep final compact-log values in one explicit layer. */
+
+#history .history-details-body{
+  display:grid;
+  gap:0;
+  margin-top:5px;
+}
+
+#history .history-exercise{
+  grid-template-columns:82px minmax(0,1fr);
+  gap:6px;
+  margin:0;
+  padding:5px 0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+
+#history .history-exercise + .history-exercise{
+  margin-top:0;
+  border-top:1px solid rgba(126,145,169,.09);
+}
+
+#history .history-exercise-name{
+  margin:0;
+  line-height:1.2;
+}
+
+#history .history-set-list{
+  margin-top:0;
+  gap:4px;
+}
