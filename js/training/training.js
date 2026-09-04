@@ -271,5 +271,5 @@
     }
   };
 
-  App.registerModule({ init, refresh, onPage, onDataReset });
+  App.registerModule({ init, refresh, onPage, onDataReset, critical: true });
 })();
