@@ -9,11 +9,11 @@
     scroll-padding-bottom:var(--training-snap-bottom);
   }
 
+  /* Fallback path for browsers without CSS view timelines. */
   html.training-snap-ready{
     scroll-snap-type:y proximity;
   }
 
-  /* Form editing owns the viewport while Android resizes around the soft keyboard. */
   html.training-snap-ready.training-form-editing{
     scroll-snap-type:none;
     scroll-behavior:auto;
@@ -72,11 +72,72 @@
     scroll-snap-stop:always;
     scroll-margin-bottom:var(--training-snap-bottom);
   }
+
+  /* Chromium path: native inertial scroll with continuous viewport-driven card depth. */
+  @supports (animation-timeline:view()){
+    html.training-snap-ready.training-view-timeline{
+      scroll-snap-type:none;
+      scroll-padding-top:0;
+      scroll-padding-bottom:0;
+    }
+
+    html.training-view-timeline #workoutContainer .exercise-card,
+    html.training-view-timeline #workoutContainer .exercise-card.is-current{
+      scroll-snap-align:none;
+      scroll-snap-stop:normal;
+      opacity:.44;
+      transform:none;
+      transition:none;
+      border-color:rgba(255,255,255,.86);
+      box-shadow:0 8px 20px rgba(31,36,45,.048),0 2px 5px rgba(31,36,45,.026);
+      animation-name:exercise-card-view-focus;
+      animation-duration:1s;
+      animation-timing-function:linear;
+      animation-fill-mode:both;
+      animation-timeline:view(block);
+      animation-range:entry 0% exit 100%;
+    }
+
+    html.training-view-timeline #workoutContainer .exercise-card.snap-start{
+      scroll-snap-align:none;
+      scroll-margin-top:0;
+    }
+
+    html.training-view-timeline.training-form-editing #workoutContainer .exercise-card{
+      opacity:.44;
+    }
+
+    html.training-view-timeline.training-form-editing #workoutContainer .exercise-card.form-editing-card{
+      animation:none;
+      opacity:1;
+    }
+
+    html.training-view-timeline #today .sticky-actions{
+      scroll-snap-align:none;
+      scroll-snap-stop:normal;
+      scroll-margin-bottom:0;
+    }
+  }
+}
+
+@keyframes exercise-card-view-focus{
+  0%{opacity:.44}
+  30%{opacity:.66}
+  44%{opacity:.92}
+  50%{opacity:1}
+  56%{opacity:.92}
+  70%{opacity:.66}
+  100%{opacity:.44}
 }
 
 @media (prefers-reduced-motion:reduce){
   html.training-snap-ready{scroll-snap-type:y proximity}
   html.training-snap-ready.training-form-editing{scroll-snap-type:none}
+  html.training-view-timeline #workoutContainer .exercise-card,
+  html.training-view-timeline #workoutContainer .exercise-card.is-current{
+    animation:none;
+    opacity:1;
+  }
   #today .today-overview,
   #workoutContainer .exercise-card,
   #workoutContainer .exercise-card.is-current{
