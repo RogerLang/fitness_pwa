@@ -154,7 +154,7 @@
       </article>`;
     }).join("");
 
-    const confirmed = plan.plannedWorkout?.status === "confirmed";
+    const confirmed = plan.plannedWorkout?.status === "confirmed" && draft.status === "confirmed" && draft.revision === plan.plannedWorkout.revision;
     setStatus(confirmed ? `已确认 · ${new Date(plan.plannedWorkout.confirmedAt).toLocaleString("zh-CN")}` : "当前为未确认建议，可修改后确认。", confirmed ? "is-confirmed" : "");
   }
 
@@ -222,6 +222,9 @@
     const set = draft?.exercises?.[ei]?.sets?.[si];
     if (!set || !key) return;
     set[key] = valueOrNull(input.value);
+    draft.status = "draft";
+    draft.revision = null;
+    setStatus("当前计划有未确认修改。", "");
   }
 
   async function persistTemplateChange(input) {
@@ -262,6 +265,8 @@
     ex.sets ??= [];
     if (delta > 0) ex.sets.push({ ...(ex.sets[ex.sets.length - 1] || { weight: null, reps: null }) });
     else if (ex.sets.length > 1) ex.sets.pop();
+    draft.status = "draft";
+    draft.revision = null;
     renderCurrentPlan();
   }
 

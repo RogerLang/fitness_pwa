@@ -1,6 +1,7 @@
 (() => {
   const App = window.FitnessApp;
   const DRAFTS_KEY = "workoutDraftsV8";
+  const LEGACY_DRAFTS_KEY = "workoutDraftsV7";
   const ACTIVE_PLAN_KEY = "workoutActivePlanV7";
 
   let draftStore = {};
@@ -157,12 +158,14 @@
 
   async function init() {
     try {
-      const [storedDrafts, storedPlanIndex] = await Promise.all([
+      const [storedDrafts, legacyDrafts, storedPlanIndex] = await Promise.all([
         App.idbGet(DRAFTS_KEY),
+        App.idbGet(LEGACY_DRAFTS_KEY),
         App.idbGet(ACTIVE_PLAN_KEY)
       ]);
-      draftStore = storedDrafts && typeof storedDrafts === "object" && !Array.isArray(storedDrafts)
-        ? storedDrafts
+      const restoredDrafts = storedDrafts || legacyDrafts;
+      draftStore = restoredDrafts && typeof restoredDrafts === "object" && !Array.isArray(restoredDrafts)
+        ? restoredDrafts
         : {};
       let pi = Number(storedPlanIndex);
       if (!Number.isInteger(pi) || pi < 0 || pi >= App.state.plans.length) pi = 0;
