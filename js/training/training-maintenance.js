@@ -1,5 +1,7 @@
 (() => {
   const App = window.FitnessApp;
+  const MAINTENANCE_KEY = "trainingMaintenanceVersion";
+  const MAINTENANCE_VERSION = 1;
 
   function exerciseMap(session) {
     const map = new Map();
@@ -68,5 +70,17 @@
     return remove.size;
   }
 
-  window.TrainingMaintenance = Object.freeze({ cleanupDuplicates });
+  async function runMigrations() {
+    const current = Number(await App.idbGet(MAINTENANCE_KEY) || 0);
+    if (current >= MAINTENANCE_VERSION) return { ran: false, removed: 0 };
+    const removed = await cleanupDuplicates();
+    await App.idbSet(MAINTENANCE_KEY, MAINTENANCE_VERSION);
+    return { ran: true, removed };
+  }
+
+  App.registerPersistHook(async reason => {
+    if (reason === "import") await App.idbSet(MAINTENANCE_KEY, 0);
+  });
+
+  window.TrainingMaintenance = Object.freeze({ cleanupDuplicates, runMigrations });
 })();
