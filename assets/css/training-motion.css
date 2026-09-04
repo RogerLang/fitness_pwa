@@ -45,13 +45,13 @@
     box-shadow:0 18px 44px rgba(31,36,45,.075),0 2px 7px rgba(31,36,45,.04);
   }
 
-  /* Native snap handles card movement; focus only changes opacity to avoid rerasterizing large cards. */
+  /* Keep native mandatory snap, but allow Chromium to carry momentum through card boundaries. */
   #workoutContainer .exercise-card{
     scroll-snap-align:center;
-    scroll-snap-stop:always;
-    opacity:.30;
+    scroll-snap-stop:normal;
+    opacity:1;
     transform:none;
-    transition:opacity .12s ease;
+    transition:none;
   }
 
   #workoutContainer .exercise-card.snap-start{
@@ -64,12 +64,8 @@
     transform:none;
   }
 
-  /* While a field is focused, keep that exercise visually owned even if resize logic runs. */
-  html.training-form-editing #workoutContainer .exercise-card{
-    opacity:.30;
-    transform:none;
-  }
-
+  /* Form focus keeps snap released without changing the entire card's compositing state. */
+  html.training-form-editing #workoutContainer .exercise-card,
   html.training-form-editing #workoutContainer .exercise-card.form-editing-card{
     opacity:1;
     transform:none;

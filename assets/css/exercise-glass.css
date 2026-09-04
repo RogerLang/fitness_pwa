@@ -43,6 +43,7 @@
   #workoutContainer .exercise-card{
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
+    transition:none;
   }
 
   #today .sticky-actions{
@@ -50,9 +51,15 @@
     backdrop-filter:blur(12px) saturate(140%);
   }
 
-  #today .today-overview,
-  #workoutContainer .exercise-card{
+  #today .today-overview{
     transition:opacity .16s ease,transform .16s ease;
+  }
+
+  /* Hidden chrome should stop paying for backdrop composition while exercise cards are scrolling. */
+  body.chrome-hidden .app-header,
+  body.chrome-hidden .bottom-nav{
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
   }
 
   #workoutContainer .exercise-panel{
