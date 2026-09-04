@@ -1,12 +1,29 @@
 (() => {
   const App = window.FitnessApp;
-  const PROGRESSION_VERSION = 1;
+  const PROGRESSION_VERSION = 2;
+  const LOAD_TYPES = new Set(["weight", "bodyweight", "added-weight"]);
 
   const valueOrNull = value => {
     if (value === null || value === undefined || value === "") return null;
     const n = Number(value);
     return Number.isFinite(n) ? n : null;
   };
+
+  function loadType(ex) {
+    const value = typeof ex === "string" ? ex : ex?.loadType;
+    return LOAD_TYPES.has(value) ? value : "weight";
+  }
+
+  function usesWeight(ex) {
+    return loadType(ex) !== "bodyweight";
+  }
+
+  function loadLabel(ex) {
+    const type = loadType(ex);
+    if (type === "added-weight") return "附加重量";
+    if (type === "bodyweight") return "";
+    return "重量";
+  }
 
   function repRange(ex) {
     let min = Number(ex?.repRange?.[0]);
@@ -81,8 +98,8 @@
     const sets = (historyItem.exercise.sets || []).filter(set => valueOrNull(set?.reps) !== null && Number(set.reps) > 0);
     if (!sets.length) return null;
     const observed = sets.slice(0, required);
-    const weight = workingWeight(observed);
-    const sameWeight = weight === null ? true : observed.every(set => valueOrNull(set?.weight) === weight);
+    const weight = usesWeight(planExercise) ? workingWeight(observed) : null;
+    const sameWeight = !usesWeight(planExercise) || weight === null ? true : observed.every(set => valueOrNull(set?.weight) === weight);
     const complete = observed.length >= required;
     const allTop = complete && sameWeight && observed.every(set => Number(set.reps) >= max);
     const rir = lastRir(observed);
@@ -98,20 +115,60 @@
     });
   }
 
-  function progressionSuggestion(ex, history) {
-    const [min, max] = repRange(ex);
-    const count = setCount(ex);
-    const step = weightStep(ex);
-    const evaluations = history.map(item => evaluate(item, ex)).filter(Boolean);
-    const last = evaluations[0] || null;
-    const previous = evaluations[1] || null;
-    const fallbackWeight = valueOrNull(ex?.defaultWeight);
-
+  function bodyweightSuggestion(ex, last, previous, min, max, count) {
     if (!last) {
       return {
         version: PROGRESSION_VERSION, status: "first", statusLabel: "首次建立基线",
+        weight: null, reps: Array(count).fill(min), repRange: [min, max], weightStep: 0, confirmation: 0,
+        reason: `从 ${min}–${max} 次区间下部建立自重基线，约 RIR 1–2。`
+      };
+    }
+
+    const lastBelowMin = last.complete && last.observed.every(set => Number(set.reps) < min);
+    const previousBelowMin = previous && previous.complete && previous.observed.every(set => Number(set.reps) < min);
+    if (lastBelowMin && previousBelowMin) {
+      return {
+        version: PROGRESSION_VERSION, status: "review", statusLabel: "检查疲劳",
+        weight: null, reps: Array(count).fill(min), repRange: [min, max], weightStep: 0, confirmation: 0,
+        reason: "连续两次全部工作组低于目标次数下限；优先检查恢复、动作质量和组间休息。"
+      };
+    }
+
+    if (last.allTop) {
+      return {
+        version: PROGRESSION_VERSION, status: "maintain", statusLabel: last.rirAllowsProgress ? "维持上限" : "再确认一次",
+        weight: null, reps: Array(count).fill(max), repRange: [min, max], weightStep: 0, confirmation: last.rirAllowsProgress ? 2 : 1,
+        reason: last.rirAllowsProgress
+          ? `已达到 ${max} 次上限；保持自重，以动作质量和目标 RIR 为优先。`
+          : "已达到次数上限，但最后一组为 RIR 0；本次保持目标次数再次确认。"
+      };
+    }
+
+    return {
+      version: PROGRESSION_VERSION, status: "build", statusLabel: "累计次数",
+      weight: null, reps: nextRepTargets(last, ex), repRange: [min, max], weightStep: 0, confirmation: 0,
+      reason: `保持自重，在 ${min}–${max} 次区间内继续增加总次数。`
+    };
+  }
+
+  function progressionSuggestion(ex, history) {
+    const [min, max] = repRange(ex);
+    const count = setCount(ex);
+    const type = loadType(ex);
+    const step = type === "bodyweight" ? 0 : weightStep(ex);
+    const evaluations = history.map(item => evaluate(item, ex)).filter(Boolean);
+    const last = evaluations[0] || null;
+    const previous = evaluations[1] || null;
+
+    if (type === "bodyweight") return bodyweightSuggestion(ex, last, previous, min, max, count);
+
+    const fallbackWeight = valueOrNull(ex?.defaultWeight);
+    if (!last) {
+      const loadCopy = type === "added-weight" ? "附加重量" : "重量";
+      return {
+        version: PROGRESSION_VERSION, status: "first", statusLabel: "首次建立基线",
         weight: fallbackWeight, reps: Array(count).fill(min), repRange: [min, max], weightStep: step, confirmation: 0,
-        reason: `选择能完成 ${min}–${max} 次、约 RIR 1–2 的重量。`
+        reason: `选择能完成 ${min}–${max} 次、约 RIR 1–2 的${loadCopy}。`
       };
     }
 
@@ -159,31 +216,52 @@
     };
   }
 
-  function setText(set) {
+  function setText(set, exerciseOrType = "weight") {
     if (!set) return "";
+    const type = loadType(exerciseOrType);
     const weight = valueOrNull(set.weight);
     const reps = valueOrNull(set.reps);
     const rir = valueOrNull(set.rir);
-    const main = weight !== null && weight > 0 && reps !== null ? `${weight} kg × ${reps}` : reps !== null ? `${reps} 次` : weight !== null ? `${weight} kg` : "";
+    let main = "";
+    if (type === "bodyweight") main = reps !== null ? `${reps} 次` : "";
+    else if (type === "added-weight") {
+      if (weight !== null && weight > 0 && reps !== null) main = `+${weight} kg × ${reps}`;
+      else if (reps !== null) main = `${reps} 次`;
+      else if (weight !== null && weight > 0) main = `+${weight} kg`;
+    } else {
+      main = weight !== null && weight > 0 && reps !== null ? `${weight} kg × ${reps}` : reps !== null ? `${reps} 次` : weight !== null ? `${weight} kg` : "";
+    }
     return `${main}${rir !== null ? ` · RIR ${rir}` : ""}`;
   }
 
-  function previousSummary(previous) {
+  function previousSummary(previous, exerciseOrType = "weight") {
+    const type = loadType(exerciseOrType);
     const sets = (previous?.sets || []).filter(set => [set?.weight, set?.reps, set?.rir].some(value => value !== null && value !== undefined));
     if (!sets.length) return null;
     const weights = sets.map(set => valueOrNull(set.weight));
     const reps = sets.map(set => valueOrNull(set.reps));
-    const positive = weights.filter(weight => weight !== null && weight > 0);
-    const sameWeight = positive.length === sets.length && positive.every(weight => weight === positive[0]);
-    const target = sameWeight
-      ? `${positive[0]} kg · ${reps.map(rep => rep ?? "–").join(" / ")} 次`
-      : sets.map((set, index) => `${weights[index] !== null && weights[index] > 0 ? `${weights[index]}kg` : "–"} × ${reps[index] ?? "–"}`).join(" · ");
+    let target = "";
+
+    if (type === "bodyweight") {
+      target = `${reps.map(rep => rep ?? "–").join(" / ")} 次`;
+    } else {
+      const positive = weights.filter(weight => weight !== null && weight > 0);
+      const sameWeight = positive.length === sets.length && positive.every(weight => weight === positive[0]);
+      const prefix = type === "added-weight" ? "+" : "";
+      target = sameWeight
+        ? `${prefix}${positive[0]} kg · ${reps.map(rep => rep ?? "–").join(" / ")} 次`
+        : sets.map((set, index) => `${weights[index] !== null && weights[index] > 0 ? `${prefix}${weights[index]}kg` : "–"} × ${reps[index] ?? "–"}`).join(" · ");
+    }
+
     const rirs = sets.map(set => valueOrNull(set.rir));
     return { target, detail: rirs.some(rir => rir !== null) ? `RIR ${rirs.map(rir => rir ?? "–").join(" / ")}` : "" };
   }
 
   window.TrainingProgression = Object.freeze({
     valueOrNull,
+    loadType,
+    usesWeight,
+    loadLabel,
     repRange,
     setCount,
     weightStep,
