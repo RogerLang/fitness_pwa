@@ -231,7 +231,7 @@
     const idle = window.requestIdleCallback || (fn => setTimeout(fn, 600));
     idle(async () => {
       try {
-        await Maintenance.cleanupDuplicates();
+        await Maintenance.runMigrations();
         if (navigator.storage?.persist) await navigator.storage.persist();
       } catch (error) {
         console.warn("maintenance", error);
