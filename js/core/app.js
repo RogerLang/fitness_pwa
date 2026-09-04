@@ -28,7 +28,9 @@ function isoDate(d = new Date()) {
 }
 
 function fmtDate(d = new Date()) {
-  return d.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" });
+  const date = d.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
+  const weekday = d.toLocaleDateString("zh-CN", { weekday: "short" });
+  return `${date} ${weekday}`;
 }
 
 function normalizeState(next) {
