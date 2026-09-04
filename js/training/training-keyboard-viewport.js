@@ -104,79 +104,50 @@
   if (!todayPage || !container) return;
 
   const DIRECTION_THRESHOLD = 6;
-  const TOP_VISIBLE_THRESHOLD = 16;
-  const FALLBACK_MANUAL_RELEASE = 84;
+  const TOP_VISIBLE_THRESHOLD = 2;
   const RESUME_VERIFY_DELAY = 220;
-  const SUPPORTS_SCROLLEND = "onscrollend" in window;
 
   let pointerActive = false;
-  let pointerAnchorY = null;
-  let manualSession = false;
+  let pointerStartY = null;
+  let gestureDecided = false;
   let desiredChromeHidden = body.classList.contains("chrome-hidden");
-  let manualReleaseTimer = null;
   let resumeTimer = null;
   let resumeFrameA = 0;
   let resumeFrameB = 0;
 
   const todayActive = () => todayPage.classList.contains("active");
 
-  function clearManualReleaseTimer() {
-    clearTimeout(manualReleaseTimer);
-    manualReleaseTimer = null;
-  }
-
-  function applyManualChrome() {
+  function applyChromeState() {
     if (!todayActive()) return;
     if (window.scrollY <= TOP_VISIBLE_THRESHOLD) desiredChromeHidden = false;
     body.classList.toggle("chrome-hidden", desiredChromeHidden);
   }
 
-  function endManualSession() {
-    clearManualReleaseTimer();
-    applyManualChrome();
-    manualSession = false;
-    pointerAnchorY = null;
-  }
-
-  function armManualRelease() {
-    if (SUPPORTS_SCROLLEND || !manualSession) return;
-    clearManualReleaseTimer();
-    manualReleaseTimer = setTimeout(endManualSession, FALLBACK_MANUAL_RELEASE);
-  }
-
   function onPointerDown(event) {
     if (!todayActive() || document.hidden) return;
     pointerActive = true;
-    pointerAnchorY = Number.isFinite(event.clientY) ? event.clientY : null;
-    manualSession = false;
-    clearManualReleaseTimer();
+    pointerStartY = Number.isFinite(event.clientY) ? event.clientY : null;
+    gestureDecided = false;
   }
 
   function onPointerMove(event) {
-    if (!pointerActive || pointerAnchorY === null || !todayActive()) return;
-    const delta = event.clientY - pointerAnchorY;
+    if (!pointerActive || pointerStartY === null || gestureDecided || !todayActive()) return;
+    const delta = event.clientY - pointerStartY;
     if (Math.abs(delta) < DIRECTION_THRESHOLD) return;
 
-    manualSession = true;
     desiredChromeHidden = delta < 0;
-    pointerAnchorY = event.clientY;
-    applyManualChrome();
+    gestureDecided = true;
+    applyChromeState();
   }
 
   function onPointerEnd() {
     pointerActive = false;
-    if (!SUPPORTS_SCROLLEND) armManualRelease();
+    pointerStartY = null;
   }
 
   function onScroll() {
     if (!todayActive()) return;
-    if (window.scrollY <= TOP_VISIBLE_THRESHOLD) {
-      desiredChromeHidden = false;
-      applyManualChrome();
-    } else if (manualSession) {
-      applyManualChrome();
-    }
-    if (!SUPPORTS_SCROLLEND && manualSession) armManualRelease();
+    applyChromeState();
   }
 
   function clearEditingGuard() {
@@ -198,15 +169,15 @@
     clearEditingGuard();
     document.dispatchEvent(new Event("training-form-editing-ended"));
     window.dispatchEvent(new Event("resize"));
+    applyChromeState();
   }
 
   function scheduleRuntimeResume() {
     if (document.hidden || !todayActive()) return;
     cancelResumeWork();
-    clearManualReleaseTimer();
     pointerActive = false;
-    manualSession = false;
-    pointerAnchorY = null;
+    pointerStartY = null;
+    gestureDecided = false;
     clearEditingGuard();
 
     resumeFrameA = requestAnimationFrame(() => {
@@ -221,23 +192,26 @@
 
   function suspendRuntime() {
     cancelResumeWork();
-    clearManualReleaseTimer();
     pointerActive = false;
-    manualSession = false;
-    pointerAnchorY = null;
+    pointerStartY = null;
+    gestureDecided = false;
   }
 
-  const bodyClassObserver = new MutationObserver(() => {
-    if (manualSession) applyManualChrome();
+  const pageObserver = new MutationObserver(() => {
+    if (todayActive()) {
+      desiredChromeHidden = false;
+      requestAnimationFrame(applyChromeState);
+      return;
+    }
+    body.classList.remove("chrome-hidden");
   });
-  bodyClassObserver.observe(body, { attributes: true, attributeFilter: ["class"] });
+  pageObserver.observe(todayPage, { attributes: true, attributeFilter: ["class"] });
 
   window.addEventListener("pointerdown", onPointerDown, { passive: true });
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   window.addEventListener("pointerup", onPointerEnd, { passive: true });
   window.addEventListener("pointercancel", onPointerEnd, { passive: true });
   window.addEventListener("scroll", onScroll, { passive: true });
-  if (SUPPORTS_SCROLLEND) window.addEventListener("scrollend", endManualSession, { passive: true });
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) suspendRuntime();
