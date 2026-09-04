@@ -2,6 +2,7 @@
   const App = window.FitnessApp;
   const PROGRESSION_VERSION = 2;
   const LOAD_TYPES = new Set(["weight", "bodyweight", "added-weight"]);
+  let historyIndexCache = null;
 
   const valueOrNull = value => {
     if (value === null || value === undefined || value === "") return null;
@@ -65,27 +66,52 @@
     return null;
   }
 
-  function buildHistoryContext(planName) {
+  function appendHistory(map, name, item) {
+    if (!map.has(name)) map.set(name, []);
+    map.get(name).push(item);
+  }
+
+  function buildHistoryIndex() {
     const sorted = App.state.sessions
       .map((session, index) => ({ session, index }))
       .sort((a, b) => String(b.session?.date || "").localeCompare(String(a.session?.date || "")) || b.index - a.index);
     const all = new Map();
-    const same = new Map();
+    const byPlan = new Map();
+
     for (const { session } of sorted) {
+      const planName = String(session?.plan || "");
+      let planMap = null;
+      if (planName) {
+        if (!byPlan.has(planName)) byPlan.set(planName, new Map());
+        planMap = byPlan.get(planName);
+      }
       for (const exercise of session?.exercises || []) {
         if (!exercise?.name) continue;
-        if (!all.has(exercise.name)) all.set(exercise.name, []);
-        all.get(exercise.name).push({ session, exercise });
-        if (session.plan === planName) {
-          if (!same.has(exercise.name)) same.set(exercise.name, []);
-          same.get(exercise.name).push({ session, exercise });
-        }
+        const item = { session, exercise };
+        appendHistory(all, exercise.name, item);
+        if (planMap) appendHistory(planMap, exercise.name, item);
       }
     }
+
+    historyIndexCache = { all, byPlan };
+    return historyIndexCache;
+  }
+
+  function historyIndex() {
+    return historyIndexCache || buildHistoryIndex();
+  }
+
+  function invalidateHistoryIndex() {
+    historyIndexCache = null;
+  }
+
+  function buildHistoryContext(planName) {
+    const index = historyIndex();
+    const same = index.byPlan.get(String(planName || "")) || null;
     return {
       history(name) {
-        const preferred = same.get(name);
-        return preferred?.length ? preferred : (all.get(name) || []);
+        const preferred = same?.get(name);
+        return preferred?.length ? preferred : (index.all.get(name) || []);
       },
       latest(name) { return this.history(name)[0]?.exercise || null; }
     };
@@ -257,6 +283,10 @@
     return { target, detail: rirs.some(rir => rir !== null) ? `RIR ${rirs.map(rir => rir ?? "–").join(" / ")}` : "" };
   }
 
+  App.registerPersistHook((reason, keys = []) => {
+    if (keys.includes("sessions")) invalidateHistoryIndex();
+  });
+
   window.TrainingProgression = Object.freeze({
     valueOrNull,
     loadType,
@@ -269,6 +299,7 @@
     buildHistoryContext,
     progressionSuggestion,
     setText,
-    previousSummary
+    previousSummary,
+    invalidateHistoryIndex
   });
 })();
