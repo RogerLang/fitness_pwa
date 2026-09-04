@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="assets/css/nav-motion.css?v=72" />
   <link rel="stylesheet" href="assets/css/glass-cards.css?v=72" />
   <link rel="stylesheet" href="assets/css/exercise-card.css?v=72" />
-  <link rel="stylesheet" href="assets/css/page-unification.css?v=87" />
+  <link rel="stylesheet" href="assets/css/page-unification.css?v=88" />
   <title>练了么</title>
 </head>
 <body class="app-booting">
@@ -132,9 +132,18 @@
 
     <div class="card">
       <h2>本地备份</h2>
-      <div class="stack">
-        <button id="exportBtn" type="button">导出明文备份 JSON</button>
-        <label class="file-btn">导入备份 JSON<input id="importInput" type="file" accept="application/json,.json"></label>
+      <div class="stack backup-stack">
+        <div class="backup-actions">
+          <button id="exportBtn" class="backup-action" type="button">
+            <span class="backup-action-title">导出备份</span>
+            <span class="backup-action-meta">JSON 文件</span>
+          </button>
+          <label class="file-btn backup-action">
+            <span class="backup-action-title">导入备份</span>
+            <span class="backup-action-meta">JSON 文件</span>
+            <input id="importInput" type="file" accept="application/json,.json">
+          </label>
+        </div>
         <button id="wipeBtn" type="button" class="danger">删除本机全部训练和身体数据</button>
       </div>
       <p class="muted">训练中的未保存输入会自动保存在当前浏览器，并在刷新后恢复。</p>

@@ -56,6 +56,68 @@
     return `<input class="workout-number-input" aria-label="${App.esc(label)}" type="text" inputmode="${decimal ? "decimal" : "numeric"}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="${done ? "done" : "next"}" data-e="${ei}" data-s="${si}" data-k="${key}" value="${App.esc(value)}" placeholder="${App.esc(placeholder)}">`;
   }
 
+  function renderEditor(ex, ei, sets, min, max) {
+    return `<div class="exercise-inline-editor${openEditors.has(ei) ? "" : " hidden"}" data-e="${ei}">
+      <div class="exercise-editor-panel">
+        <div class="editor-section-label">动作设置</div>
+
+        <label class="editor-name-field">动作名称
+          <input data-edit="name" autocomplete="off" value="${App.esc(ex.name || "")}">
+        </label>
+
+        <div class="editor-parameter-grid">
+          <section class="editor-parameter-card">
+            <div class="editor-parameter-title">次数范围</div>
+            <div class="editor-range-fields">
+              <label><span>最低</span><input data-edit="repMin" type="number" min="1" step="1" inputmode="numeric" value="${min}"></label>
+              <span class="editor-range-divider">—</span>
+              <label><span>最高</span><input data-edit="repMax" type="number" min="1" step="1" inputmode="numeric" value="${max}"></label>
+            </div>
+          </section>
+
+          <section class="editor-parameter-card">
+            <div class="editor-parameter-title">重量设置</div>
+            <div class="editor-weight-fields">
+              <label><span>默认重量</span><input data-edit="defaultWeight" type="number" step="0.5" inputmode="decimal" value="${ex.defaultWeight ?? ""}"></label>
+              <label><span>递增档位</span><input data-edit="weightStep" type="number" min="0" step="0.5" inputmode="decimal" value="${weightStep(ex)}"></label>
+            </div>
+          </section>
+        </div>
+
+        <div class="editor-option-list">
+          <div class="editor-setting-row editor-set-count-row">
+            <div class="editor-setting-copy">
+              <strong>组数</strong>
+              <span>当前动作</span>
+            </div>
+            <div class="set-count-control" aria-label="调整动作组数">
+              <button type="button" class="small secondary remove-set" data-e="${ei}" ${sets <= 1 ? "disabled" : ""} aria-label="减少一组">−</button>
+              <span class="set-count-value">${sets}</span>
+              <button type="button" class="small secondary add-set" data-e="${ei}" aria-label="增加一组">+</button>
+            </div>
+          </div>
+
+          <label class="optional-toggle">
+            <span class="editor-setting-copy">
+              <strong>可选动作</strong>
+              <span>训练时可按情况跳过</span>
+            </span>
+            <input class="optional-toggle-input" data-edit="optional" type="checkbox" ${ex.optional ? "checked" : ""}>
+          </label>
+        </div>
+
+        <label class="editor-note-field">备注
+          <textarea data-edit="note" rows="2">${App.esc(ex.note || "")}</textarea>
+        </label>
+      </div>
+
+      <div class="editor-footer-actions">
+        <button type="button" class="small editor-delete delete-exercise-inline" data-e="${ei}">删除动作</button>
+        <button type="button" class="small exercise-edit-toggle editor-finish" data-e="${ei}">完成</button>
+      </div>
+    </div>`;
+  }
+
   function renderExerciseCard(ex, ei, historyContext) {
     const history = historyContext.history(ex.name);
     const previous = history[0]?.exercise || null;
@@ -111,32 +173,7 @@
         </section>
       </div>
 
-      <div class="exercise-inline-editor${editorOpen ? "" : " hidden"}" data-e="${ei}">
-        <div class="inline-editor-grid">
-          <label class="wide">动作名称<input data-edit="name" autocomplete="off" value="${App.esc(ex.name || "")}"></label>
-          <label>最低次数<input data-edit="repMin" type="number" min="1" step="1" value="${min}"></label>
-          <label>最高次数<input data-edit="repMax" type="number" min="1" step="1" value="${max}"></label>
-          <label>默认 kg<input data-edit="defaultWeight" type="number" step="0.5" value="${ex.defaultWeight ?? ""}"></label>
-          <label>重量档位 kg<input data-edit="weightStep" type="number" min="0" step="0.5" value="${weightStep(ex)}"></label>
-        </div>
-        <label>备注<textarea data-edit="note">${App.esc(ex.note || "")}</textarea></label>
-        <div class="editor-actions">
-          <div class="editor-set-actions">
-            <div class="row wrap">
-              <button type="button" class="small secondary remove-set" data-e="${ei}" ${sets <= 1 ? "disabled" : ""}>− 1组</button>
-              <button type="button" class="small secondary add-set" data-e="${ei}">+ 1组</button>
-            </div>
-            <label class="optional-toggle">
-              <span class="optional-toggle-label">可选动作</span>
-              <input class="optional-toggle-input" data-edit="optional" type="checkbox" ${ex.optional ? "checked" : ""}>
-            </label>
-          </div>
-          <div class="editor-footer-actions">
-            <button type="button" class="small editor-delete delete-exercise-inline" data-e="${ei}">删除动作</button>
-            <button type="button" class="small exercise-edit-toggle editor-finish" data-e="${ei}">完成</button>
-          </div>
-        </div>
-      </div>
+      ${renderEditor(ex, ei, sets, min, max)}
     </article>`;
   }
 
