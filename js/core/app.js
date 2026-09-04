@@ -133,7 +133,7 @@ async function switchPage(id, { historyMode = "replace", scroll = true } = {}) {
   for (const module of appModules) {
     if (module.onPage) await module.onPage(pageId);
   }
-  if (scroll) window.scrollTo(0, 0);
+  if (scroll) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 }
 
 function bindCoreEvents() {
