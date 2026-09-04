@@ -17,14 +17,14 @@
       return `<section class="exercise-panel exercise-summary-panel exercise-previous-panel">
         <div class="context-head"><strong>上次记录</strong></div>
         <div class="context-target is-empty">暂无历史记录</div>
-        <div class="context-detail">完成一次训练后会自动显示。</div>
+        <div class="context-detail">完成训练后自动显示</div>
       </section>`;
     }
 
     return `<section class="exercise-panel exercise-summary-panel exercise-previous-panel">
       <div class="context-head"><strong>上次记录</strong></div>
       <div class="context-target">${App.esc(summary.target)}</div>
-      ${summary.detail ? `<div class="context-detail">${App.esc(summary.detail)}</div>` : '<div class="context-detail">最近一次有效训练记录</div>'}
+      ${summary.detail ? `<div class="context-detail">${App.esc(summary.detail)}</div>` : ""}
     </section>`;
   }
 
@@ -52,7 +52,9 @@
   function plannedHtml(ex, workout) {
     const label = ex.warmup ? "专项热身" : (ex.suggestionLabel || "已确认");
     const time = workout?.confirmedAt ? new Date(workout.confirmedAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
-    const detail = ex.reason || (time ? `已确认 · ${time}` : "已确认本次计划");
+    const note = String(ex.note || "").trim();
+    const reason = String(ex.reason || "").trim();
+    const detail = reason && reason !== note ? reason : (time ? `已确认 · ${time}` : "已确认本次计划");
     return `<section class="exercise-panel exercise-summary-panel exercise-plan-panel">
       <div class="context-head"><strong>本次计划</strong><span class="context-chip">${App.esc(label)}</span></div>
       <div class="context-target">${App.esc(plannedSummary(ex))}</div>
@@ -105,6 +107,7 @@
           <div class="exercise-title-line"><div class="exercise-title">${App.esc(ex.name || "未命名动作")}</div>${ex.warmup ? '<span class="badge warmup-badge">热身</span>' : ""}</div>
           <div class="exercise-meta">${App.esc(meta)}</div>
         </div>
+        <span class="exercise-count-chip">${sets}组</span>
       </div>
 
       <div class="exercise-card-layout">
@@ -145,7 +148,8 @@
     const time = active.workout.confirmedAt
       ? new Date(active.workout.confirmedAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
       : "已推送";
-    meta.textContent = `${time} · 当前待训练计划`;
+    const exerciseCount = Array.isArray(active.workout.exercises) ? active.workout.exercises.length : 0;
+    meta.textContent = `${time}${exerciseCount ? ` · ${exerciseCount} 个动作` : ""} · 当前待训练计划`;
   }
 
   function renderWorkout() {
