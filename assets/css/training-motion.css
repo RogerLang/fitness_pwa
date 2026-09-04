@@ -1,4 +1,4 @@
-/* Training-page scroll snapping. Kept separate from the archived v40 UI layer. */
+/* Training-page scroll snapping and focus states. */
 
 @media (max-width:680px){
   html{
@@ -13,18 +13,12 @@
     scroll-snap-type:y proximity;
   }
 
-  /* A deliberate fast upward/downward fling is continuous; normal/slow scrolling keeps snap. */
-  html.training-snap-ready.training-free-glide{
-    scroll-snap-type:none;
-  }
-
   /* Form editing owns the viewport while Android resizes around the soft keyboard. */
   html.training-snap-ready.training-form-editing{
     scroll-snap-type:none;
     scroll-behavior:auto;
   }
 
-  /* The overview owns the visible-header starting position and joins the same focus system. */
   #today .today-overview{
     scroll-snap-align:start;
     scroll-snap-stop:always;
@@ -45,7 +39,6 @@
     box-shadow:0 18px 44px rgba(31,36,45,.075),0 2px 7px rgba(31,36,45,.04);
   }
 
-  /* Card depth stays static while scrolling; current focus is switched only after scroll settles. */
   #workoutContainer .exercise-card{
     scroll-snap-align:center;
     scroll-snap-stop:normal;
@@ -64,7 +57,6 @@
     transform:none;
   }
 
-  /* Form focus keeps snap released while preserving the current-card hierarchy. */
   html.training-form-editing #workoutContainer .exercise-card{
     opacity:.32;
     transform:none;
@@ -75,7 +67,6 @@
     transform:none;
   }
 
-  /* The final action card remains the bottom edge stop. */
   #today .sticky-actions{
     scroll-snap-align:end;
     scroll-snap-stop:always;
@@ -85,7 +76,6 @@
 
 @media (prefers-reduced-motion:reduce){
   html.training-snap-ready{scroll-snap-type:y proximity}
-  html.training-snap-ready.training-free-glide,
   html.training-snap-ready.training-form-editing{scroll-snap-type:none}
   #today .today-overview,
   #workoutContainer .exercise-card,
