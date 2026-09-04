@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="assets/css/glass-cards.css?v=72" />
   <link rel="stylesheet" href="assets/css/exercise-card.css?v=72" />
   <link rel="stylesheet" href="assets/css/page-unification.css?v=90" />
-  <link rel="stylesheet" href="assets/css/planning.css?v=93" />
+  <link rel="stylesheet" href="assets/css/planning.css?v=95" />
   <title>练了么</title>
 </head>
 <body class="app-booting">
@@ -89,7 +89,10 @@
         <select id="planningPlanSelect" aria-label="选择训练模板"></select>
         <button id="planningRegenerateBtn" type="button" class="small secondary">重新生成</button>
       </div>
-      <button id="planningPushTopBtn" type="button" class="planning-push-top">推送训练计划</button>
+      <div class="planning-actions-top">
+        <button id="planningPushTopBtn" type="button">推送训练计划</button>
+        <button id="planningGoTrainTopBtn" type="button" class="secondary hidden">去训练当前计划</button>
+      </div>
       <div id="planningCurrentPlan" class="planning-current"></div>
     </div>
 
@@ -211,7 +214,9 @@
 <script src="js/training/training-maintenance.js?v=72"></script>
 <script src="js/training/training.js?v=92"></script>
 <script src="js/training/planning.js?v=93"></script>
+<script src="js/training/planning-actions.js?v=95"></script>
 <script src="js/training/training-motion.js?v=94"></script>
+<script src="js/training/training-keyboard-viewport.js?v=95"></script>
 <script src="js/ui/nav-motion.js?v=72"></script>
 <script src="js/sync/sync-remote.js?v=72"></script>
 <script src="js/sync/sync.js?v=72"></script>
