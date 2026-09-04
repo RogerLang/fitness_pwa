@@ -124,11 +124,18 @@ function bindCoreEvents() {
 }
 
 function initChromeAutoHide() {
+  const trainingPage = document.getElementById("today");
   let lastY = window.scrollY;
   let ticking = false;
 
   const update = () => {
     const y = window.scrollY;
+    if (trainingPage?.classList.contains("active")) {
+      lastY = y;
+      ticking = false;
+      return;
+    }
+
     const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
     const delta = y - lastY;
     if (y <= 16 || max - y <= 16 || delta < -8) document.body.classList.remove("chrome-hidden");
