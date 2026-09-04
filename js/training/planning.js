@@ -174,10 +174,11 @@
       const button = document.getElementById(id);
       if (button) button.disabled = !hasPlan;
     }
-    const goButton = document.getElementById("planningGoTrainBtn");
-    if (goButton) {
-      goButton.classList.toggle("hidden", !hasActive);
-      goButton.disabled = !hasActive;
+    for (const id of ["planningGoTrainTopBtn", "planningGoTrainBtn"]) {
+      const button = document.getElementById(id);
+      if (!button) continue;
+      button.classList.toggle("hidden", !hasActive);
+      button.disabled = !hasActive;
     }
     const regenerateButton = document.getElementById("planningRegenerateBtn");
     if (regenerateButton) regenerateButton.disabled = !hasPlan;
@@ -399,6 +400,10 @@
     render();
   }
 
+  function goTrain() {
+    App.switchPage("today", { historyMode: "replace" });
+  }
+
   function bindEvents() {
     select()?.addEventListener("change", () => render());
     document.getElementById("planningWorkoutList")?.addEventListener("input", event => {
@@ -429,7 +434,9 @@
     for (const id of ["planningPushTopBtn", "planningPushBottomBtn"]) {
       document.getElementById(id)?.addEventListener("click", () => pushPlan().catch(error => App.toast(error.message, "error")));
     }
-    document.getElementById("planningGoTrainBtn")?.addEventListener("click", () => App.switchPage("today", { historyMode: "replace" }));
+    for (const id of ["planningGoTrainTopBtn", "planningGoTrainBtn"]) {
+      document.getElementById(id)?.addEventListener("click", goTrain);
+    }
     document.getElementById("planningAddExerciseBtn")?.addEventListener("click", addTemplateExercise);
   }
 
@@ -461,6 +468,6 @@
     drafts.delete(index);
   }
 
-  App.planning = { render, pushPlan, confirmPlan: pushPlan, invalidate };
+  App.planning = { render, pushPlan, invalidate };
   App.registerModule({ init, refresh, onPage, onDataReset });
 })();
