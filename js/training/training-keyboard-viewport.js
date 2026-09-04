@@ -103,7 +103,7 @@
   const container = document.getElementById("workoutContainer");
   if (!todayPage || !container) return;
 
-  const DIRECTION_THRESHOLD = 10;
+  const DIRECTION_THRESHOLD = 6;
   const TOP_VISIBLE_THRESHOLD = 16;
   const FALLBACK_MANUAL_RELEASE = 84;
   const RESUME_VERIFY_DELAY = 220;
