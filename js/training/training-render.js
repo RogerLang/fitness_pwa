@@ -6,6 +6,7 @@
   if (!Progression || !Draft || !NextWorkout) throw new Error("Training dependencies must load before TrainingRenderer");
 
   const { buildHistoryContext, previousSummary, valueOrNull } = Progression;
+  const AUTOFILL_GUARD = 'autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore data-bwignore="true" data-protonpass-ignore="true"';
 
   function currentWorkoutEntry() {
     return NextWorkout.current(Draft.planIndex);
@@ -59,8 +60,9 @@
     </section>`;
   }
 
-  function workoutNumberInput({ label, ei, si, key, value, placeholder, decimal = false, done = false }) {
-    return `<input class="workout-number-input" aria-label="${App.esc(label)}" type="text" inputmode="${decimal ? "decimal" : "numeric"}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore enterkeyhint="${done ? "done" : "next"}" data-e="${ei}" data-s="${si}" data-k="${key}" value="${App.esc(value)}" placeholder="${App.esc(placeholder ?? "")}">`;
+  function workoutNumberInput({ label, ei, si, key, value, placeholder, decimal = false, done = false, renderToken }) {
+    const fieldName = `manual-${renderToken}-${ei}-${si}-${key}`;
+    return `<input class="workout-number-input" name="${App.esc(fieldName)}" aria-label="${App.esc(label)}" type="text" inputmode="${decimal ? "decimal" : "numeric"}" ${AUTOFILL_GUARD} enterkeyhint="${done ? "done" : "next"}" data-e="${ei}" data-s="${si}" data-k="${key}" value="${App.esc(value)}" placeholder="${App.esc(placeholder ?? "")}">`;
   }
 
   function plannedSetFor(ex, si) {
@@ -68,7 +70,7 @@
     return sets[si] || sets[sets.length - 1] || {};
   }
 
-  function renderExerciseCard(ex, ei, historyContext, workout) {
+  function renderExerciseCard(ex, ei, historyContext, workout, renderToken) {
     const history = historyContext.history(ex.name);
     const previous = history[0]?.exercise || null;
     const summary = previousSummary(previous);
@@ -90,9 +92,9 @@
       const done = Draft.isCompleted(ei, si);
       rows += `<div class="set-row workout-set-row${done ? " set-completed" : ""}" data-e="${ei}" data-s="${si}">
         <span class="set-number">${si + 1}</span>
-        ${workoutNumberInput({ label: `第 ${si + 1} 组重量`, ei, si, key: "weight", value: weightValue, placeholder: target.weight, decimal: true })}
-        ${workoutNumberInput({ label: `第 ${si + 1} 组次数`, ei, si, key: "reps", value: repsValue, placeholder: target.reps })}
-        ${workoutNumberInput({ label: `第 ${si + 1} 组 RIR`, ei, si, key: "rir", value: rirValue, placeholder: ex.warmup ? "" : (prev?.rir ?? "1–2"), done: true })}
+        ${workoutNumberInput({ label: `第 ${si + 1} 组重量`, ei, si, key: "weight", value: weightValue, placeholder: target.weight, decimal: true, renderToken })}
+        ${workoutNumberInput({ label: `第 ${si + 1} 组次数`, ei, si, key: "reps", value: repsValue, placeholder: target.reps, renderToken })}
+        ${workoutNumberInput({ label: `第 ${si + 1} 组 RIR`, ei, si, key: "rir", value: rirValue, placeholder: ex.warmup ? "" : (prev?.rir ?? "1–2"), done: true, renderToken })}
         <button type="button" class="set-complete${done ? "" : " secondary"}" data-e="${ei}" data-s="${si}" aria-pressed="${done}">${done ? "✓" : "完成"}</button>
       </div>`;
     }
@@ -169,7 +171,8 @@
 
     Draft.ensurePlan(active.index);
     const historyContext = buildHistoryContext(active.plan.name);
-    container.innerHTML = active.workout.exercises.map((ex, ei) => renderExerciseCard(ex, ei, historyContext, active.workout)).join("");
+    const renderToken = crypto.randomUUID().replaceAll("-", "");
+    container.innerHTML = active.workout.exercises.map((ex, ei) => renderExerciseCard(ex, ei, historyContext, active.workout, renderToken)).join("");
   }
 
   window.TrainingRenderer = Object.freeze({
