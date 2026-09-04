@@ -46,7 +46,6 @@ function pageFromLocation() {
 
 const idbGet = key => Storage.get(db, key);
 const idbSet = (key, value) => Storage.set(db, key, value);
-const idbDelete = key => Storage.remove(db, key);
 
 async function loadState() {
   state = await Storage.readState(db);
@@ -85,7 +84,6 @@ async function refresh(reason = "refresh") {
 async function resetData(next, reason = "reset") {
   for (const module of appModules) {
     if (module.beforeDataReset) await module.beforeDataReset(reason);
-    else if (reason === "wipe" && module.beforeWipe) await module.beforeWipe();
   }
 
   state = normalizeState(next);
@@ -221,15 +219,11 @@ window.FitnessApp = {
   fmtDate,
   idbGet,
   idbSet,
-  idbDelete,
   persist,
   toast,
   refresh,
   resetData,
   switchPage,
-  replaceState(next) {
-    state = normalizeState(next);
-  },
   registerModule(module) {
     appModules.push(module);
   },

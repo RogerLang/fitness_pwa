@@ -74,5 +74,4 @@
   }
 
   App.registerModule({ init, refresh, onPage });
-  App.body = Object.freeze({ renderHistory, save });
 })();
