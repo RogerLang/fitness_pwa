@@ -6,8 +6,13 @@
   const CREDS_KEY = "syncCredentialsV7";
   const LEGACY_CONFIG_KEY = "syncConfig";
   const META_KEY = "syncMetaV11";
+  const AUTO_CHECK_COOLDOWN_MS = 60000;
+
   let applyingRemote = false;
   let todayStatusTimer = null;
+  let autoInitialized = false;
+  let autoChecking = false;
+  let lastAutoCheckAt = 0;
 
   function config() {
     return {
@@ -72,19 +77,45 @@
 
   async function ensureIds() {
     let changed = false;
-    for (const session of App.state.sessions) {
-      if (!session.id) {
-        session.id = crypto.randomUUID();
-        changed = true;
-      }
-    }
-    for (const body of App.state.body) {
-      if (!body.id) {
-        body.id = crypto.randomUUID();
+    for (const items of [App.state.sessions, App.state.body]) {
+      for (const item of items) {
+        if (item.id) continue;
+        item.id = crypto.randomUUID();
         changed = true;
       }
     }
     if (changed) await App.persist("ids");
+  }
+
+  async function pushImmutable(configValue, manifest, kind, items) {
+    const local = await Remote.mapByHash(items);
+    const remote = new Set(Array.isArray(manifest[kind]) ? manifest[kind] : []);
+    let added = 0;
+
+    for (const [hash, item] of local) {
+      if (remote.has(hash)) continue;
+      await Remote.verifyOrCreateImmutable(configValue, kind, hash, item);
+      remote.add(hash);
+      added++;
+    }
+
+    manifest[kind] = [...remote].sort();
+    return added;
+  }
+
+  async function pullImmutable(configValue, manifest, kind, target) {
+    const local = await Remote.mapByHash(target);
+    let added = 0;
+
+    for (const hash of Array.isArray(manifest[kind]) ? manifest[kind] : []) {
+      if (local.has(hash)) continue;
+      const item = await Remote.downloadImmutable(configValue, kind, hash);
+      target.push(item);
+      local.set(hash, item);
+      added++;
+    }
+
+    return added;
   }
 
   async function saveCredentials(showStatus = false) {
@@ -126,32 +157,10 @@
         throw new Error("云端训练计划有更新，请先从 GitHub 合并。");
       }
 
-      let changed = false;
-      let addedSessions = 0;
-      let addedBody = 0;
       status("正在增量同步新增记录…");
-
-      const sessionMap = await Remote.mapByHash(App.state.sessions);
-      const remoteSessions = new Set(manifest.sessions);
-      for (const [hash, item] of sessionMap) {
-        if (remoteSessions.has(hash)) continue;
-        await Remote.verifyOrCreateImmutable(c, "sessions", hash, item);
-        remoteSessions.add(hash);
-        addedSessions++;
-        changed = true;
-      }
-      manifest.sessions = [...remoteSessions].sort();
-
-      const bodyMap = await Remote.mapByHash(App.state.body);
-      const remoteBody = new Set(manifest.body);
-      for (const [hash, item] of bodyMap) {
-        if (remoteBody.has(hash)) continue;
-        await Remote.verifyOrCreateImmutable(c, "body", hash, item);
-        remoteBody.add(hash);
-        addedBody++;
-        changed = true;
-      }
-      manifest.body = [...remoteBody].sort();
+      const addedSessions = await pushImmutable(c, manifest, "sessions", App.state.sessions);
+      const addedBody = await pushImmutable(c, manifest, "body", App.state.body);
+      let changed = addedSessions > 0 || addedBody > 0;
 
       if (!remoteRev || meta.plansDirty) {
         await Remote.uploadPlans(c, App.state.plans, manifest, meta);
@@ -198,25 +207,8 @@
       let nextPlans = App.state.plans;
       if (plansChanged) nextPlans = await Remote.downloadPlans(c, manifest);
 
-      let addedSessions = 0;
-      let addedBody = 0;
-      const sessionMap = await Remote.mapByHash(App.state.sessions);
-      for (const hash of manifest.sessions) {
-        if (sessionMap.has(hash)) continue;
-        const item = await Remote.downloadImmutable(c, "sessions", hash);
-        App.state.sessions.push(item);
-        sessionMap.set(hash, item);
-        addedSessions++;
-      }
-
-      const bodyMap = await Remote.mapByHash(App.state.body);
-      for (const hash of manifest.body) {
-        if (bodyMap.has(hash)) continue;
-        const item = await Remote.downloadImmutable(c, "body", hash);
-        App.state.body.push(item);
-        bodyMap.set(hash, item);
-        addedBody++;
-      }
+      const addedSessions = await pullImmutable(c, manifest, "sessions", App.state.sessions);
+      const addedBody = await pullImmutable(c, manifest, "body", App.state.body);
 
       if (plansChanged) App.state.plans = nextPlans;
       const removed = await App.training?.cleanupDuplicates({ persistChanges: false }) || 0;
@@ -248,6 +240,20 @@
       applyingRemote = false;
       status(error.message, false);
       return false;
+    }
+  }
+
+  async function checkLatest() {
+    if (!autoInitialized || autoChecking || Date.now() - lastAutoCheckAt < AUTO_CHECK_COOLDOWN_MS) return;
+    if (App.training?.hasDraft?.()) return;
+    if (!await hasCredentials()) return;
+
+    autoChecking = true;
+    lastAutoCheckAt = Date.now();
+    try {
+      await pull({ source: "today" });
+    } finally {
+      autoChecking = false;
     }
   }
 
@@ -286,11 +292,19 @@
     await loadCredentials();
     await refreshMeta();
     bindEvents();
+    autoInitialized = true;
+    if (document.getElementById("today")?.classList.contains("active")) {
+      setTimeout(() => checkLatest().catch(() => {}), 250);
+    }
+  }
+
+  async function onPage(id) {
+    if (id === "today") checkLatest().catch(() => {});
   }
 
   App.registerPersistHook(async reason => {
     if (["plans", "import", "wipe"].includes(reason)) await refreshMeta();
   });
-  App.registerModule({ init, onDataReset });
-  App.sync = { push, pull, saveCredentials, hasCredentials, refreshMeta };
+  App.registerModule({ init, onPage, onDataReset });
+  App.sync = { push, pull, hasCredentials };
 })();
