@@ -5,13 +5,33 @@ html #workoutContainer .workout-set-row.set-completed{
   opacity:1;
 }
 
-html #workoutContainer .workout-set-row.set-completed > :not(.set-complete){
-  opacity:.38;
-  transition:opacity .14s ease;
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed .set-number{
+  color:rgba(90,101,114,.22);
+  transition:color .14s ease;
 }
 
-html #workoutContainer .workout-set-row.set-completed:focus-within > :not(.set-complete){
-  opacity:.70;
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed input{
+  color:rgba(34,41,51,.20)!important;
+  -webkit-text-fill-color:rgba(34,41,51,.20);
+  transition:color .14s ease,-webkit-text-fill-color .14s ease,background .14s ease,border-color .14s ease,box-shadow .14s ease;
+}
+
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed input::placeholder{
+  color:rgba(23,26,33,.16)!important;
+  opacity:1;
+}
+
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:focus-within .set-number{
+  color:rgba(90,101,114,.58);
+}
+
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:focus-within input{
+  color:rgba(34,41,51,.62)!important;
+  -webkit-text-fill-color:rgba(34,41,51,.62);
+}
+
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:focus-within input::placeholder{
+  color:rgba(23,26,33,.46)!important;
 }
 
 html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed="true"]{
