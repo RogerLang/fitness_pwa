@@ -4,27 +4,72 @@
   if (!Progression) throw new Error("TrainingProgression must load before TrainingInsights");
 
   let historyLimit = 20;
+  let historyPlanFilter = "all";
   let progressRange = "1y";
 
   function allExerciseNames() {
     return [...new Set(App.state.plans.flatMap(plan => (plan.exercises || []).filter(ex => !ex.warmup).map(ex => ex.name)).filter(Boolean))];
   }
 
+  function historyPlans() {
+    return [...new Set(App.state.sessions.map(session => session?.plan).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), "zh-CN"));
+  }
+
+  function renderHistoryFilter() {
+    const select = document.getElementById("historyPlanFilter");
+    if (!select) return;
+    const plans = historyPlans();
+    const current = historyPlanFilter;
+    select.innerHTML = '<option value="all">全部训练</option>' + plans.map(plan => `<option value="${App.esc(plan)}">${App.esc(plan)}</option>`).join("");
+    historyPlanFilter = current === "all" || plans.includes(current) ? current : "all";
+    select.value = historyPlanFilter;
+  }
+
+  function sessionStats(session) {
+    const exercises = session.exercises || [];
+    let setCount = 0;
+    let volume = 0;
+    for (const ex of exercises) {
+      for (const set of ex.sets || []) {
+        setCount++;
+        const weight = Number(set.weight);
+        const reps = Number(set.reps);
+        if (weight > 0 && reps > 0) volume += weight * reps;
+      }
+    }
+    return { exerciseCount: exercises.length, setCount, volume };
+  }
+
   function renderHistory() {
     const box = document.getElementById("historyList");
     if (!box) return;
-    const arr = [...App.state.sessions].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+    renderHistoryFilter();
+    const arr = [...App.state.sessions]
+      .filter(session => historyPlanFilter === "all" || session.plan === historyPlanFilter)
+      .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
     if (!arr.length) {
-      box.innerHTML = '<div class="empty">暂无训练记录</div>';
+      box.innerHTML = `<div class="card empty">${historyPlanFilter === "all" ? "暂无训练记录" : "暂无此训练计划的记录"}</div>`;
       return;
     }
     const shown = arr.slice(0, historyLimit);
     box.innerHTML = shown.map(session => {
+      const stats = sessionStats(session);
       const exercises = (session.exercises || []).map(ex => {
         const chips = (ex.sets || []).map((set, index) => `<span class="history-set-chip"><b>${index + 1}</b>${App.esc(Progression.setText(set) || "未记录")}</span>`).join("");
         return `<div class="history-exercise"><div class="history-exercise-name">${App.esc(ex.name || "")}</div><div class="history-set-list">${chips}</div></div>`;
       }).join("");
-      return `<article class="history-card"><div class="history-head"><strong>${App.esc(session.date || "")}</strong><span class="badge">${App.esc(session.plan || "训练")}</span></div>${exercises}</article>`;
+      const volumeText = stats.volume > 0 ? `<span>训练量 ${Math.round(stats.volume).toLocaleString("zh-CN")} kg</span>` : "";
+      return `<article class="history-card">
+        <div class="history-head">
+          <div class="history-head-copy"><strong>${App.esc(session.plan || "训练")}</strong><span>${App.esc(session.date || "")}</span></div>
+          <span class="badge">${stats.exerciseCount} 个动作</span>
+        </div>
+        <div class="history-summary-meta"><span>${stats.setCount} 组</span>${volumeText}</div>
+        <details class="history-details">
+          <summary>查看详情</summary>
+          <div class="history-details-body">${exercises}</div>
+        </details>
+      </article>`;
     }).join("") + (shown.length < arr.length ? `<div class="load-more-row"><button id="loadMoreHistory" class="secondary">加载更多（${shown.length}/${arr.length}）</button></div>` : "");
     const more = document.getElementById("loadMoreHistory");
     if (more) more.onclick = () => { historyLimit += 20; renderHistory(); };
@@ -161,7 +206,14 @@
   }
 
   function init() {
-    document.getElementById("progressExercise").onchange = drawProgress;
+    const progressSelect = document.getElementById("progressExercise");
+    if (progressSelect) progressSelect.onchange = drawProgress;
+    const historySelect = document.getElementById("historyPlanFilter");
+    if (historySelect) historySelect.onchange = () => {
+      historyPlanFilter = historySelect.value || "all";
+      historyLimit = 20;
+      renderHistory();
+    };
     document.querySelectorAll("#progressRange .v16-range-btn").forEach(button => {
       button.onclick = () => { progressRange = button.dataset.range || "1y"; syncRangeButtons(); drawProgress(); };
     });
