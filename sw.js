@@ -1,4 +1,4 @@
-const SHELL_CACHE = "fitness-pwa-shell-v94";
+const SHELL_CACHE = "fitness-pwa-shell-v95";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
@@ -9,7 +9,7 @@ const SHELL_ASSETS = [
   "./assets/css/glass-cards.css?v=72",
   "./assets/css/exercise-card.css?v=72",
   "./assets/css/page-unification.css?v=90",
-  "./assets/css/planning.css?v=93",
+  "./assets/css/planning.css?v=95",
   "./js/pwa/sw-register.js?v=72",
   "./js/core/app-storage.js?v=72",
   "./js/core/app.js?v=91",
@@ -23,7 +23,9 @@ const SHELL_ASSETS = [
   "./js/training/training-maintenance.js?v=72",
   "./js/training/training.js?v=92",
   "./js/training/planning.js?v=93",
+  "./js/training/planning-actions.js?v=95",
   "./js/training/training-motion.js?v=94",
+  "./js/training/training-keyboard-viewport.js?v=95",
   "./js/ui/nav-motion.js?v=72",
   "./js/sync/sync-remote.js?v=72",
   "./js/sync/sync.js?v=72",
