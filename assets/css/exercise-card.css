@@ -139,6 +139,17 @@
   margin-top:7px;
 }
 
+/* Set number and editable values share the same lightweight glass surface as the idle Complete button. */
+#workoutContainer .exercise-sets-panel .set-number,
+#workoutContainer .exercise-sets-panel .set-row input{
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:18px;
+  background:rgba(255,255,255,.60);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.88),
+    0 2px 6px rgba(35,40,48,.035);
+}
+
 #workoutContainer .exercise-sets-panel .set-number{
   display:flex;
   align-items:center;
@@ -147,16 +158,10 @@
   width:28px;
   min-height:48px;
   height:48px;
-  border:1px solid rgba(143,158,178,.14);
-  border-radius:14px;
-  background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(247,250,253,.66));
-  color:#65717f;
+  color:#5a6572;
   font-size:14px;
-  font-weight:750;
+  font-weight:720;
   font-variant-numeric:tabular-nums;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.98),
-    0 2px 7px rgba(31,43,60,.035);
 }
 
 #workoutContainer .exercise-sets-panel .set-row input,
@@ -167,24 +172,19 @@
 
 #workoutContainer .exercise-sets-panel .set-row input{
   padding:10px 5px;
-  border:1px solid rgba(143,158,178,.18);
-  background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(247,250,253,.66));
   color:#222933;
   font-size:18px;
   font-weight:690;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.98),
-    0 2px 7px rgba(31,43,60,.035);
-  transition:background .16s ease,border-color .16s ease,box-shadow .16s ease;
+  transition:background .14s ease,border-color .14s ease,box-shadow .14s ease;
 }
 
 #workoutContainer .exercise-sets-panel .set-row input:focus{
-  border-color:rgba(126,145,169,.38);
-  background:rgba(255,255,255,.94);
+  border-color:rgba(255,255,255,.88);
+  background:rgba(255,255,255,.78);
   box-shadow:
-    0 0 0 3px rgba(93,116,148,.055),
-    0 3px 10px rgba(31,43,60,.045),
-    inset 0 1px 0 rgba(255,255,255,1);
+    0 0 0 3px rgba(93,116,148,.045),
+    inset 0 1px 0 rgba(255,255,255,.96),
+    0 2px 6px rgba(35,40,48,.035);
 }
 
 #workoutContainer .exercise-sets-panel .set-complete{
@@ -205,6 +205,15 @@
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
     transition:opacity .16s ease,transform .16s ease;
+  }
+
+  /* Keep outer depth constant while the focus class changes; opacity/scale carry the focus transition. */
+  #workoutContainer .exercise-card,
+  html.training-snap-ready #workoutContainer .exercise-card.is-current,
+  html.training-form-editing #workoutContainer .exercise-card.form-editing-card{
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+    box-shadow:0 8px 20px rgba(31,36,45,.048),0 2px 5px rgba(31,36,45,.026);
   }
 
   #workoutContainer .exercise-head{
@@ -295,7 +304,7 @@
     width:28px;
     min-height:48px;
     height:48px;
-    border-radius:14px;
+    border-radius:16px;
     font-size:13.5px;
   }
 
@@ -303,6 +312,7 @@
   #workoutContainer .exercise-sets-panel .set-complete{
     min-height:48px;
     height:48px;
+    border-radius:16px;
   }
 
   #workoutContainer .exercise-sets-panel .set-row input{
@@ -314,26 +324,11 @@
     position:static;
     width:80px;
     padding:0 7px;
-    border-radius:16px;
     font-size:14px;
   }
 
   #workoutContainer .exercise-sets-panel .set-header > span:first-child{
     text-align:center;
-  }
-
-  html.training-snap-ready #workoutContainer .exercise-card.is-current,
-  html.training-form-editing #workoutContainer .exercise-card.form-editing-card{
-    -webkit-backdrop-filter:blur(8px) saturate(128%);
-    backdrop-filter:blur(8px) saturate(128%);
-    box-shadow:0 10px 26px rgba(31,36,45,.058),0 2px 6px rgba(31,36,45,.03);
-  }
-
-  html.training-scrolling #workoutContainer .exercise-card,
-  html.training-scrolling #workoutContainer .exercise-card.is-current{
-    -webkit-backdrop-filter:none;
-    backdrop-filter:none;
-    box-shadow:0 4px 12px rgba(31,36,45,.035);
   }
 }
 
@@ -351,7 +346,7 @@
     width:26px;
     min-height:46px;
     height:46px;
-    border-radius:13px;
+    border-radius:15px;
     font-size:12.5px;
   }
 
