@@ -256,12 +256,12 @@
 }
 
 #progress .body-input-wrap input{
-  min-height:38px!important;
-  height:38px!important;
-  padding:6px 34px 6px 9px!important;
-  border-radius:13px!important;
-  font-size:15px!important;
-  line-height:1!important;
+  min-height:38px;
+  height:38px;
+  padding:6px 34px 6px 9px;
+  border-radius:13px;
+  font-size:15px;
+  line-height:1;
 }
 
 #progress .body-input-wrap small{
@@ -340,9 +340,9 @@
   margin:0;
   padding:5px 0;
   border:0!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
 }
 
 #history .history-exercise + .history-exercise{
@@ -359,8 +359,8 @@
   gap:4px;
 }
 
-#progress .body-input-grid{
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+#progress > .card.body-data-card .body-input-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:9px 10px;
 }
 
