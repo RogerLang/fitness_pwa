@@ -1,7 +1,8 @@
 /* Exercise-card interior layout. Loaded after glass-cards.css so the three content blocks stay visually distinct. */
 
 #workoutContainer .exercise-card{
-  padding:15px 12px 16px;
+  padding:15px 12px 12px;
+  contain:layout style;
 }
 
 #workoutContainer .exercise-head{
@@ -16,7 +17,7 @@
 #workoutContainer .exercise-card-layout{
   display:grid;
   gap:12px;
-  margin-inline:-2px;
+  margin-inline:0;
 }
 
 #workoutContainer .exercise-summary-grid{
@@ -150,8 +151,24 @@
 
 #workoutContainer .exercise-sets-panel .set-row input{
   padding:10px 5px;
+  border:1px solid rgba(143,158,178,.18);
+  background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(247,250,253,.66));
+  color:#222933;
   font-size:18px;
   font-weight:690;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.98),
+    0 2px 7px rgba(31,43,60,.035);
+  transition:background .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+
+#workoutContainer .exercise-sets-panel .set-row input:focus{
+  border-color:rgba(126,145,169,.38);
+  background:rgba(255,255,255,.94);
+  box-shadow:
+    0 0 0 3px rgba(93,116,148,.055),
+    0 3px 10px rgba(31,43,60,.045),
+    inset 0 1px 0 rgba(255,255,255,1);
 }
 
 #workoutContainer .exercise-sets-panel .set-complete{
@@ -168,7 +185,10 @@
 
 @media(max-width:680px){
   #workoutContainer .exercise-card{
-    padding:12px 8px 13px;
+    padding:12px 10px 10px;
+    -webkit-backdrop-filter:blur(12px) saturate(140%);
+    backdrop-filter:blur(12px) saturate(140%);
+    transition:opacity .18s ease,transform .18s ease;
   }
 
   #workoutContainer .exercise-head{
@@ -178,7 +198,7 @@
 
   #workoutContainer .exercise-card-layout{
     gap:10px;
-    margin-inline:-2px;
+    margin-inline:0;
   }
 
   #workoutContainer .exercise-summary-grid{
