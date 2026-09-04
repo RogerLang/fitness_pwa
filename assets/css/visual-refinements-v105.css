@@ -217,30 +217,6 @@
   gap:9px;
 }
 
-/* History details should read like a compact log, not separate floating blocks. */
-#history .history-details-body{
-  display:grid;
-  gap:5px;
-}
-
-#history .history-exercise{
-  margin-top:0;
-  padding:7px 9px;
-}
-
-#history .history-exercise + .history-exercise{
-  margin-top:0;
-}
-
-#history .history-exercise-name{
-  margin-bottom:5px;
-  line-height:1.25;
-}
-
-#history .history-set-list{
-  gap:4px;
-}
-
 @media(max-width:680px){
   #today .today-overview{
     padding:16px 14px 14px;
@@ -298,37 +274,6 @@
     grid-template-columns:28px minmax(0,1fr) minmax(0,.64fr) 72px;
     gap:4px;
   }
-}
-
-/* v106: flatten history exercise rows and keep body measurements in two columns on phones. */
-#history .history-details-body{
-  gap:0;
-  margin-top:5px;
-}
-
-#history .history-exercise{
-  grid-template-columns:82px minmax(0,1fr);
-  gap:6px;
-  margin:0;
-  padding:5px 0;
-  border:0;
-  border-radius:0;
-  background:transparent;
-  box-shadow:none;
-}
-
-#history .history-exercise + .history-exercise{
-  border-top:1px solid rgba(126,145,169,.09);
-}
-
-#history .history-exercise-name{
-  margin:0;
-  line-height:1.2;
-}
-
-#history .history-set-list{
-  margin-top:0;
-  gap:4px;
 }
 
 /* v107: saving is the only primary workout completion action; sync follows automatically. */
