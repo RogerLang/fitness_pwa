@@ -1,4 +1,4 @@
-/* v92 planning flow: one confirmed next workout across the whole app. */
+/* v93 planning flow: editable candidate plan with explicit push to training. */
 
 .bottom-nav{
   grid-template-columns:repeat(5,minmax(0,1fr));
@@ -21,10 +21,6 @@
 }
 
 #plan .planning-heading h2{
-  margin:0 0 3px;
-}
-
-#plan .planning-heading p{
   margin:0;
 }
 
@@ -39,72 +35,44 @@
   min-width:0;
 }
 
-#plan .planning-status{
-  min-height:18px;
-  margin:9px 2px 0;
-  color:#7f8996;
-  font-size:12px;
-  line-height:1.4;
-}
-
-#plan .planning-status.is-confirmed{
-  color:#557066;
-}
-
-#plan .planning-status.is-warning{
-  color:#8a6846;
-}
-
-#plan .planning-status.is-editing{
-  color:#667482;
+#plan .planning-push-top{
+  width:100%;
+  min-height:44px;
+  margin-top:8px;
 }
 
 #plan .planning-current{
-  display:flex;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
   align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-top:10px;
-  padding:10px 11px;
+  gap:9px;
+  margin-top:9px;
+  padding:9px 10px;
   border:1px solid rgba(255,255,255,.42);
-  border-radius:18px;
-  background:rgba(255,255,255,.36);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+  border-radius:17px;
+  background:rgba(255,255,255,.34);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.76);
 }
 
-#plan .planning-current > div{
-  display:flex;
-  min-width:0;
-  flex-direction:column;
-  gap:2px;
-}
-
-#plan .planning-current span,
-#plan .planning-current small{
+#plan .planning-current > span{
   color:#8c96a2;
   font-size:10.5px;
   line-height:1.35;
+  white-space:nowrap;
 }
 
-#plan .planning-current strong{
+#plan .planning-current > strong{
+  overflow:hidden;
   color:#3d4754;
-  font-size:14px;
+  font-size:13.5px;
   line-height:1.35;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 
-#plan .planning-current-badge{
-  flex:0 0 auto;
-  padding:5px 8px;
-  border:1px solid rgba(104,128,118,.13);
-  border-radius:999px;
-  background:rgba(122,151,138,.10);
-  color:#607b6f!important;
-  font-size:10px!important;
-  font-weight:700;
-}
-
-#plan .planning-current.is-empty{
-  background:rgba(255,255,255,.28);
+#plan .planning-current.is-empty > strong{
+  color:#8c96a2;
+  font-weight:650;
 }
 
 #planningWorkoutList{
@@ -121,12 +89,6 @@
     linear-gradient(180deg,rgba(255,255,255,.70),rgba(245,248,252,.55));
   box-shadow:
     0 7px 19px rgba(37,48,64,.045),
-    inset 0 1.5px 0 rgba(255,255,255,.96);
-}
-
-#plan .planning-exercise-card.is-locked{
-  box-shadow:
-    0 5px 15px rgba(37,48,64,.035),
     inset 0 1.5px 0 rgba(255,255,255,.96);
 }
 
@@ -185,15 +147,11 @@
 
 #plan .planning-target-panel{
   margin-top:8px;
-  padding:10px;
+  padding:9px 10px 10px;
   border:1px solid rgba(255,255,255,.42);
   border-radius:19px;
   background:rgba(255,255,255,.42);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.82);
-}
-
-#plan .planning-exercise-card.is-locked .planning-target-panel{
-  background:rgba(255,255,255,.30);
 }
 
 #plan .planning-target-head{
@@ -201,7 +159,7 @@
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  margin-bottom:8px;
+  margin-bottom:7px;
 }
 
 #plan .planning-target-head > div:first-child{
@@ -251,46 +209,39 @@
 
 #plan .planning-set-list{
   display:grid;
-  gap:6px;
+  gap:5px;
 }
 
+#plan .planning-set-header,
 #plan .planning-set-row{
   display:grid;
-  grid-template-columns:24px 1fr 1fr;
+  grid-template-columns:24px minmax(0,1fr) minmax(0,1fr);
   gap:7px;
-  align-items:end;
+  align-items:center;
+}
+
+#plan .planning-set-header{
+  padding:0 1px 1px;
+  color:#929ba7;
+  font-size:9.5px;
+  line-height:1.2;
+  text-align:center;
 }
 
 #plan .planning-set-number{
   display:grid;
   place-items:center;
-  height:38px;
+  height:37px;
   color:#8d96a2;
   font-size:11px;
   font-weight:700;
 }
 
-#plan .planning-set-row label{
-  margin:0;
-  gap:4px;
-}
-
-#plan .planning-set-row label span{
-  color:#929ba7;
-  font-size:9.5px;
-}
-
 #plan .planning-set-row input{
-  padding:9px 7px;
+  min-width:0;
+  padding:8px 7px;
   text-align:center;
   font-variant-numeric:tabular-nums;
-}
-
-#plan .planning-set-row input[readonly]{
-  color:#65717f;
-  -webkit-text-fill-color:#65717f;
-  background:rgba(255,255,255,.36);
-  cursor:default;
 }
 
 #plan .planning-actions{
@@ -302,10 +253,6 @@
 
 #plan .planning-actions button{
   min-height:44px;
-}
-
-#plan #planningGoTrainBtn{
-  grid-column:1/-1;
 }
 
 #plan .planning-template-shell{
@@ -528,10 +475,6 @@
 
   #plan .planning-actions{
     grid-template-columns:1fr;
-  }
-
-  #plan #planningGoTrainBtn{
-    grid-column:auto;
   }
 
   #today .today-plan-bar{
