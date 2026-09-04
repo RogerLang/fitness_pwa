@@ -53,7 +53,8 @@
       Draft.capture();
       const base = Math.max(1, plannedExercise.sets?.length || 1);
       const next = Draft.effectiveSetCount(ei, base) + 1;
-      Draft.setSetCount(ei, next);
+      if (next === base) Draft.clearSetCount(ei);
+      else Draft.setSetCount(ei, next);
       Renderer.renderWorkout();
       Draft.queueWrite();
       return;
@@ -66,7 +67,8 @@
       if (current <= 1) return;
       const next = current - 1;
       Draft.trimFromSet(ei, next);
-      Draft.setSetCount(ei, next);
+      if (next === base) Draft.clearSetCount(ei);
+      else Draft.setSetCount(ei, next);
       Renderer.renderWorkout();
       Draft.queueWrite();
     }
@@ -170,6 +172,7 @@
     };
 
     await App.persist("plans");
+    App.planning?.invalidate?.(pi);
     await Draft.resetPlan(pi);
     Renderer.renderPlanSelect();
     Renderer.renderWorkout();

@@ -163,7 +163,8 @@
         App.idbGet(LEGACY_DRAFTS_KEY),
         App.idbGet(ACTIVE_PLAN_KEY)
       ]);
-      const restoredDrafts = storedDrafts || legacyDrafts;
+      const storedHasEntries = storedDrafts && typeof storedDrafts === "object" && Object.keys(storedDrafts).length > 0;
+      const restoredDrafts = storedHasEntries ? storedDrafts : (legacyDrafts || storedDrafts);
       draftStore = restoredDrafts && typeof restoredDrafts === "object" && !Array.isArray(restoredDrafts)
         ? restoredDrafts
         : {};

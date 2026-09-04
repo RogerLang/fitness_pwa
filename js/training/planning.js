@@ -292,8 +292,9 @@
     const draft = draftFor(index);
     if (!plan || !draft) return;
 
-    if (App.training?.currentPlanIndex?.() === index && App.training?.hasDraft?.()) {
-      App.toast("当前这套训练还有未保存记录，请先保存或清空后再重新确认计划", "error");
+    const activeDraft = App.training?.currentPlanIndex?.() === index && App.training?.hasDraft?.();
+    if (activeDraft && plan.plannedWorkout?.status === "confirmed") {
+      App.toast("当前这套训练已经开始记录，请先保存或清空后再重新确认计划", "error");
       return;
     }
 
@@ -383,7 +384,8 @@
     bindEvents();
   }
 
-  async function refresh() {
+  async function refresh(reason) {
+    if (reason === "remote") drafts.clear();
     render();
   }
 
@@ -395,6 +397,10 @@
     drafts.clear();
   }
 
-  App.planning = { render, confirmPlan };
+  function invalidate(index = currentIndex()) {
+    drafts.delete(index);
+  }
+
+  App.planning = { render, confirmPlan, invalidate };
   App.registerModule({ init, refresh, onPage, onDataReset });
 })();
