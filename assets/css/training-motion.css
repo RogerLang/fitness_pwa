@@ -85,8 +85,9 @@
     html.training-view-timeline #workoutContainer .exercise-card.is-current{
       scroll-snap-align:none;
       scroll-snap-stop:normal;
-      opacity:.44;
-      transform:none;
+      opacity:.50;
+      transform:translate3d(0,7px,0) scale(.995);
+      transform-origin:center center;
       transition:none;
       border-color:rgba(255,255,255,.86);
       box-shadow:0 8px 20px rgba(31,36,45,.048),0 2px 5px rgba(31,36,45,.026);
@@ -104,12 +105,13 @@
     }
 
     html.training-view-timeline.training-form-editing #workoutContainer .exercise-card{
-      opacity:.44;
+      opacity:.50;
     }
 
     html.training-view-timeline.training-form-editing #workoutContainer .exercise-card.form-editing-card{
       animation:none;
       opacity:1;
+      transform:none;
     }
 
     html.training-view-timeline #today .sticky-actions{
@@ -121,13 +123,34 @@
 }
 
 @keyframes exercise-card-view-focus{
-  0%{opacity:.44}
-  30%{opacity:.66}
-  44%{opacity:.92}
-  50%{opacity:1}
-  56%{opacity:.92}
-  70%{opacity:.66}
-  100%{opacity:.44}
+  0%{
+    opacity:.50;
+    transform:translate3d(0,7px,0) scale(.995);
+  }
+  22%{
+    opacity:.70;
+    transform:translate3d(0,4px,0) scale(.997);
+  }
+  38%{
+    opacity:.94;
+    transform:translate3d(0,1px,0) scale(.999);
+  }
+  44%,56%{
+    opacity:1;
+    transform:translate3d(0,0,0) scale(1);
+  }
+  62%{
+    opacity:.94;
+    transform:translate3d(0,-1px,0) scale(.999);
+  }
+  78%{
+    opacity:.70;
+    transform:translate3d(0,-4px,0) scale(.997);
+  }
+  100%{
+    opacity:.50;
+    transform:translate3d(0,-7px,0) scale(.995);
+  }
 }
 
 @media (prefers-reduced-motion:reduce){

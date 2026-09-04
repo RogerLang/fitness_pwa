@@ -1,4 +1,4 @@
-const SHELL_CACHE = "fitness-pwa-shell-v81";
+const SHELL_CACHE = "fitness-pwa-shell-v82";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
