@@ -32,13 +32,17 @@
   let touchGesture = null;
 
   let cardCache = [];
+  let cardTargets = [];
+  let targetByCard = new WeakMap();
   let cardMetricsDirty = true;
   let currentCard = null;
   let overviewCurrent = false;
   let lastClassifiedSnapHeight = null;
   let runtimeListening = false;
-  let scrolling = false;
   let pendingScrollDelta = 0;
+  let overviewDocumentTop = 0;
+  let overviewHeight = 0;
+  let actionsTargetY = 0;
 
   const todayActive = () => todayPage.classList.contains("active");
 
@@ -49,6 +53,8 @@
   function invalidateCardMetrics() {
     cardMetricsDirty = true;
     lastClassifiedSnapHeight = null;
+    cardTargets = [];
+    targetByCard = new WeakMap();
   }
 
   function refreshCardCache() {
@@ -80,24 +86,38 @@
     };
   }
 
-  function overviewSettled(rect = overview.getBoundingClientRect()) {
+  function elementDocumentTop(element) {
+    let top = 0;
+    let node = element;
+    while (node) {
+      top += node.offsetTop || 0;
+      node = node.offsetParent;
+    }
+    return top;
+  }
+
+  function overviewRectSnapshot() {
+    const top = overviewDocumentTop - window.scrollY;
+    return { top, bottom: top + overviewHeight, height: overviewHeight };
+  }
+
+  function overviewSettled(rect = overviewRectSnapshot()) {
     if (!todayActive()) return false;
     return Math.abs(rect.top - OVERVIEW_TOP) <= OVERVIEW_TOLERANCE;
   }
 
-  function overviewVisibleRatio(rect = overview.getBoundingClientRect()) {
+  function overviewVisibleRatio(rect = overviewRectSnapshot()) {
     if (rect.height <= 0) return 0;
     const visible = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
     return Math.min(1, visible / rect.height);
   }
 
-  function overviewDepartureDistance(rect = overview.getBoundingClientRect()) {
+  function overviewDepartureDistance(rect = overviewRectSnapshot()) {
     return Math.max(0, OVERVIEW_TOP - rect.top);
   }
 
-  function actionsSettled(geometry = snapGeometry()) {
-    const rect = actions.getBoundingClientRect();
-    return Math.abs(rect.bottom - geometry.snapBottom) <= TARGET_TOLERANCE;
+  function actionsSettled() {
+    return Math.abs(window.scrollY - actionsTargetY) <= TARGET_TOLERANCE;
   }
 
   function nearPageBottom(buffer = 220) {
@@ -119,13 +139,7 @@
     overview.classList.toggle("is-current", active);
   }
 
-  function setScrolling(active) {
-    if (scrolling === active) return;
-    scrolling = active;
-    root.classList.toggle("training-scrolling", active);
-  }
-
-  function updateOverviewFocusLock(delta = 0, rect = overview.getBoundingClientRect()) {
+  function updateOverviewFocusLock(delta = 0, rect = overviewRectSnapshot()) {
     if (mode === "overview" || overviewSettled(rect)) {
       overviewFocusLocked = true;
       return;
@@ -150,13 +164,38 @@
     if (!force && !cardMetricsDirty && lastClassifiedSnapHeight === geometry.snapHeight) return;
 
     const threshold = geometry.snapHeight - 20;
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const nextTargets = [];
+    const nextTargetByCard = new WeakMap();
+
+    overviewDocumentTop = elementDocumentTop(overview);
+    overviewHeight = overview.offsetHeight;
+
     for (const card of getCards()) {
-      const shouldSnapStart = card.offsetHeight > threshold;
+      const height = card.offsetHeight;
+      const shouldSnapStart = height > threshold;
       if (card.classList.contains("snap-start") !== shouldSnapStart) {
         card.classList.toggle("snap-start", shouldSnapStart);
       }
+
+      const top = elementDocumentTop(card);
+      const rawTargetY = shouldSnapStart
+        ? top - geometry.snapTop
+        : top + height / 2 - geometry.snapCenter;
+      const targetY = Math.min(maxScroll, Math.max(0, rawTargetY));
+      const entry = { card, targetY };
+      nextTargets.push(entry);
+      nextTargetByCard.set(card, entry);
     }
 
+    const actionTop = elementDocumentTop(actions);
+    actionsTargetY = Math.min(
+      maxScroll,
+      Math.max(0, actionTop + actions.offsetHeight - geometry.snapBottom)
+    );
+
+    cardTargets = nextTargets;
+    targetByCard = nextTargetByCard;
     cardMetricsDirty = false;
     lastClassifiedSnapHeight = geometry.snapHeight;
   }
@@ -172,29 +211,43 @@
     setCurrentCard(null);
   }
 
-  function cardDistance(card, geometry = snapGeometry()) {
-    const rect = card.getBoundingClientRect();
-    return card.classList.contains("snap-start")
-      ? Math.abs(rect.top - geometry.snapTop)
-      : Math.abs((rect.top + rect.bottom) / 2 - geometry.snapCenter);
+  function cardDistance(card) {
+    const target = targetByCard.get(card);
+    if (!target) return Infinity;
+    return Math.abs(window.scrollY - target.targetY);
   }
 
   function targetScrollForCard(card, geometry = snapGeometry()) {
-    const rect = card.getBoundingClientRect();
-    const delta = card.classList.contains("snap-start")
-      ? rect.top - geometry.snapTop
-      : (rect.top + rect.bottom) / 2 - geometry.snapCenter;
-    return Math.max(0, window.scrollY + delta);
+    classifyCards(geometry);
+    const target = targetByCard.get(card);
+    if (target) return target.targetY;
+    return Math.max(0, window.scrollY);
   }
 
-  function targetScrollForOverview() {
-    return Math.max(0, window.scrollY + overview.getBoundingClientRect().top - OVERVIEW_TOP);
+  function targetScrollForOverview(geometry = snapGeometry()) {
+    classifyCards(geometry);
+    return Math.max(0, overviewDocumentTop - OVERVIEW_TOP);
   }
 
   function targetScrollForActions(geometry = snapGeometry()) {
-    const rect = actions.getBoundingClientRect();
-    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-    return Math.min(maxScroll, Math.max(0, window.scrollY + rect.bottom - geometry.snapBottom));
+    classifyCards(geometry);
+    return actionsTargetY;
+  }
+
+  function closestCardToScroll() {
+    let bestCard = null;
+    let bestDistance = Infinity;
+    const y = window.scrollY;
+
+    for (const entry of cardTargets) {
+      const distance = Math.abs(y - entry.targetY);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestCard = entry.card;
+      }
+    }
+
+    return bestCard;
   }
 
   function clearTrainingState() {
@@ -215,7 +268,6 @@
     for (const card of getCards()) card.classList.remove("is-current", "snap-start");
     currentCard = null;
     overviewCurrent = false;
-    scrolling = false;
     pendingScrollDelta = 0;
     invalidateCardMetrics();
   }
@@ -251,9 +303,12 @@
     ticking = false;
     if (!enabled) return;
 
+    const geometry = snapGeometry();
+    classifyCards(geometry);
+
     const scrollDelta = pendingScrollDelta;
     pendingScrollDelta = 0;
-    const overviewRect = overview.getBoundingClientRect();
+    const overviewRect = overviewRectSnapshot();
 
     if (!freeGlideDirection && !programmaticTarget && mode === "overview" && scrollDelta > 1) {
       setMode("exercise");
@@ -269,9 +324,6 @@
     }
 
     updateOverviewFocusLock(scrollDelta, overviewRect);
-
-    const geometry = snapGeometry();
-    classifyCards(geometry);
 
     if (mode === "overview") {
       overviewFocusLocked = true;
@@ -297,29 +349,12 @@
 
     setOverviewCurrent(false);
 
-    if (nearPageBottom() && actionsSettled(geometry)) {
+    if (nearPageBottom() && actionsSettled()) {
       clearCurrentCardState();
       return;
     }
 
-    let bestCard = null;
-    let bestDistance = Infinity;
-
-    for (const card of getCards()) {
-      const rect = card.getBoundingClientRect();
-      if (rect.bottom <= geometry.snapTop || rect.top >= geometry.snapBottom) continue;
-
-      const distance = card.classList.contains("snap-start")
-        ? Math.abs(rect.top - geometry.snapTop)
-        : Math.abs((rect.top + rect.bottom) / 2 - geometry.snapCenter);
-
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestCard = card;
-      }
-    }
-
-    setCurrentCard(bestCard);
+    setCurrentCard(closestCardToScroll());
   }
 
   function scheduleUpdate() {
@@ -342,7 +377,6 @@
   function finishFreeGlide() {
     freeGlideDirection = null;
     root.classList.remove("training-free-glide");
-    setScrolling(false);
     programmaticTarget = null;
     setMode(overviewSettled() ? "overview" : "exercise");
     overviewFocusLocked = mode === "overview";
@@ -372,7 +406,6 @@
         return;
       }
       programmaticTarget = null;
-      setScrolling(false);
       setMode("exercise");
       overviewFocusLocked = false;
       setOverviewCurrent(false);
@@ -381,7 +414,6 @@
       return;
     }
 
-    setScrolling(false);
     setMode(overviewSettled() ? "overview" : "exercise");
     if (mode === "overview") overviewFocusLocked = true;
     else if (overviewDepartureDistance() >= OVERVIEW_FOCUS_RELEASE_DISTANCE) overviewFocusLocked = false;
@@ -400,13 +432,11 @@
     setOverviewCurrent(false);
     body.classList.add("chrome-hidden");
     programmaticTarget = card;
-    setScrolling(true);
     setCurrentCard(card);
 
     const targetTop = targetScrollForCard(card);
     if (Math.abs(targetTop - window.scrollY) <= TARGET_TOLERANCE) {
       programmaticTarget = null;
-      setScrolling(false);
       scheduleUpdate();
       return;
     }
@@ -423,7 +453,6 @@
     programmaticTarget = null;
     freeGlideDirection = direction;
     root.classList.add("training-free-glide");
-    setScrolling(true);
 
     if (direction === "down") {
       setMode("exercise");
@@ -443,7 +472,6 @@
     programmaticTarget = null;
     freeGlideDirection = "up";
     root.classList.add("training-free-glide");
-    setScrolling(true);
     overviewFocusLocked = true;
     setOverviewCurrent(true);
     clearCurrentCardState();
@@ -464,7 +492,6 @@
     const y = window.scrollY;
     pendingScrollDelta += y - lastY;
     lastY = y;
-    setScrolling(true);
     scheduleUpdate();
     armSettle();
   }
@@ -480,7 +507,6 @@
       else if (overviewDepartureDistance() >= OVERVIEW_FOCUS_RELEASE_DISTANCE) overviewFocusLocked = false;
     }
     programmaticTarget = null;
-    setScrolling(true);
 
     const touch = event.touches[0];
     touchGesture = {
@@ -589,7 +615,6 @@
     resizeObserver?.disconnect();
     clearTimeout(settleTimer);
     settleTimer = null;
-    setScrolling(false);
   }
 
   if (body.classList.contains("app-booting")) {
