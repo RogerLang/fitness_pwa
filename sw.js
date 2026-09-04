@@ -1,4 +1,4 @@
-const SHELL_CACHE = "fitness-pwa-shell-v86";
+const SHELL_CACHE = "fitness-pwa-shell-v87";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const SHELL_ASSETS = [
   "./assets/css/nav-motion.css?v=72",
   "./assets/css/glass-cards.css?v=72",
   "./assets/css/exercise-card.css?v=72",
+  "./assets/css/page-unification.css?v=87",
   "./js/pwa/sw-register.js?v=72",
   "./js/core/app-storage.js?v=72",
   "./js/core/app.js?v=72",

@@ -1,0 +1,442 @@
+/* Cross-page visual hierarchy and form refinements. Loaded after the core card styles. */
+
+:root{
+  --ui-panel-border:rgba(255,255,255,.42);
+  --ui-panel-bg:
+    radial-gradient(118% 88% at 12% -8%,rgba(255,255,255,.54) 0%,rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,rgba(255,255,255,.68),rgba(245,248,252,.52));
+  --ui-panel-shadow:
+    0 4px 12px rgba(37,48,64,.040),
+    inset 0 1.5px 0 rgba(255,255,255,.96),
+    inset 0 -1px 0 rgba(96,112,134,.026);
+}
+
+/* Completed sets remain legible only as a faint trace until the row is edited again. */
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed .set-number{
+  color:rgba(90,101,114,.11)!important;
+}
+
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed input{
+  color:rgba(34,41,51,.09)!important;
+  -webkit-text-fill-color:rgba(34,41,51,.09)!important;
+  caret-color:rgba(34,41,51,.48);
+}
+
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed input::placeholder{
+  color:rgba(23,26,33,.07)!important;
+  opacity:1;
+}
+
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:focus-within .set-number{
+  color:rgba(90,101,114,.58)!important;
+}
+
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:focus-within input{
+  color:rgba(34,41,51,.62)!important;
+  -webkit-text-fill-color:rgba(34,41,51,.62)!important;
+}
+
+html #workoutContainer .exercise-sets-panel .workout-set-row.set-completed:focus-within input::placeholder{
+  color:rgba(23,26,33,.42)!important;
+}
+
+html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed="true"]{
+  background:rgba(255,255,255,.22);
+  border-color:rgba(151,164,181,.14);
+  color:rgba(92,104,119,.38);
+  opacity:.48;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.68);
+}
+
+/* Workout value fields use the mobile keyboard without browser number steppers or autofill styling. */
+#workoutContainer .workout-number-input{
+  appearance:none;
+  -webkit-appearance:none;
+  font-variant-numeric:tabular-nums;
+}
+
+/* Exercise editor: low-risk controls above, destructive action left, completion action right. */
+#workoutContainer .editor-actions{
+  display:grid;
+  gap:11px;
+  margin-top:13px;
+}
+
+#workoutContainer .editor-set-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+#workoutContainer .optional-toggle{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-width:154px;
+  margin:0;
+  padding:8px 9px 8px 12px;
+  border:1px solid rgba(255,255,255,.50);
+  border-radius:17px;
+  background:rgba(255,255,255,.38);
+  color:#66717f;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.80);
+  cursor:pointer;
+}
+
+#workoutContainer .optional-toggle-label{
+  font-size:12.5px;
+  font-weight:690;
+  line-height:1.2;
+}
+
+#workoutContainer .optional-toggle-input{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:0 0 44px;
+  width:44px;
+  min-width:44px;
+  height:26px;
+  min-height:26px;
+  margin:0;
+  padding:0;
+  border:1px solid rgba(148,160,176,.22);
+  border-radius:999px;
+  background:
+    radial-gradient(circle at 13px 50%,rgba(255,255,255,.98) 0 8px,rgba(255,255,255,0) 9px),
+    rgba(212,218,226,.72);
+  box-shadow:
+    inset 0 1px 2px rgba(61,70,82,.06),
+    0 1px 3px rgba(34,40,48,.025);
+  transition:background .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+
+#workoutContainer .optional-toggle-input:checked{
+  border-color:rgba(86,99,116,.16);
+  background:
+    radial-gradient(circle at calc(100% - 13px) 50%,rgba(255,255,255,.99) 0 8px,rgba(255,255,255,0) 9px),
+    rgba(92,105,122,.76);
+  box-shadow:
+    inset 0 1px 2px rgba(34,40,48,.08),
+    0 1px 3px rgba(34,40,48,.03);
+}
+
+#workoutContainer .optional-toggle-input:focus-visible{
+  outline:2px solid rgba(69,82,100,.18);
+  outline-offset:2px;
+}
+
+#workoutContainer .editor-footer-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(126,145,169,.10);
+}
+
+#workoutContainer .editor-delete{
+  border:1px solid rgba(159,47,47,.14);
+  background:rgba(159,47,47,.055);
+  color:rgba(143,45,45,.72);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+#workoutContainer .editor-finish{
+  min-width:96px;
+  border:1px solid rgba(255,255,255,.26);
+  background:rgba(43,49,59,.90);
+  color:#fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.15),
+    0 3px 9px rgba(29,34,42,.07);
+}
+
+/* Shared visual language for History, Progress and Settings. */
+#history > .card,
+#progress > .card,
+#settings > .card{
+  overflow:hidden;
+}
+
+#history h2,
+#progress h2,
+#settings h2,
+#progress h3{
+  margin-bottom:12px;
+  color:var(--workout-text-primary);
+  font-weight:820;
+  letter-spacing:-.012em;
+}
+
+#history > .card{
+  padding:15px 12px 12px;
+}
+
+#history > .card > h2{
+  padding-inline:4px;
+}
+
+#historyList{
+  display:grid;
+  gap:9px;
+}
+
+#history .history-card{
+  margin:0;
+  padding:13px;
+  border:1px solid var(--ui-panel-border);
+  border-radius:20px;
+  background:var(--ui-panel-bg);
+  box-shadow:var(--ui-panel-shadow);
+}
+
+#history .history-head{
+  padding:1px 2px 9px;
+  border-bottom-color:rgba(126,145,169,.10);
+}
+
+#history .history-exercise{
+  margin-top:8px;
+  padding:9px 10px;
+  border:1px solid rgba(255,255,255,.34);
+  border-radius:16px;
+  background:rgba(255,255,255,.34);
+}
+
+#history .history-exercise:last-child{
+  border-bottom:1px solid rgba(255,255,255,.34);
+}
+
+#history .history-set-chip{
+  border-color:rgba(255,255,255,.56);
+  background:rgba(255,255,255,.50);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+}
+
+#history .load-more-row{
+  margin:2px 0 0;
+}
+
+#history .load-more-row button{
+  width:100%;
+  background:rgba(255,255,255,.44);
+  border:1px solid rgba(255,255,255,.52);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+}
+
+/* Progress: control, chart summary and body history all use the same thin-panel material. */
+#progress > .card:first-child > label{
+  margin-top:0;
+  padding:11px 12px;
+  border:1px solid var(--ui-panel-border);
+  border-radius:18px;
+  background:var(--ui-panel-bg);
+  box-shadow:var(--ui-panel-shadow);
+}
+
+#progress > .card:first-child > label select{
+  margin-top:1px;
+}
+
+#progressRange{
+  margin:9px 0 0;
+  padding:8px;
+  border:1px solid var(--ui-panel-border);
+  border-radius:18px;
+  background:rgba(255,255,255,.32);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+#progress #progressChart{
+  margin-top:10px;
+  border-color:rgba(255,255,255,.48);
+  border-radius:20px;
+  background:rgba(255,255,255,.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.88),
+    0 3px 9px rgba(37,48,64,.032);
+}
+
+#progress #progressSummary{
+  margin:9px 0 0;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.36);
+  border-radius:16px;
+  background:rgba(255,255,255,.32);
+  line-height:1.45;
+}
+
+#progress > .card:nth-child(2) .grid2{
+  padding:10px;
+  border:1px solid var(--ui-panel-border);
+  border-radius:20px;
+  background:var(--ui-panel-bg);
+  box-shadow:var(--ui-panel-shadow);
+}
+
+#progress > .card:nth-child(2) .grid2 label{
+  margin-top:0;
+}
+
+#progress #saveBodyBtn{
+  width:100%;
+  margin-top:9px;
+}
+
+#progress #bodyHistory:not(:empty){
+  margin-top:10px;
+  padding:3px 11px;
+  border:1px solid rgba(255,255,255,.36);
+  border-radius:18px;
+  background:rgba(255,255,255,.30);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+#progress .body-history-row{
+  border-bottom-color:rgba(126,145,169,.10);
+}
+
+/* Settings: separate account, action and explanatory surfaces without adding blur inside blur. */
+#settings .card > .grid2,
+#settings .card > label,
+#settings .card > .row.top-gap,
+#settings .card > .stack,
+#settings details{
+  border:1px solid var(--ui-panel-border);
+  border-radius:19px;
+  background:var(--ui-panel-bg);
+  box-shadow:var(--ui-panel-shadow);
+}
+
+#settings .card > .grid2{
+  padding:10px;
+  gap:9px;
+}
+
+#settings .card > .grid2 label{
+  margin-top:0;
+}
+
+#settings .card > label{
+  padding:10px 11px;
+}
+
+#settings .card > .row.top-gap{
+  padding:9px;
+  gap:8px;
+}
+
+#settings .card > .row.top-gap button{
+  flex:1 1 150px;
+}
+
+#settings details{
+  padding:12px 13px;
+}
+
+#settings .card > .stack{
+  padding:10px;
+}
+
+#settings .file-btn{
+  margin:0;
+  border-color:rgba(255,255,255,.56);
+  background:rgba(255,255,255,.46);
+}
+
+#settings #wipeBtn{
+  border:1px solid rgba(159,47,47,.14);
+  background:rgba(159,47,47,.075);
+  color:#8f2d2d;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+@media(max-width:680px){
+  #workoutContainer .editor-set-actions{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  #workoutContainer .editor-set-actions > .row{
+    width:100%;
+  }
+
+  #workoutContainer .editor-set-actions > .row button{
+    flex:1;
+  }
+
+  #workoutContainer .optional-toggle{
+    width:100%;
+    min-width:0;
+    min-height:44px;
+  }
+
+  #workoutContainer .editor-footer-actions{
+    width:100%;
+  }
+
+  #workoutContainer .editor-footer-actions button{
+    min-height:42px;
+  }
+
+  #workoutContainer .editor-finish{
+    min-width:112px;
+  }
+
+  #history > .card,
+  #progress > .card,
+  #settings > .card{
+    padding:14px 11px 12px;
+  }
+
+  #history .history-card{
+    padding:12px;
+    border-radius:18px;
+  }
+
+  #history .history-exercise{
+    grid-template-columns:82px minmax(0,1fr);
+    padding:9px;
+  }
+
+  #progressRange{
+    gap:5px;
+    padding:7px;
+  }
+
+  #progressRange .v16-range-btn{
+    flex:1 1 auto;
+    min-width:68px;
+  }
+
+  #settings .card > .row.top-gap{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+  #settings .card > .row.top-gap button:last-child{
+    grid-column:1/-1;
+  }
+}
+
+@media(prefers-reduced-transparency:reduce){
+  #history .history-card,
+  #history .history-exercise,
+  #progress > .card:first-child > label,
+  #progressRange,
+  #progress #progressSummary,
+  #progress > .card:nth-child(2) .grid2,
+  #progress #bodyHistory:not(:empty),
+  #settings .card > .grid2,
+  #settings .card > label,
+  #settings .card > .row.top-gap,
+  #settings .card > .stack,
+  #settings details{
+    background:#f8f9fb;
+    border-color:rgba(205,211,220,.42);
+    box-shadow:none;
+  }
+}

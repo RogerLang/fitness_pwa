@@ -52,6 +52,10 @@
     return Array.isArray(ex?.setPresets) ? (ex.setPresets[si] || {}) : {};
   }
 
+  function workoutNumberInput({ label, ei, si, key, value, placeholder, decimal = false, done = false }) {
+    return `<input class="workout-number-input" aria-label="${App.esc(label)}" type="text" inputmode="${decimal ? "decimal" : "numeric"}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="${done ? "done" : "next"}" data-e="${ei}" data-s="${si}" data-k="${key}" value="${App.esc(value)}" placeholder="${App.esc(placeholder)}">`;
+  }
+
   function renderExerciseCard(ex, ei, historyContext) {
     const history = historyContext.history(ex.name);
     const previous = history[0]?.exercise || null;
@@ -75,9 +79,9 @@
       const done = Draft.isCompleted(ei, si);
       rows += `<div class="set-row workout-set-row${done ? " set-completed" : ""}" data-e="${ei}" data-s="${si}">
         <span class="set-number">${si + 1}</span>
-        <input aria-label="第 ${si + 1} 组重量" type="number" step="0.5" inputmode="decimal" data-e="${ei}" data-s="${si}" data-k="weight" value="${App.esc(weightValue)}" placeholder="${App.esc(plannedWeight)}">
-        <input aria-label="第 ${si + 1} 组次数" type="number" step="1" inputmode="numeric" data-e="${ei}" data-s="${si}" data-k="reps" value="${App.esc(repsValue)}" placeholder="${App.esc(plannedReps)}">
-        <input aria-label="第 ${si + 1} 组 RIR" type="number" step="1" min="0" max="10" inputmode="numeric" data-e="${ei}" data-s="${si}" data-k="rir" value="${App.esc(rirValue)}" placeholder="${ex.warmup ? "" : App.esc(prev?.rir ?? "1–2")}">
+        ${workoutNumberInput({ label: `第 ${si + 1} 组重量`, ei, si, key: "weight", value: weightValue, placeholder: plannedWeight, decimal: true })}
+        ${workoutNumberInput({ label: `第 ${si + 1} 组次数`, ei, si, key: "reps", value: repsValue, placeholder: plannedReps })}
+        ${workoutNumberInput({ label: `第 ${si + 1} 组 RIR`, ei, si, key: "rir", value: rirValue, placeholder: ex.warmup ? "" : (prev?.rir ?? "1–2"), done: true })}
         <button type="button" class="set-complete${done ? "" : " secondary"}" data-e="${ei}" data-s="${si}" aria-pressed="${done}">${done ? "✓" : "完成"}</button>
       </div>`;
     }
@@ -109,7 +113,7 @@
 
       <div class="exercise-inline-editor${editorOpen ? "" : " hidden"}" data-e="${ei}">
         <div class="inline-editor-grid">
-          <label class="wide">动作名称<input data-edit="name" value="${App.esc(ex.name || "")}"></label>
+          <label class="wide">动作名称<input data-edit="name" autocomplete="off" value="${App.esc(ex.name || "")}"></label>
           <label>最低次数<input data-edit="repMin" type="number" min="1" step="1" value="${min}"></label>
           <label>最高次数<input data-edit="repMax" type="number" min="1" step="1" value="${max}"></label>
           <label>默认 kg<input data-edit="defaultWeight" type="number" step="0.5" value="${ex.defaultWeight ?? ""}"></label>
@@ -117,12 +121,20 @@
         </div>
         <label>备注<textarea data-edit="note">${App.esc(ex.note || "")}</textarea></label>
         <div class="editor-actions">
-          <div class="row wrap">
-            <button type="button" class="small secondary remove-set" data-e="${ei}" ${sets <= 1 ? "disabled" : ""}>− 1组</button>
-            <button type="button" class="small secondary add-set" data-e="${ei}">+ 1组</button>
+          <div class="editor-set-actions">
+            <div class="row wrap">
+              <button type="button" class="small secondary remove-set" data-e="${ei}" ${sets <= 1 ? "disabled" : ""}>− 1组</button>
+              <button type="button" class="small secondary add-set" data-e="${ei}">+ 1组</button>
+            </div>
+            <label class="optional-toggle">
+              <span class="optional-toggle-label">可选动作</span>
+              <input class="optional-toggle-input" data-edit="optional" type="checkbox" ${ex.optional ? "checked" : ""}>
+            </label>
           </div>
-          <label class="row compact-check"><input data-edit="optional" type="checkbox" ${ex.optional ? "checked" : ""}> 可选动作</label>
-          <button type="button" class="small danger delete-exercise-inline" data-e="${ei}">删除动作</button>
+          <div class="editor-footer-actions">
+            <button type="button" class="small editor-delete delete-exercise-inline" data-e="${ei}">删除动作</button>
+            <button type="button" class="small exercise-edit-toggle editor-finish" data-e="${ei}">完成</button>
+          </div>
         </div>
       </div>
     </article>`;
@@ -157,11 +169,17 @@
   }
 
   function toggleEditor(button, ei) {
-    const editor = button.closest(".exercise-card")?.querySelector(".exercise-inline-editor");
-    if (!editor) return false;
-    const opening = editor.classList.contains("hidden");
+    const card = button.closest(".exercise-card");
+    const editor = card?.querySelector(".exercise-inline-editor");
+    if (!card || !editor) return false;
+
+    const forceClose = button.classList.contains("editor-finish");
+    const opening = forceClose ? false : editor.classList.contains("hidden");
     editor.classList.toggle("hidden", !opening);
-    button.textContent = opening ? "收起" : "调整";
+
+    const headerToggle = card.querySelector(".exercise-head .exercise-edit-toggle");
+    if (headerToggle) headerToggle.textContent = opening ? "收起" : "调整";
+
     if (opening) openEditors.add(ei); else openEditors.delete(ei);
     return true;
   }
