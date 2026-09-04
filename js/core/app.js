@@ -1,7 +1,7 @@
 const Storage = window.FitnessStorage;
 if (!Storage) throw new Error("FitnessStorage must load before app.js");
 
-const PAGE_IDS = new Set(["today", "history", "progress", "settings"]);
+const PAGE_IDS = new Set(["today", "plan", "history", "progress", "settings"]);
 
 let db = null;
 let state = { plans: [], sessions: [], body: [] };

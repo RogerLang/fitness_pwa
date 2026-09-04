@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="assets/css/glass-cards.css?v=72" />
   <link rel="stylesheet" href="assets/css/exercise-card.css?v=72" />
   <link rel="stylesheet" href="assets/css/page-unification.css?v=90" />
+  <link rel="stylesheet" href="assets/css/planning.css?v=91" />
   <title>练了么</title>
 </head>
 <body class="app-booting">
@@ -58,8 +59,8 @@
         </div>
       </div>
       <div class="today-plan-bar">
-        <button id="pullPlansTodayBtn" type="button" class="small secondary">拉取最新计划</button>
-        <select id="planSelect" aria-label="选择训练计划"></select>
+        <button id="pullPlansTodayBtn" type="button" class="small secondary">检查最新计划</button>
+        <select id="planSelect" aria-label="选择训练模板"></select>
       </div>
       <p id="todaySyncStatus" class="today-sync-status" aria-live="polite"></p>
     </div>
@@ -71,6 +72,37 @@
       <button id="syncTodayBtn" type="button" class="secondary">增量同步</button>
       <button id="resetWorkoutBtn" type="button" class="secondary">清空输入</button>
     </div>
+  </section>
+
+  <section id="plan" class="page">
+    <div class="card planning-hero">
+      <div class="planning-heading">
+        <div>
+          <h2>本次计划</h2>
+          <p class="muted">根据训练模板和最近记录生成建议，确认后训练页只执行这一版。</p>
+        </div>
+      </div>
+      <div class="planning-plan-bar">
+        <select id="planningPlanSelect" aria-label="选择训练模板"></select>
+        <button id="planningRegenerateBtn" type="button" class="small secondary">重新生成</button>
+      </div>
+      <p id="planningStatus" class="planning-status" aria-live="polite"></p>
+    </div>
+
+    <div id="planningWorkoutList"></div>
+
+    <div class="card planning-actions">
+      <button id="planningConfirmBtn" type="button">确认本次计划</button>
+      <button id="planningConfirmSyncBtn" type="button" class="secondary">确认并同步</button>
+      <button id="planningGoTrainBtn" type="button" class="secondary">进入训练</button>
+    </div>
+
+    <details class="card planning-template-shell">
+      <summary>编辑训练模板</summary>
+      <p class="muted">模板负责长期结构；修改模板不会改动已经确认的本次计划。</p>
+      <div id="planningTemplateList"></div>
+      <button id="planningAddExerciseBtn" type="button" class="secondary">+ 添加模板动作</button>
+    </details>
   </section>
 
   <section id="history" class="page">
@@ -110,7 +142,7 @@
   <section id="settings" class="page">
     <div class="card">
       <h2>GitHub 同步</h2>
-      <p class="muted">使用单独的 Private GitHub 仓库。训练记录和身体记录按条目增量同步；训练计划使用 revision 检测多设备修改冲突。</p>
+      <p class="muted">使用单独的 Private GitHub 仓库。训练记录和身体记录按条目增量同步；训练模板和已确认的本次计划使用 revision 检测多设备修改冲突。</p>
       <div class="grid2">
         <label>GitHub 用户名<input id="syncOwner" autocomplete="off" placeholder="例如 yourname"></label>
         <label>Private 仓库名<input id="syncRepo" autocomplete="off" placeholder="例如 fitness-data-private"></label>
@@ -126,7 +158,7 @@
       <p id="syncStatus" class="muted sync-status" aria-live="polite"></p>
       <details>
         <summary>隐私与冲突说明</summary>
-        <p class="muted">GitHub 用户名、仓库名和 Token 可保存在当前浏览器的 IndexedDB 中，不会进入公开 Pages 仓库或导出的训练备份。同步数据在 Private 仓库中以普通 JSON 保存，因此任何能访问该 Private 仓库的人都可以读取训练内容。应用会检查同步目标必须为 Private repository。记录文件名使用本地记录 ID 的 SHA-256，不直接暴露训练日期。若两台设备都修改过训练计划，应用会检测 revision 冲突并阻止静默覆盖。</p>
+        <p class="muted">GitHub 用户名、仓库名和 Token 可保存在当前浏览器的 IndexedDB 中，不会进入公开 Pages 仓库或导出的训练备份。同步数据在 Private 仓库中以普通 JSON 保存，因此任何能访问该 Private 仓库的人都可以读取训练内容。应用会检查同步目标必须为 Private repository。记录文件名使用本地记录 ID 的 SHA-256，不直接暴露训练日期。若两台设备都修改过训练模板或本次计划，应用会检测 revision 冲突并阻止静默覆盖。</p>
       </details>
     </div>
 
@@ -155,6 +187,7 @@
 
 <nav class="bottom-nav" aria-label="主导航">
   <button data-page="today" class="active" type="button">训练</button>
+  <button data-page="plan" type="button">计划</button>
   <button data-page="history" type="button">历史</button>
   <button data-page="progress" type="button">趋势</button>
   <button data-page="settings" type="button">设置</button>
@@ -164,18 +197,20 @@
 
 <script src="js/pwa/sw-register.js?v=72"></script>
 <script src="js/core/app-storage.js?v=72"></script>
-<script src="js/core/app.js?v=72"></script>
+<script src="js/core/app.js?v=91"></script>
 <script src="js/core/app-body.js?v=72"></script>
 <script src="js/core/app-backup.js?v=72"></script>
 <script src="js/training/training-progression.js?v=72"></script>
-<script src="js/training/training-draft.js?v=72"></script>
-<script src="js/training/training-render.js?v=72"></script>
+<script src="js/training/training-draft.js?v=91"></script>
+<script src="js/training/training-render.js?v=91"></script>
 <script src="js/training/training-insights.js?v=72"></script>
 <script src="js/training/training-maintenance.js?v=72"></script>
-<script src="js/training/training.js?v=72"></script>
+<script src="js/training/training.js?v=91"></script>
+<script src="js/training/planning.js?v=91"></script>
 <script src="js/training/training-motion.js?v=72"></script>
 <script src="js/ui/nav-motion.js?v=72"></script>
 <script src="js/sync/sync-remote.js?v=72"></script>
 <script src="js/sync/sync.js?v=72"></script>
+<script src="js/sync/sync-auto.js?v=91"></script>
 </body>
 </html>
