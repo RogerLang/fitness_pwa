@@ -183,7 +183,18 @@
     App.planning?.invalidate?.(pi);
     await Draft.resetPlan(pi);
     Renderer.renderWorkout();
-    App.toast("本次训练已保存，下一次可重新制定计划", "success");
+
+    let syncStarted = false;
+    try {
+      if (App.sync?.push && await App.sync.hasCredentials?.()) {
+        syncStarted = true;
+        App.sync.push().catch(error => console.warn("post-workout sync", error));
+      }
+    } catch (error) {
+      console.warn("post-workout sync setup", error);
+    }
+
+    App.toast(syncStarted ? "本次训练已保存，正在自动同步" : "本次训练已保存，下一次可重新制定计划", "success");
   }
 
   async function resetWorkout() {
