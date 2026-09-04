@@ -1,5 +1,8 @@
 (() => {
   const App = window.FitnessApp;
+  const NextWorkout = window.TrainingNextWorkout;
+  if (!NextWorkout) throw new Error("TrainingNextWorkout must load before TrainingDraft");
+
   const DRAFTS_KEY = "workoutDraftsV8";
   const LEGACY_DRAFTS_KEY = "workoutDraftsV7";
   const ACTIVE_PLAN_KEY = "workoutActivePlanV7";
@@ -26,19 +29,32 @@
     };
   }
 
+  function draftHasData(source = draft) {
+    return Object.values(source?.sets || {}).some(value => String(value ?? "").trim() !== "") ||
+      Object.values(source?.completed || {}).some(Boolean) ||
+      Object.keys(source?.setCounts || {}).length > 0;
+  }
+
+  function validPlanIndex(index) {
+    return Number.isInteger(index) && index >= 0 && index < App.state.plans.length;
+  }
+
   function currentPlanIndex() {
-    const select = document.getElementById("planSelect");
-    if (!select || select.disabled) return 0;
-    const index = Number(select.value || 0);
-    return Number.isInteger(index) && index >= 0 ? index : 0;
+    if (draftHasData(draft) && validPlanIndex(draft.planIndex) && App.state.plans[draft.planIndex]?.plannedWorkout?.status === "confirmed") {
+      return draft.planIndex;
+    }
+    const active = NextWorkout.current(validPlanIndex(draft.planIndex) ? draft.planIndex : null);
+    if (active) return active.index;
+    return validPlanIndex(draft.planIndex) ? draft.planIndex : 0;
   }
 
   function ensurePlan(index = currentPlanIndex()) {
-    if (draft.planIndex !== index) {
-      const saved = draftStore[String(index)];
-      draft = saved ? normalizeDraft(saved, index) : emptyDraft(index);
+    const nextIndex = validPlanIndex(index) ? index : 0;
+    if (draft.planIndex !== nextIndex) {
+      const saved = draftStore[String(nextIndex)];
+      draft = saved ? normalizeDraft(saved, nextIndex) : emptyDraft(nextIndex);
     }
-    return index;
+    return nextIndex;
   }
 
   function capture() {
@@ -75,9 +91,7 @@
 
   function hasData() {
     capture();
-    return Object.values(draft.sets || {}).some(value => String(value ?? "").trim() !== "") ||
-      Object.values(draft.completed || {}).some(Boolean) ||
-      Object.keys(draft.setCounts || {}).length > 0;
+    return draftHasData(draft);
   }
 
   function getValue(ei, si, key) {
@@ -168,14 +182,20 @@
       draftStore = restoredDrafts && typeof restoredDrafts === "object" && !Array.isArray(restoredDrafts)
         ? restoredDrafts
         : {};
-      let pi = Number(storedPlanIndex);
-      if (!Number.isInteger(pi) || pi < 0 || pi >= App.state.plans.length) pi = 0;
+
+      let storedIndex = Number(storedPlanIndex);
+      if (!validPlanIndex(storedIndex)) storedIndex = 0;
+      const stored = draftStore[String(storedIndex)];
+      const preserveStored = draftHasData(stored) && App.state.plans[storedIndex]?.plannedWorkout?.status === "confirmed";
+      const active = NextWorkout.current(preserveStored ? storedIndex : null);
+      const pi = preserveStored ? storedIndex : (active?.index ?? storedIndex);
       const saved = draftStore[String(pi)];
       draft = saved ? normalizeDraft(saved, pi) : emptyDraft(pi);
     } catch (error) {
       console.warn("draft restore", error);
       draftStore = {};
-      draft = emptyDraft(0);
+      const active = NextWorkout.current();
+      draft = emptyDraft(active?.index ?? 0);
     }
   }
 
@@ -200,7 +220,8 @@
   }
 
   async function prepareRemotePlans(oldPlanName, plansChanged) {
-    let index = App.state.plans.findIndex(plan => plan.name === oldPlanName);
+    const active = NextWorkout.current();
+    let index = active?.index ?? App.state.plans.findIndex(plan => plan.name === oldPlanName);
     if (index < 0) index = 0;
     if (plansChanged) {
       draftStore = {};

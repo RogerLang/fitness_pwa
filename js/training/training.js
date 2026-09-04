@@ -12,12 +12,10 @@
   const { valueOrNull, workingWeight, buildHistoryContext } = Progression;
 
   function currentPlan() {
-    const pi = Draft.ensurePlan();
-    return { pi, plan: App.state.plans[pi] || null };
-  }
-
-  function currentWorkout(plan) {
-    return Renderer.confirmedWorkout(plan);
+    const active = Renderer.currentWorkoutEntry();
+    if (!active) return { pi: Draft.ensurePlan(), plan: null, workout: null };
+    Draft.ensurePlan(active.index);
+    return { pi: active.index, plan: active.plan, workout: active.workout };
   }
 
   async function workoutClick(event) {
@@ -29,8 +27,7 @@
       return;
     }
 
-    const { plan } = currentPlan();
-    const workout = currentWorkout(plan);
+    const { plan, workout } = currentPlan();
     if (!plan || !workout) return;
     const ei = Number(button.dataset.e);
     const plannedExercise = workout.exercises?.[ei];
@@ -77,7 +74,9 @@
   function workoutInput(event) {
     const input = event.target;
     if (!input.matches('input[data-e][data-s][data-k]')) return;
-    Draft.ensurePlan();
+    const active = Renderer.currentWorkoutEntry();
+    if (!active) return;
+    Draft.ensurePlan(active.index);
     Draft.setValue(input.dataset.e, input.dataset.s, input.dataset.k, input.value);
     Draft.queueWrite();
   }
@@ -89,15 +88,15 @@
 
   async function saveWorkout() {
     if (!App.state.plans.length) return;
-    const { pi, plan } = currentPlan();
-    const workout = currentWorkout(plan);
+    const { pi, plan, workout } = currentPlan();
     if (!plan || !workout) {
       App.toast("请先在计划页确认本次计划", "error");
       return;
     }
 
     Draft.capture();
-    const historyContext = buildHistoryContext(plan.name);
+    const sessionPlanName = workout.planName || plan.name;
+    const historyContext = buildHistoryContext(sessionPlanName);
     const exercises = (workout.exercises || []).map((ex, ei) => {
       const previous = historyContext.latest(ex.name);
       const baseCount = Math.max(1, ex.sets?.length || 1);
@@ -158,40 +157,35 @@
     App.state.sessions.push({
       id: sessionId,
       date: App.isoDate(),
-      plan: plan.name,
+      plan: sessionPlanName,
       plannedWorkoutId: workout.id,
       plannedRevision: workout.revision,
       exercises
     });
 
-    plan.plannedWorkout = {
-      ...workout,
-      status: "completed",
-      completedAt: new Date().toISOString(),
-      completedSessionId: sessionId
-    };
+    if (plan.plannedWorkout?.status === "confirmed" && plan.plannedWorkout.revision === workout.revision) {
+      plan.plannedWorkout = {
+        ...workout,
+        status: "completed",
+        completedAt: new Date().toISOString(),
+        completedSessionId: sessionId
+      };
+    }
 
     await App.persist("plans");
     App.planning?.invalidate?.(pi);
     await Draft.resetPlan(pi);
-    Renderer.renderPlanSelect();
+    Renderer.renderPlanStatus();
     Renderer.renderWorkout();
-    App.toast("本次训练已保存", "success");
+    App.toast("本次训练已保存，下一次可重新制定计划", "success");
   }
 
   async function resetWorkout() {
-    const pi = Draft.currentPlanIndex();
+    const active = Renderer.currentWorkoutEntry();
+    const pi = active?.index ?? Draft.currentPlanIndex();
+    Draft.ensurePlan(pi);
     if (Draft.hasData() && !confirm("清空本次未保存输入和临时组数调整？")) return;
     await Draft.resetPlan(pi);
-    Renderer.renderWorkout();
-  }
-
-  async function changePlan() {
-    Draft.capture();
-    await Draft.flush();
-    const pi = Draft.currentPlanIndex();
-    Draft.ensurePlan(pi);
-    await Draft.setActivePlan(pi);
     Renderer.renderWorkout();
   }
 
@@ -199,7 +193,6 @@
     const workout = document.getElementById("workoutContainer");
     workout.addEventListener("click", workoutClick);
     workout.addEventListener("input", workoutInput);
-    document.getElementById("planSelect").onchange = changePlan;
     document.getElementById("saveWorkoutBtn").onclick = saveWorkout;
     document.getElementById("resetWorkoutBtn").onclick = resetWorkout;
     document.addEventListener("visibilitychange", () => {
@@ -230,8 +223,9 @@
   }
 
   async function refresh(reason) {
-    Renderer.renderPlanSelect();
-    Draft.ensurePlan(Math.min(Draft.planIndex, Math.max(0, App.state.plans.length - 1)));
+    const active = Renderer.currentWorkoutEntry();
+    if (active) Draft.ensurePlan(active.index);
+    Renderer.renderPlanStatus();
     Renderer.renderWorkout();
     Insights.refresh(reason);
   }
@@ -257,7 +251,10 @@
     flushDraft: Draft.flush,
     cleanupDuplicates: Maintenance.cleanupDuplicates,
     prepareRemotePlans,
-    get currentPlanName() { return App.state.plans[Draft.currentPlanIndex()]?.name || ""; }
+    get currentPlanName() {
+      const active = Renderer.currentWorkoutEntry();
+      return active?.plan?.name || active?.workout?.planName || "";
+    }
   };
 
   App.registerModule({ init, refresh, onPage, onDataReset });

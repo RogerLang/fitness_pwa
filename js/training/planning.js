@@ -1,7 +1,8 @@
 (() => {
   const App = window.FitnessApp;
   const Progression = window.TrainingProgression;
-  if (!Progression) throw new Error("TrainingProgression must load before planning.js");
+  const NextWorkout = window.TrainingNextWorkout;
+  if (!Progression || !NextWorkout) throw new Error("Planning dependencies must load before planning.js");
 
   const {
     valueOrNull,
@@ -14,6 +15,7 @@
   } = Progression;
 
   const drafts = new Map();
+  const editing = new Set();
   const clone = value => JSON.parse(JSON.stringify(value));
 
   function select() {
@@ -29,6 +31,15 @@
 
   function currentPlan() {
     return App.state.plans[currentIndex()] || null;
+  }
+
+  function confirmed() {
+    return NextWorkout.current();
+  }
+
+  function isLocked(index = currentIndex()) {
+    const active = confirmed();
+    return !!active && active.index === index && !editing.has(index);
   }
 
   function setStatus(message = "", tone = "") {
@@ -91,12 +102,14 @@
   }
 
   function draftFor(index = currentIndex()) {
-    if (drafts.has(index)) return drafts.get(index);
     const plan = App.state.plans[index];
     if (!plan) return null;
-    const existing = plan.plannedWorkout?.status === "confirmed" ? clone(plan.plannedWorkout) : suggestionSnapshot(plan);
-    drafts.set(index, existing);
-    return existing;
+    const active = confirmed();
+    if (active?.index === index && !editing.has(index)) return clone(active.workout);
+    if (drafts.has(index)) return drafts.get(index);
+    const draft = suggestionSnapshot(plan);
+    drafts.set(index, draft);
+    return draft;
   }
 
   function previousPanel(summary) {
@@ -104,25 +117,44 @@
     return `<div class="planning-context planning-previous"><span>上次记录</span><strong>${App.esc(summary.target)}</strong><small>${App.esc(summary.detail || "最近一次有效训练")}</small></div>`;
   }
 
-  function suggestionPanel(ex) {
-    return `<div class="planning-context planning-suggestion"><span>${ex.warmup ? "热身预设" : "系统建议"}</span><strong>${App.esc(ex.suggestionLabel || "已确认")}</strong><small>${App.esc(ex.reason || "")}</small></div>`;
+  function suggestionPanel(ex, locked) {
+    return `<div class="planning-context planning-suggestion"><span>${locked ? "确认依据" : (ex.warmup ? "热身预设" : "系统建议")}</span><strong>${App.esc(ex.suggestionLabel || (locked ? "已确认" : "建议"))}</strong><small>${App.esc(ex.reason || "")}</small></div>`;
   }
 
-  function plannedRows(ex, ei) {
+  function plannedRows(ex, ei, locked) {
     return (ex.sets || []).map((set, si) => `<div class="planning-set-row">
       <span class="planning-set-number">${si + 1}</span>
-      <label><span>重量 kg</span><input type="text" inputmode="decimal" autocomplete="off" data-plan-e="${ei}" data-plan-s="${si}" data-plan-key="weight" value="${App.esc(set.weight ?? "")}"></label>
-      <label><span>次数</span><input type="text" inputmode="numeric" autocomplete="off" data-plan-e="${ei}" data-plan-s="${si}" data-plan-key="reps" value="${App.esc(set.reps ?? "")}"></label>
+      <label><span>重量 kg</span><input type="text" inputmode="decimal" autocomplete="off" data-plan-e="${ei}" data-plan-s="${si}" data-plan-key="weight" value="${App.esc(set.weight ?? "")}" ${locked ? "readonly" : ""}></label>
+      <label><span>次数</span><input type="text" inputmode="numeric" autocomplete="off" data-plan-e="${ei}" data-plan-s="${si}" data-plan-key="reps" value="${App.esc(set.reps ?? "")}" ${locked ? "readonly" : ""}></label>
     </div>`).join("");
+  }
+
+  function renderCurrentBanner() {
+    const root = document.getElementById("planningCurrentPlan");
+    if (!root) return;
+    const active = confirmed();
+    if (!active) {
+      root.className = "planning-current is-empty";
+      root.innerHTML = `<div><span>当前待训练</span><strong>还没有已确认计划</strong><small>选择模板，检查建议后确认即可。</small></div>`;
+      return;
+    }
+
+    const confirmedAt = active.workout.confirmedAt
+      ? new Date(active.workout.confirmedAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+      : "已确认";
+    root.className = "planning-current is-confirmed";
+    root.innerHTML = `<div><span>当前待训练</span><strong>${App.esc(active.plan?.name || active.workout.planName || "训练")}</strong><small>${App.esc(confirmedAt)} · 训练页将只执行这一份</small></div><span class="planning-current-badge">已确认</span>`;
   }
 
   function renderCurrentPlan() {
     const root = document.getElementById("planningWorkoutList");
     if (!root) return;
+    const index = currentIndex();
     const plan = currentPlan();
-    const draft = draftFor();
+    const draft = draftFor(index);
+    const locked = isLocked(index);
     if (!plan || !draft) {
-      root.innerHTML = '<div class="empty-state"><strong>暂无训练模板</strong></div>';
+      root.innerHTML = '<div class="card empty-state"><strong>暂无训练模板</strong></div>';
       return;
     }
 
@@ -131,31 +163,65 @@
       const previous = historyContext.latest(ex.name);
       const summary = previousSummary(previous);
       const count = Math.max(1, ex.sets?.length || 1);
-      return `<article class="planning-exercise-card">
+      return `<article class="planning-exercise-card${locked ? " is-locked" : ""}">
         <div class="planning-exercise-head">
           <div><h3>${App.esc(ex.name || "未命名动作")}</h3><p>${App.esc(ex.note || (ex.warmup ? "专项热身" : ""))}</p></div>
           ${ex.warmup ? '<span class="badge warmup-badge">热身</span>' : ""}
         </div>
         <div class="planning-context-grid">
           ${previousPanel(summary)}
-          ${suggestionPanel(ex)}
+          ${suggestionPanel(ex, locked)}
         </div>
         <div class="planning-target-panel">
           <div class="planning-target-head">
-            <div><strong>本次计划</strong><small>${count} 组${ex.repRange ? ` · 模板 ${ex.repRange[0]}–${ex.repRange[1]} 次` : ""}</small></div>
-            <div class="planning-set-control">
+            <div><strong>${locked ? "已确认计划" : "本次计划"}</strong><small>${count} 组${ex.repRange ? ` · 模板 ${ex.repRange[0]}–${ex.repRange[1]} 次` : ""}</small></div>
+            ${locked ? "" : `<div class="planning-set-control">
               <button type="button" class="small secondary planning-remove-set" data-e="${ei}" ${count <= 1 ? "disabled" : ""}>−</button>
               <span>${count}</span>
               <button type="button" class="small secondary planning-add-set" data-e="${ei}">+</button>
-            </div>
+            </div>`}
           </div>
-          <div class="planning-set-list">${plannedRows(ex, ei)}</div>
+          <div class="planning-set-list">${plannedRows(ex, ei, locked)}</div>
         </div>
       </article>`;
     }).join("");
 
-    const confirmed = plan.plannedWorkout?.status === "confirmed" && draft.status === "confirmed" && draft.revision === plan.plannedWorkout.revision;
-    setStatus(confirmed ? `已确认 · ${new Date(plan.plannedWorkout.confirmedAt).toLocaleString("zh-CN")}` : "当前为未确认建议，可修改后确认。", confirmed ? "is-confirmed" : "");
+    const active = confirmed();
+    if (locked) {
+      const time = active?.workout?.confirmedAt ? new Date(active.workout.confirmedAt).toLocaleString("zh-CN") : "";
+      setStatus(`本次计划已确认${time ? ` · ${time}` : ""}。需要修改时先点“重新制定”。`, "is-confirmed");
+    } else if (editing.has(index)) {
+      setStatus("正在重新制定。当前已确认版本仍会保留，直到你再次确认。", "is-editing");
+    } else if (active && active.index !== index) {
+      setStatus(`当前待训练是“${active.plan?.name || active.workout.planName}”。确认这里的计划会替换它。`, "is-warning");
+    } else {
+      setStatus("这是根据模板和最新历史生成的建议，可修改后确认。", "");
+    }
+  }
+
+  function renderActions() {
+    const index = currentIndex();
+    const active = confirmed();
+    const locked = isLocked(index);
+    const isEditing = editing.has(index);
+    const confirmButton = document.getElementById("planningConfirmBtn");
+    const replanButton = document.getElementById("planningReplanBtn");
+    const cancelButton = document.getElementById("planningCancelEditBtn");
+    const goButton = document.getElementById("planningGoTrainBtn");
+    const regenerateButton = document.getElementById("planningRegenerateBtn");
+
+    if (confirmButton) {
+      confirmButton.classList.toggle("hidden", locked);
+      confirmButton.textContent = active && active.index !== index ? "替换并确认本次计划" : "确认本次计划";
+    }
+    if (replanButton) replanButton.classList.toggle("hidden", !locked);
+    if (cancelButton) cancelButton.classList.toggle("hidden", !isEditing);
+    if (goButton) {
+      const hide = !active || (isEditing && active.index === index);
+      goButton.classList.toggle("hidden", hide);
+      goButton.textContent = active && active.index !== index ? "去训练当前计划" : "进入训练";
+    }
+    if (regenerateButton) regenerateButton.classList.toggle("hidden", locked);
   }
 
   function templateField(label, edit, value, extra = "") {
@@ -197,7 +263,10 @@
   function renderSelect() {
     const el = select();
     if (!el) return;
-    const previous = Number(el.value || App.training?.currentPlanIndex?.() || 0);
+    const raw = el.value;
+    const active = confirmed();
+    const fallback = active?.index ?? App.training?.currentPlanIndex?.() ?? 0;
+    const previous = raw === "" ? fallback : Number(raw);
     if (!App.state.plans.length) {
       el.innerHTML = "<option>暂无训练模板</option>";
       el.disabled = true;
@@ -205,13 +274,22 @@
     }
     el.disabled = false;
     el.innerHTML = App.state.plans.map((plan, index) => `<option value="${index}">${App.esc(plan.name || `训练模板 ${index + 1}`)}</option>`).join("");
-    el.value = String(Math.min(Math.max(0, previous), App.state.plans.length - 1));
+    el.value = String(Math.min(Math.max(0, Number.isInteger(previous) ? previous : fallback), App.state.plans.length - 1));
   }
 
   function render() {
     renderSelect();
+    renderCurrentBanner();
     renderCurrentPlan();
+    renderActions();
     renderTemplate();
+  }
+
+  function markDraftChanged(draft) {
+    draft.status = "draft";
+    draft.revision = null;
+    renderActions();
+    setStatus("当前计划有未确认修改。已确认版本不会变化，直到再次确认。", "is-editing");
   }
 
   function updateDraftInput(input) {
@@ -220,15 +298,14 @@
     const si = Number(input.dataset.planS);
     const key = input.dataset.planKey;
     const set = draft?.exercises?.[ei]?.sets?.[si];
-    if (!set || !key) return;
+    if (!set || !key || isLocked()) return;
     set[key] = valueOrNull(input.value);
-    draft.status = "draft";
-    draft.revision = null;
-    setStatus("当前计划有未确认修改。", "");
+    markDraftChanged(draft);
   }
 
   async function persistTemplateChange(input) {
-    const plan = currentPlan();
+    const index = currentIndex();
+    const plan = App.state.plans[index];
     const ei = Number(input.closest(".template-card")?.dataset.e);
     const ex = plan?.exercises?.[ei];
     if (!ex) return;
@@ -240,12 +317,13 @@
     else if (field === "weightStep") ex.weightStep = Math.max(0, Number(input.value) || 0);
     else if (field === "note") ex.note = input.value;
     await App.persist("plans");
-    if (plan.plannedWorkout?.status !== "confirmed") drafts.delete(currentIndex());
+    if (!editing.has(index)) drafts.delete(index);
     render();
   }
 
   async function persistPresetChange(input) {
-    const plan = currentPlan();
+    const index = currentIndex();
+    const plan = App.state.plans[index];
     const ei = Number(input.dataset.e);
     const si = Number(input.dataset.s);
     const ex = plan?.exercises?.[ei];
@@ -254,24 +332,26 @@
     ex.setPresets[si] ??= {};
     ex.setPresets[si][input.dataset.templatePreset] = valueOrNull(input.value);
     await App.persist("plans");
-    if (plan.plannedWorkout?.status !== "confirmed") drafts.delete(currentIndex());
+    if (!editing.has(index)) drafts.delete(index);
     render();
   }
 
   function adjustDraftSets(ei, delta) {
+    if (isLocked()) return;
     const draft = draftFor();
     const ex = draft?.exercises?.[ei];
     if (!ex) return;
     ex.sets ??= [];
     if (delta > 0) ex.sets.push({ ...(ex.sets[ex.sets.length - 1] || { weight: null, reps: null }) });
     else if (ex.sets.length > 1) ex.sets.pop();
-    draft.status = "draft";
-    draft.revision = null;
+    markDraftChanged(draft);
     renderCurrentPlan();
+    renderActions();
   }
 
   async function adjustTemplateSets(ei, delta) {
-    const plan = currentPlan();
+    const index = currentIndex();
+    const plan = App.state.plans[index];
     const ex = plan?.exercises?.[ei];
     if (!ex) return;
     const next = Math.max(1, setCount(ex) + delta);
@@ -282,22 +362,34 @@
       ex.setPresets = ex.setPresets.slice(0, next);
     }
     await App.persist("plans");
-    if (plan.plannedWorkout?.status !== "confirmed") drafts.delete(currentIndex());
+    if (!editing.has(index)) drafts.delete(index);
     render();
   }
 
-  async function confirmPlan(syncAfter = false) {
+  async function hasSyncCredentials() {
+    const saved = await App.idbGet("syncCredentialsV7") || await App.idbGet("syncConfig") || {};
+    return !!(saved.owner && saved.repo && saved.token);
+  }
+
+  async function confirmPlan() {
     const index = currentIndex();
     const plan = App.state.plans[index];
     const draft = draftFor(index);
+    const active = confirmed();
     if (!plan || !draft) return;
+    if (isLocked(index)) return;
 
-    const activeDraft = App.training?.currentPlanIndex?.() === index && App.training?.hasDraft?.();
-    if (activeDraft && plan.plannedWorkout?.status === "confirmed") {
-      App.toast("当前这套训练已经开始记录，请先保存或清空后再重新确认计划", "error");
+    if (active && App.training?.hasDraft?.()) {
+      App.toast("当前训练已经开始记录，请先保存或清空后再更换本次计划", "error");
       return;
     }
 
+    if (active && active.index !== index) {
+      const replace = confirm(`当前待训练计划是“${active.plan?.name || active.workout.planName}”。确认后将替换为“${plan.name}”。继续？`);
+      if (!replace) return;
+    }
+
+    NextWorkout.replaceOthers(index, { replacedByPlanName: plan.name || "" });
     const old = plan.plannedWorkout;
     const now = new Date().toISOString();
     plan.plannedWorkout = {
@@ -309,35 +401,81 @@
       confirmedAt: now,
       exercises: clone(draft.exercises || [])
     };
-    drafts.set(index, clone(plan.plannedWorkout));
+
+    editing.delete(index);
+    drafts.delete(index);
     await App.persist("plans");
     await App.refresh("planned-workout");
-    setStatus("本次计划已确认。训练页将读取这一版。", "is-confirmed");
-    App.toast(syncAfter ? "本次计划已确认，正在同步" : "本次计划已确认", "success");
+    App.toast("本次计划已确认", "success");
 
-    if (syncAfter) {
-      if (App.sync?.push) await App.sync.push();
-      else App.toast("已保存本机；同步模块尚未就绪", "error");
+    if (await hasSyncCredentials() && App.sync?.push) {
+      setStatus("本次计划已确认，正在同步 GitHub…", "is-confirmed");
+      await App.sync.push();
+      const syncStatus = document.getElementById("todaySyncStatus");
+      if (syncStatus?.classList.contains("sync-error")) {
+        setStatus(`本机已确认 · ${syncStatus.textContent || "GitHub 同步未完成"}`, "is-warning");
+      } else {
+        setStatus("本次计划已确认并完成 GitHub 同步。", "is-confirmed");
+      }
+    } else {
+      setStatus("本次计划已确认并保存在本机。", "is-confirmed");
     }
   }
 
-  async function deleteTemplateExercise(ei) {
+  function regenerate() {
+    const index = currentIndex();
     const plan = currentPlan();
+    if (!plan || isLocked(index)) return;
+    drafts.set(index, suggestionSnapshot(plan));
+    renderCurrentPlan();
+    renderActions();
+    App.toast("已按最新历史重新生成建议", "success");
+  }
+
+  function replan() {
+    const index = currentIndex();
+    const active = confirmed();
+    if (!active || active.index !== index) return;
+    if (App.training?.hasDraft?.()) {
+      App.toast("当前训练已经开始记录，请先保存或清空后再重新制定", "error");
+      return;
+    }
+    const draft = clone(active.workout);
+    draft.status = "draft";
+    draft.revision = null;
+    drafts.set(index, draft);
+    editing.add(index);
+    renderCurrentPlan();
+    renderActions();
+  }
+
+  function cancelEdit() {
+    const index = currentIndex();
+    editing.delete(index);
+    drafts.delete(index);
+    renderCurrentPlan();
+    renderActions();
+  }
+
+  async function deleteTemplateExercise(ei) {
+    const index = currentIndex();
+    const plan = App.state.plans[index];
     if (!plan?.exercises?.[ei]) return;
     if (!confirm("删除这个模板动作？历史训练记录会保留。")) return;
     plan.exercises.splice(ei, 1);
     await App.persist("plans");
-    drafts.delete(currentIndex());
+    if (!editing.has(index)) drafts.delete(index);
     render();
   }
 
   async function addTemplateExercise() {
-    const plan = currentPlan();
+    const index = currentIndex();
+    const plan = App.state.plans[index];
     if (!plan) return;
     plan.exercises ??= [];
     plan.exercises.push({ name: "新动作", sets: 3, repRange: [8, 12], defaultWeight: null, weightStep: 5, note: "", optional: false });
     await App.persist("plans");
-    drafts.delete(currentIndex());
+    if (!editing.has(index)) drafts.delete(index);
     render();
   }
 
@@ -352,7 +490,7 @@
       if (!button) return;
       const ei = Number(button.dataset.e);
       if (button.classList.contains("planning-add-set")) adjustDraftSets(ei, 1);
-      if (button.classList.contains("planning-remove-set")) adjustDraftSets(ei, -1);
+      else if (button.classList.contains("planning-remove-set")) adjustDraftSets(ei, -1);
     });
     document.getElementById("planningTemplateList")?.addEventListener("change", event => {
       const input = event.target;
@@ -367,25 +505,28 @@
       else if (button.classList.contains("template-remove-set")) adjustTemplateSets(ei, -1);
       else if (button.classList.contains("template-delete")) deleteTemplateExercise(ei);
     });
-    document.getElementById("planningRegenerateBtn")?.addEventListener("click", () => {
-      const plan = currentPlan();
-      if (!plan) return;
-      drafts.set(currentIndex(), suggestionSnapshot(plan));
-      renderCurrentPlan();
-      App.toast("已按最新历史重新生成建议", "success");
-    });
-    document.getElementById("planningConfirmBtn")?.addEventListener("click", () => confirmPlan(false));
-    document.getElementById("planningConfirmSyncBtn")?.addEventListener("click", () => confirmPlan(true));
+    document.getElementById("planningRegenerateBtn")?.addEventListener("click", regenerate);
+    document.getElementById("planningConfirmBtn")?.addEventListener("click", () => confirmPlan().catch(error => App.toast(error.message, "error")));
+    document.getElementById("planningReplanBtn")?.addEventListener("click", replan);
+    document.getElementById("planningCancelEditBtn")?.addEventListener("click", cancelEdit);
     document.getElementById("planningGoTrainBtn")?.addEventListener("click", () => App.switchPage("today", { historyMode: "replace" }));
     document.getElementById("planningAddExerciseBtn")?.addEventListener("click", addTemplateExercise);
   }
 
   async function init() {
+    const preferred = App.training?.hasDraft?.() ? App.training.currentPlanIndex() : null;
+    const normalized = NextWorkout.normalizeSingle(preferred);
+    if (normalized.changed) await App.persist("plans");
     bindEvents();
   }
 
   async function refresh(reason) {
-    if (reason === "remote") drafts.clear();
+    if (reason === "remote") {
+      drafts.clear();
+      editing.clear();
+      const normalized = NextWorkout.normalizeSingle(App.training?.hasDraft?.() ? App.training.currentPlanIndex() : null);
+      if (normalized.changed) await App.persist("plans");
+    }
     render();
   }
 
@@ -395,10 +536,12 @@
 
   async function onDataReset() {
     drafts.clear();
+    editing.clear();
   }
 
   function invalidate(index = currentIndex()) {
     drafts.delete(index);
+    editing.delete(index);
   }
 
   App.planning = { render, confirmPlan, invalidate };

@@ -2,9 +2,14 @@
   const App = window.FitnessApp;
   const Progression = window.TrainingProgression;
   const Draft = window.TrainingDraft;
-  if (!Progression || !Draft) throw new Error("TrainingProgression and TrainingDraft must load before TrainingRenderer");
+  const NextWorkout = window.TrainingNextWorkout;
+  if (!Progression || !Draft || !NextWorkout) throw new Error("Training dependencies must load before TrainingRenderer");
 
   const { buildHistoryContext, previousSummary, valueOrNull } = Progression;
+
+  function currentWorkoutEntry() {
+    return NextWorkout.current(Draft.planIndex);
+  }
 
   function confirmedWorkout(plan) {
     const workout = plan?.plannedWorkout;
@@ -130,21 +135,25 @@
     </article>`;
   }
 
-  function renderPlanSelect() {
-    const select = document.getElementById("planSelect");
-    if (!select) return;
-    const wanted = Math.min(Math.max(0, Draft.planIndex || 0), Math.max(0, App.state.plans.length - 1));
-    if (!App.state.plans.length) {
-      select.innerHTML = "<option>暂无训练模板</option>";
-      select.disabled = true;
+  function renderPlanStatus() {
+    const name = document.getElementById("todayPlanName");
+    const meta = document.getElementById("todayPlanMeta");
+    const active = currentWorkoutEntry();
+    if (!name || !meta) return;
+    if (!active) {
+      name.textContent = "尚未确认下一次训练";
+      meta.textContent = "先到计划页选择模板并确认本次计划";
       return;
     }
-    select.disabled = false;
-    select.innerHTML = App.state.plans.map((plan, index) => {
-      const confirmed = confirmedWorkout(plan) ? " · 已确认" : "";
-      return `<option value="${index}">${App.esc(plan.name || `训练模板 ${index + 1}`)}${confirmed}</option>`;
-    }).join("");
-    select.value = String(wanted);
+    name.textContent = active.plan?.name || active.workout.planName || "本次训练";
+    const time = active.workout.confirmedAt
+      ? new Date(active.workout.confirmedAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+      : "已确认";
+    meta.textContent = `${time} · 已锁定本次计划`;
+  }
+
+  function renderPlanSelect() {
+    renderPlanStatus();
   }
 
   function renderWorkout() {
@@ -152,22 +161,25 @@
     if (!container) return;
     if (!App.state.plans.length) {
       container.innerHTML = '<div class="card empty-state"><strong>当前没有训练模板</strong><span>可从 GitHub 拉取已有模板，或导入本地备份。</span></div>';
+      renderPlanStatus();
       return;
     }
 
-    const plan = App.state.plans[Draft.planIndex] || App.state.plans[0];
-    const workout = confirmedWorkout(plan);
-    if (!workout) {
+    const active = currentWorkoutEntry();
+    if (!active) {
       container.innerHTML = `<div class="card training-plan-empty">
-        <strong>这套训练还没有已确认的本次计划</strong>
-        <span>先在计划页查看上次记录和系统建议，确认后再开始记录。</span>
+        <strong>还没有已确认的下一次训练</strong>
+        <span>在计划页选择训练模板，检查系统建议并确认后，这里会直接显示那一份计划。</span>
         <button type="button" class="go-plan-page">去制定计划</button>
       </div>`;
+      renderPlanStatus();
       return;
     }
 
-    const historyContext = buildHistoryContext(plan.name);
-    container.innerHTML = workout.exercises.map((ex, ei) => renderExerciseCard(ex, ei, historyContext, workout)).join("");
+    Draft.ensurePlan(active.index);
+    const historyContext = buildHistoryContext(active.plan.name);
+    container.innerHTML = active.workout.exercises.map((ex, ei) => renderExerciseCard(ex, ei, historyContext, active.workout)).join("");
+    renderPlanStatus();
   }
 
   function clearEditors() {}
@@ -179,11 +191,13 @@
 
   window.TrainingRenderer = Object.freeze({
     renderPlanSelect,
+    renderPlanStatus,
     renderWorkout,
     clearEditors,
     toggleEditor,
     shiftEditorsAfterDeleteExercise,
     warmupPreset,
-    confirmedWorkout
+    confirmedWorkout,
+    currentWorkoutEntry
   });
 })();
