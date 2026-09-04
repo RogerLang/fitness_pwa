@@ -33,15 +33,6 @@
     });
   }
 
-  function remove(db, key) {
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, "readwrite");
-      tx.objectStore(STORE).delete(key);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  }
-
   async function readState(db) {
     const [plans, sessions, body] = await Promise.all([
       get(db, "plans"),
@@ -67,5 +58,5 @@
     });
   }
 
-  window.FitnessStorage = Object.freeze({ open, get, set, remove, readState, writeState });
+  window.FitnessStorage = Object.freeze({ open, get, set, readState, writeState });
 })();
