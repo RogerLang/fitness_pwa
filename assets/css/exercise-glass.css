@@ -34,7 +34,7 @@
 }
 
 @media(max-width:680px){
-  /* Reduce full-screen blur work on mobile; thin translucent layers preserve the glass look. */
+  /* Mobile keeps blur only on the broader page sheets; exercise cards and inner panels use painted translucency. */
   .card:not(.today-boot-card){
     -webkit-backdrop-filter:blur(12px) saturate(138%);
     backdrop-filter:blur(12px) saturate(138%);
@@ -69,21 +69,6 @@
       0 4px 11px rgba(34,46,64,.045),
       inset 0 1.5px 0 rgba(255,255,255,.98),
       inset 0 -1px 0 rgba(84,103,130,.026);
-  }
-
-  /* While the page is moving, remove the remaining costly depth effects. */
-  html.training-scrolling #today .today-overview,
-  html.training-scrolling #today .sticky-actions,
-  html.training-scrolling #workoutContainer .exercise-card{
-    -webkit-backdrop-filter:none;
-    backdrop-filter:none;
-    box-shadow:none;
-  }
-
-  html.training-scrolling #workoutContainer .exercise-panel,
-  html.training-scrolling #workoutContainer .exercise-sets-panel{
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.90);
   }
 }
 

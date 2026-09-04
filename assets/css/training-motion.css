@@ -45,14 +45,14 @@
     box-shadow:0 18px 44px rgba(31,36,45,.075),0 2px 7px rgba(31,36,45,.04);
   }
 
-  /* Every exercise uses the final hidden-header viewport from the first movement onward. */
+  /* Exercise focus uses only opacity and transform. Shadow stays constant to avoid paint flashes. */
   #workoutContainer .exercise-card{
     scroll-snap-align:center;
     scroll-snap-stop:always;
     transform-origin:center center;
     opacity:.28;
     transform:scale(.982);
-    transition:opacity .18s ease,transform .18s ease,box-shadow .18s ease;
+    transition:opacity .16s ease,transform .16s ease;
   }
 
   #workoutContainer .exercise-card.snap-start{
@@ -64,7 +64,6 @@
   #workoutContainer .exercise-card.is-current{
     opacity:1;
     transform:scale(1);
-    box-shadow:0 18px 44px rgba(31,36,45,.075),0 2px 7px rgba(31,36,45,.04);
   }
 
   /* While a field is focused, keep that exercise visually owned even if resize logic runs. */
@@ -76,7 +75,6 @@
   html.training-form-editing #workoutContainer .exercise-card.form-editing-card{
     opacity:1;
     transform:scale(1);
-    box-shadow:0 18px 44px rgba(31,36,45,.075),0 2px 7px rgba(31,36,45,.04);
   }
 
   /* The final action card remains the bottom edge stop. */
