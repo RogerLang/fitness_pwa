@@ -90,7 +90,7 @@
     if (!App.state.plans.length) return;
     const { pi, plan, workout } = currentPlan();
     if (!plan || !workout) {
-      App.toast("请先在计划页确认本次计划", "error");
+      App.toast("请先在计划页推送训练计划", "error");
       return;
     }
 
@@ -175,7 +175,6 @@
     await App.persist("plans");
     App.planning?.invalidate?.(pi);
     await Draft.resetPlan(pi);
-    Renderer.renderPlanStatus();
     Renderer.renderWorkout();
     App.toast("本次训练已保存，下一次可重新制定计划", "success");
   }
@@ -225,7 +224,6 @@
   async function refresh(reason) {
     const active = Renderer.currentWorkoutEntry();
     if (active) Draft.ensurePlan(active.index);
-    Renderer.renderPlanStatus();
     Renderer.renderWorkout();
     Insights.refresh(reason);
   }
@@ -236,12 +234,10 @@
 
   async function onDataReset() {
     await Draft.resetAll();
-    Renderer.clearEditors();
   }
 
   async function prepareRemotePlans(oldPlanName, plansChanged) {
     await Draft.prepareRemotePlans(oldPlanName, plansChanged);
-    Renderer.clearEditors();
   }
 
   App.training = {
