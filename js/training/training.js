@@ -179,7 +179,7 @@
       };
     }
 
-    await App.persist("plans");
+    await App.persist("workout");
     App.planning?.invalidate?.(pi);
     await Draft.resetPlan(pi);
     Renderer.renderWorkout();
