@@ -73,17 +73,25 @@
     scroll-margin-bottom:var(--training-snap-bottom);
   }
 
-  /* Chromium path: native inertial scroll with continuous viewport-driven card depth. */
+  /* Chromium path: native inertia + lightweight native proximity snap + view-driven depth. */
   @supports (animation-timeline:view()){
     html.training-snap-ready.training-view-timeline{
+      scroll-snap-type:y proximity;
+      scroll-padding-top:var(--training-snap-top);
+      scroll-padding-bottom:var(--training-snap-bottom);
+    }
+
+    html.training-snap-ready.training-view-timeline.training-form-editing{
       scroll-snap-type:none;
-      scroll-padding-top:0;
-      scroll-padding-bottom:0;
+    }
+
+    html.training-view-timeline #today .today-overview{
+      scroll-snap-stop:normal;
     }
 
     html.training-view-timeline #workoutContainer .exercise-card,
     html.training-view-timeline #workoutContainer .exercise-card.is-current{
-      scroll-snap-align:none;
+      scroll-snap-align:center;
       scroll-snap-stop:normal;
       opacity:.50;
       transform:translate3d(0,7px,0) scale(.995);
@@ -100,8 +108,8 @@
     }
 
     html.training-view-timeline #workoutContainer .exercise-card.snap-start{
-      scroll-snap-align:none;
-      scroll-margin-top:0;
+      scroll-snap-align:start;
+      scroll-margin-top:var(--training-snap-top);
     }
 
     html.training-view-timeline.training-form-editing #workoutContainer .exercise-card{
@@ -115,9 +123,9 @@
     }
 
     html.training-view-timeline #today .sticky-actions{
-      scroll-snap-align:none;
+      scroll-snap-align:end;
       scroll-snap-stop:normal;
-      scroll-margin-bottom:0;
+      scroll-margin-bottom:var(--training-snap-bottom);
     }
   }
 }
