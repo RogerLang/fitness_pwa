@@ -119,8 +119,8 @@
 
   function applyChromeState() {
     if (!todayActive()) return;
-    if (window.scrollY <= TOP_VISIBLE_THRESHOLD) desiredChromeHidden = false;
-    body.classList.toggle("chrome-hidden", desiredChromeHidden);
+    const atTop = window.scrollY <= TOP_VISIBLE_THRESHOLD;
+    body.classList.toggle("chrome-hidden", !atTop && desiredChromeHidden);
   }
 
   function onPointerDown(event) {
