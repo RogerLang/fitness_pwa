@@ -9,32 +9,32 @@
     throw new Error("Training modules must load before training.js");
   }
 
-  const {
-    valueOrNull,
-    setCount,
-    workingWeight,
-    buildHistoryContext,
-    progressionSuggestion
-  } = Progression;
+  const { valueOrNull, workingWeight, buildHistoryContext } = Progression;
 
-  async function persistPlanAndRender() {
-    await App.persist("plans");
-    Renderer.renderPlanSelect();
-    Renderer.renderWorkout();
+  function currentPlan() {
+    const pi = Draft.ensurePlan();
+    return { pi, plan: App.state.plans[pi] || null };
+  }
+
+  function currentWorkout(plan) {
+    return Renderer.confirmedWorkout(plan);
   }
 
   async function workoutClick(event) {
     const button = event.target.closest("button");
     if (!button) return;
-    const pi = Draft.ensurePlan();
-    const plan = App.state.plans[pi];
-    if (!plan) return;
-    const ei = Number(button.dataset.e);
 
-    if (button.classList.contains("exercise-edit-toggle")) {
-      Renderer.toggleEditor(button, ei);
+    if (button.classList.contains("go-plan-page")) {
+      await App.switchPage("plan", { historyMode: "replace" });
       return;
     }
+
+    const { plan } = currentPlan();
+    const workout = currentWorkout(plan);
+    if (!plan || !workout) return;
+    const ei = Number(button.dataset.e);
+    const plannedExercise = workout.exercises?.[ei];
+    if (!plannedExercise) return;
 
     if (button.classList.contains("set-complete")) {
       const si = Number(button.dataset.s);
@@ -51,40 +51,23 @@
 
     if (button.classList.contains("add-set")) {
       Draft.capture();
-      plan.exercises[ei].sets = setCount(plan.exercises[ei]) + 1;
-      await persistPlanAndRender();
+      const base = Math.max(1, plannedExercise.sets?.length || 1);
+      const next = Draft.effectiveSetCount(ei, base) + 1;
+      Draft.setSetCount(ei, next);
+      Renderer.renderWorkout();
       Draft.queueWrite();
       return;
     }
 
     if (button.classList.contains("remove-set")) {
-      const ex = plan.exercises[ei];
-      const sets = setCount(ex);
-      if (sets <= 1) return;
       Draft.capture();
-      Draft.trimLastSet(ei, sets - 1);
-      ex.sets = sets - 1;
-      await persistPlanAndRender();
-      Draft.queueWrite();
-      return;
-    }
-
-    if (button.classList.contains("delete-exercise-inline")) {
-      if (!confirm("删除这个动作？历史训练记录会保留。")) return;
-      Draft.capture();
-      plan.exercises.splice(ei, 1);
-      Draft.shiftAfterDeleteExercise(ei);
-      Renderer.shiftEditorsAfterDeleteExercise(ei);
-      await persistPlanAndRender();
-      Draft.queueWrite();
-      return;
-    }
-
-    if (button.id === "addExerciseInlineBtn") {
-      Draft.capture();
-      plan.exercises ??= [];
-      plan.exercises.push({ name: "新动作", sets: 3, repRange: [8, 12], defaultWeight: null, weightStep: 5, note: "", optional: false });
-      await persistPlanAndRender();
+      const base = Math.max(1, plannedExercise.sets?.length || 1);
+      const current = Draft.effectiveSetCount(ei, base);
+      if (current <= 1) return;
+      const next = current - 1;
+      Draft.trimFromSet(ei, next);
+      Draft.setSetCount(ei, next);
+      Renderer.renderWorkout();
       Draft.queueWrite();
     }
   }
@@ -97,43 +80,29 @@
     Draft.queueWrite();
   }
 
-  async function workoutChange(event) {
-    const input = event.target;
-    const editor = input.closest(".exercise-inline-editor");
-    if (!editor || !input.dataset.edit) return;
-    Draft.capture();
-    const pi = Draft.ensurePlan();
-    const ei = Number(editor.dataset.e);
-    const ex = App.state.plans?.[pi]?.exercises?.[ei];
-    if (!ex) return;
-    const field = input.dataset.edit;
-    if (field === "name") ex.name = input.value.trim() || "未命名动作";
-    else if (field === "repMin") { ex.repRange ??= [8, 12]; ex.repRange[0] = Math.max(1, Number(input.value) || 1); }
-    else if (field === "repMax") { ex.repRange ??= [8, 12]; ex.repRange[1] = Math.max(1, Number(input.value) || 1); }
-    else if (field === "defaultWeight") ex.defaultWeight = valueOrNull(input.value);
-    else if (field === "weightStep") ex.weightStep = Math.max(0, Number(input.value) || 0);
-    else if (field === "note") ex.note = input.value;
-    else if (field === "optional") ex.optional = input.checked;
-    await App.persist("plans");
-    Renderer.renderWorkout();
-    Draft.queueWrite();
+  function plannedTarget(ex, si) {
+    const sets = Array.isArray(ex?.sets) ? ex.sets : [];
+    return sets[si] || sets[sets.length - 1] || {};
   }
 
   async function saveWorkout() {
     if (!App.state.plans.length) return;
-    const pi = Draft.ensurePlan();
-    const plan = App.state.plans[pi];
-    Draft.capture();
-    const historyContext = buildHistoryContext(plan.name);
-    const plannedByName = new Map();
-    for (const ex of plan.exercises || []) {
-      if (!ex.warmup) plannedByName.set(ex.name, progressionSuggestion(ex, historyContext.history(ex.name)));
+    const { pi, plan } = currentPlan();
+    const workout = currentWorkout(plan);
+    if (!plan || !workout) {
+      App.toast("请先在计划页确认本次计划", "error");
+      return;
     }
 
-    const exercises = (plan.exercises || []).map((ex, ei) => {
+    Draft.capture();
+    const historyContext = buildHistoryContext(plan.name);
+    const exercises = (workout.exercises || []).map((ex, ei) => {
       const previous = historyContext.latest(ex.name);
+      const baseCount = Math.max(1, ex.sets?.length || 1);
+      const count = Draft.effectiveSetCount(ei, baseCount);
       const sets = [];
-      for (let si = 0; si < setCount(ex); si++) {
+
+      for (let si = 0; si < count; si++) {
         const raw = {
           weight: Draft.getValue(ei, si, "weight"),
           reps: Draft.getValue(ei, si, "reps"),
@@ -143,35 +112,37 @@
         const touched = Object.values(raw).some(value => value !== "" && value !== undefined && value !== null);
         if (!completed && !touched) continue;
 
+        const target = plannedTarget(ex, si);
         const prev = previous?.sets?.[si] || null;
-        const preset = Renderer.warmupPreset(ex, si);
         let weight = valueOrNull(raw.weight);
         let reps = valueOrNull(raw.reps);
         const rir = valueOrNull(raw.rir);
+
         if (weight === null && (reps !== null || completed)) {
-          if (ex.warmup && valueOrNull(preset.weight) !== null) weight = valueOrNull(preset.weight);
+          if (valueOrNull(target.weight) !== null) weight = valueOrNull(target.weight);
           else if (valueOrNull(prev?.weight) !== null) weight = valueOrNull(prev.weight);
-          else if (valueOrNull(ex.defaultWeight) !== null) weight = valueOrNull(ex.defaultWeight);
         }
         if (reps === null && completed) {
-          if (ex.warmup && valueOrNull(preset.reps) !== null) reps = valueOrNull(preset.reps);
+          if (valueOrNull(target.reps) !== null) reps = valueOrNull(target.reps);
           else if (valueOrNull(prev?.reps) !== null) reps = valueOrNull(prev.reps);
         }
         sets.push({ weight, reps, rir, completed });
       }
-      const result = { name: ex.name, sets };
+
+      const result = {
+        name: ex.name,
+        sets,
+        planned: {
+          workoutId: workout.id,
+          revision: workout.revision,
+          sets: Array.from({ length: count }, (_, si) => ({ ...plannedTarget(ex, si) }))
+        }
+      };
+
       if (sets.length && !ex.warmup) {
-        const planned = plannedByName.get(ex.name);
-        result.planned = {
-          version: planned.version,
-          weight: planned.weight,
-          reps: [...planned.reps],
-          repRange: [...planned.repRange],
-          weightStep: planned.weightStep,
-          status: planned.status
-        };
+        const plannedWeight = workingWeight(result.planned.sets);
         const actualWeight = workingWeight(sets);
-        result.weightOverride = planned.weight !== null && actualWeight !== null && actualWeight !== planned.weight;
+        result.weightOverride = plannedWeight !== null && actualWeight !== null && actualWeight !== plannedWeight;
       }
       return result;
     }).filter(ex => ex.sets.length);
@@ -181,16 +152,33 @@
       return;
     }
 
-    App.state.sessions.push({ id: crypto.randomUUID(), date: App.isoDate(), plan: plan.name, exercises });
-    await App.persist("workout");
+    const sessionId = crypto.randomUUID();
+    App.state.sessions.push({
+      id: sessionId,
+      date: App.isoDate(),
+      plan: plan.name,
+      plannedWorkoutId: workout.id,
+      plannedRevision: workout.revision,
+      exercises
+    });
+
+    plan.plannedWorkout = {
+      ...workout,
+      status: "completed",
+      completedAt: new Date().toISOString(),
+      completedSessionId: sessionId
+    };
+
+    await App.persist("plans");
     await Draft.resetPlan(pi);
+    Renderer.renderPlanSelect();
     Renderer.renderWorkout();
     App.toast("本次训练已保存", "success");
   }
 
   async function resetWorkout() {
     const pi = Draft.currentPlanIndex();
-    if (Draft.hasData() && !confirm("清空本次未保存输入？")) return;
+    if (Draft.hasData() && !confirm("清空本次未保存输入和临时组数调整？")) return;
     await Draft.resetPlan(pi);
     Renderer.renderWorkout();
   }
@@ -201,7 +189,6 @@
     const pi = Draft.currentPlanIndex();
     Draft.ensurePlan(pi);
     await Draft.setActivePlan(pi);
-    Renderer.clearEditors();
     Renderer.renderWorkout();
   }
 
@@ -209,7 +196,6 @@
     const workout = document.getElementById("workoutContainer");
     workout.addEventListener("click", workoutClick);
     workout.addEventListener("input", workoutInput);
-    workout.addEventListener("change", workoutChange);
     document.getElementById("planSelect").onchange = changePlan;
     document.getElementById("saveWorkoutBtn").onclick = saveWorkout;
     document.getElementById("resetWorkoutBtn").onclick = resetWorkout;

@@ -1,6 +1,6 @@
 (() => {
   const App = window.FitnessApp;
-  const DRAFTS_KEY = "workoutDraftsV7";
+  const DRAFTS_KEY = "workoutDraftsV8";
   const ACTIVE_PLAN_KEY = "workoutActivePlanV7";
 
   let draftStore = {};
@@ -10,9 +10,19 @@
   const clone = value => JSON.parse(JSON.stringify(value));
   const draftKey = (ei, si, key) => `${ei}:${si}:${key}`;
   const doneKey = (ei, si) => `${ei}:${si}`;
+  const countKey = ei => String(ei);
 
   function emptyDraft(planIndex) {
-    return { planIndex, sets: {}, completed: {} };
+    return { planIndex, sets: {}, completed: {}, setCounts: {} };
+  }
+
+  function normalizeDraft(saved, planIndex) {
+    return {
+      planIndex,
+      sets: clone(saved?.sets || {}),
+      completed: clone(saved?.completed || {}),
+      setCounts: clone(saved?.setCounts || {})
+    };
   }
 
   function currentPlanIndex() {
@@ -25,9 +35,7 @@
   function ensurePlan(index = currentPlanIndex()) {
     if (draft.planIndex !== index) {
       const saved = draftStore[String(index)];
-      draft = saved
-        ? { planIndex: index, sets: clone(saved.sets || {}), completed: clone(saved.completed || {}) }
-        : emptyDraft(index);
+      draft = saved ? normalizeDraft(saved, index) : emptyDraft(index);
     }
     return index;
   }
@@ -67,7 +75,8 @@
   function hasData() {
     capture();
     return Object.values(draft.sets || {}).some(value => String(value ?? "").trim() !== "") ||
-      Object.values(draft.completed || {}).some(Boolean);
+      Object.values(draft.completed || {}).some(Boolean) ||
+      Object.keys(draft.setCounts || {}).length > 0;
   }
 
   function getValue(ei, si, key) {
@@ -87,14 +96,39 @@
     draft.completed[doneKey(ei, si)] = completed;
   }
 
+  function effectiveSetCount(ei, baseCount) {
+    const value = Number(draft.setCounts[countKey(ei)]);
+    return Number.isInteger(value) && value > 0 ? value : Math.max(1, Number(baseCount) || 1);
+  }
+
+  function setSetCount(ei, count) {
+    const next = Math.max(1, Math.round(Number(count) || 1));
+    draft.setCounts[countKey(ei)] = next;
+  }
+
+  function clearSetCount(ei) {
+    delete draft.setCounts[countKey(ei)];
+  }
+
+  function trimFromSet(ei, fromSi) {
+    for (const key of Object.keys(draft.sets)) {
+      const [e, s] = key.split(":");
+      if (Number(e) === Number(ei) && Number(s) >= Number(fromSi)) delete draft.sets[key];
+    }
+    for (const key of Object.keys(draft.completed)) {
+      const [e, s] = key.split(":");
+      if (Number(e) === Number(ei) && Number(s) >= Number(fromSi)) delete draft.completed[key];
+    }
+  }
+
   function trimLastSet(ei, lastSi) {
-    ["weight", "reps", "rir"].forEach(key => delete draft.sets[draftKey(ei, lastSi, key)]);
-    delete draft.completed[doneKey(ei, lastSi)];
+    trimFromSet(ei, lastSi);
   }
 
   function shiftAfterDeleteExercise(deletedEi) {
     const nextSets = {};
     const nextCompleted = {};
+    const nextCounts = {};
 
     for (const [key, value] of Object.entries(draft.sets)) {
       const [e, s, k] = key.split(":");
@@ -110,8 +144,15 @@
       nextCompleted[doneKey(ei > deletedEi ? ei - 1 : ei, s)] = value;
     }
 
+    for (const [key, value] of Object.entries(draft.setCounts || {})) {
+      const ei = Number(key);
+      if (ei === deletedEi) continue;
+      nextCounts[countKey(ei > deletedEi ? ei - 1 : ei)] = value;
+    }
+
     draft.sets = nextSets;
     draft.completed = nextCompleted;
+    draft.setCounts = nextCounts;
   }
 
   async function init() {
@@ -126,9 +167,7 @@
       let pi = Number(storedPlanIndex);
       if (!Number.isInteger(pi) || pi < 0 || pi >= App.state.plans.length) pi = 0;
       const saved = draftStore[String(pi)];
-      draft = saved
-        ? { planIndex: pi, sets: clone(saved.sets || {}), completed: clone(saved.completed || {}) }
-        : emptyDraft(pi);
+      draft = saved ? normalizeDraft(saved, pi) : emptyDraft(pi);
     } catch (error) {
       console.warn("draft restore", error);
       draftStore = {};
@@ -181,6 +220,10 @@
     setValue,
     isCompleted,
     setCompleted,
+    effectiveSetCount,
+    setSetCount,
+    clearSetCount,
+    trimFromSet,
     trimLastSet,
     shiftAfterDeleteExercise,
     setActivePlan,
