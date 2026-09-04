@@ -1,0 +1,823 @@
+/* v104 visual hierarchy: compact page heroes, shared exercise hierarchy, history cards and body metrics. */
+
+:root{
+  --v104-glass-border:rgba(255,255,255,.82);
+  --v104-glass-bg:
+    radial-gradient(120% 90% at 10% -4%,rgba(255,255,255,.60) 0%,rgba(255,255,255,0) 59%),
+    linear-gradient(180deg,rgba(255,255,255,.80),rgba(244,248,252,.64));
+  --v104-inner-bg:rgba(255,255,255,.38);
+  --v104-inner-border:rgba(255,255,255,.48);
+  --v104-divider:rgba(126,145,169,.11);
+  --v104-title:#242b35;
+  --v104-copy:#53606e;
+  --v104-muted:#7f8a98;
+  --v104-faint:#99a2ad;
+}
+
+/* Shared page-level card title rhythm. */
+#today .today-overview h2,
+#plan .planning-hero h2,
+#history .history-hero h2,
+#progress .progress-card h2{
+  margin:0;
+  color:var(--v104-title);
+  font-size:21px;
+  font-weight:840;
+  line-height:1.18;
+  letter-spacing:-.018em;
+}
+
+/* Training overview: a smaller glass status card. */
+#today .today-overview{
+  padding:15px 15px 13px;
+  border:1px solid var(--v104-glass-border);
+  background:var(--v104-glass-bg);
+  -webkit-backdrop-filter:blur(20px) saturate(148%);
+  backdrop-filter:blur(20px) saturate(148%);
+  box-shadow:
+    0 12px 30px rgba(30,35,44,.064),
+    0 2px 6px rgba(30,35,44,.028),
+    inset 0 1.5px 0 rgba(255,255,255,.98);
+}
+
+#today .today-heading{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+  padding-inline:1px;
+}
+
+#today .today-heading #todayDate{
+  margin:0;
+  color:var(--v104-muted);
+  font-size:11.5px;
+  font-weight:590;
+  white-space:nowrap;
+}
+
+#today .today-plan-bar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:9px;
+  align-items:end;
+}
+
+#today .today-plan-current{
+  gap:2px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+}
+
+#today .today-plan-current > span{
+  color:var(--v104-faint);
+  font-size:10.5px;
+  font-weight:650;
+  letter-spacing:.015em;
+}
+
+#today .today-plan-current > strong{
+  margin-top:2px;
+  color:#313a46;
+  font-size:16px;
+  font-weight:810;
+  line-height:1.3;
+}
+
+#today .today-plan-current > small{
+  margin-top:2px;
+  color:var(--v104-muted);
+  font-size:11px;
+  line-height:1.35;
+}
+
+#today #pullPlansTodayBtn{
+  min-height:36px;
+  height:36px;
+  padding:0 10px;
+  border-radius:13px;
+  font-size:11.5px;
+  white-space:nowrap;
+}
+
+#today .today-sync-status{
+  min-height:0;
+  margin:8px 1px 0;
+  color:var(--v104-muted);
+  font-size:10.5px;
+}
+
+#today .today-sync-status:empty{
+  display:none;
+}
+
+/* Training exercise cards: title -> one note -> compact reference -> working sets. */
+#workoutContainer .exercise-card{
+  padding:14px 12px 12px;
+}
+
+#workoutContainer .exercise-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:9px;
+  padding:0 4px;
+}
+
+#workoutContainer .exercise-title-wrap{
+  min-width:0;
+}
+
+#workoutContainer .exercise-title-line{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+#workoutContainer .exercise-title{
+  color:var(--v104-title);
+  font-size:19px;
+  font-weight:850;
+  line-height:1.22;
+  letter-spacing:-.018em;
+}
+
+#workoutContainer .exercise-count-chip{
+  flex:0 0 auto;
+  margin-top:1px;
+  padding:3px 7px;
+  border:1px solid rgba(255,255,255,.56);
+  border-radius:999px;
+  background:rgba(255,255,255,.43);
+  color:#778391;
+  font-size:10.5px;
+  font-weight:700;
+  line-height:1.25;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+}
+
+#workoutContainer .exercise-meta{
+  display:inline-flex;
+  width:auto;
+  max-width:100%;
+  margin-top:6px;
+  padding:4px 8px;
+  border:1px solid rgba(255,255,255,.46);
+  border-radius:11px;
+  background:rgba(255,255,255,.31);
+  color:#73808e;
+  font-size:11px;
+  font-weight:590;
+  line-height:1.35;
+}
+
+#workoutContainer .exercise-meta:empty{
+  display:none;
+}
+
+#workoutContainer .exercise-summary-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+}
+
+#workoutContainer .exercise-summary-panel{
+  min-height:0;
+  padding:10px 11px;
+  border-radius:16px;
+  background:rgba(255,255,255,.31);
+  border-color:rgba(255,255,255,.42);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+#workoutContainer .exercise-panel .context-head{
+  min-height:0;
+  margin-bottom:4px;
+}
+
+#workoutContainer .exercise-panel .context-head strong{
+  color:#7d8895;
+  font-size:10.5px;
+  font-weight:700;
+}
+
+#workoutContainer .exercise-panel .context-target{
+  color:#3b4653;
+  font-size:13.5px;
+  font-weight:780;
+  line-height:1.34;
+}
+
+#workoutContainer .exercise-panel .context-detail{
+  margin-top:3px;
+  color:#9099a4;
+  font-size:10.5px;
+  line-height:1.35;
+}
+
+#workoutContainer .exercise-panel .context-chip{
+  padding:2px 5px;
+  font-size:9px;
+}
+
+#workoutContainer .exercise-sets-panel{
+  padding:12px 11px 13px;
+  border-radius:18px;
+}
+
+#workoutContainer .exercise-panel-heading{
+  padding:0 1px 8px;
+}
+
+#workoutContainer .exercise-panel-title{
+  font-size:14px;
+  font-weight:790;
+}
+
+#workoutContainer .exercise-panel-meta{
+  font-size:11px;
+  font-weight:620;
+}
+
+/* Plan hero: select row, one action row, one quiet status row. */
+#plan .planning-hero{
+  padding:15px 14px 13px;
+}
+
+#plan .planning-heading{
+  margin-bottom:12px;
+}
+
+#plan .planning-select-field{
+  display:grid;
+  gap:5px;
+  margin:0;
+  color:var(--v104-muted);
+  font-size:10.5px;
+  font-weight:650;
+}
+
+#plan .planning-select-field select{
+  width:100%;
+  min-height:44px;
+  margin:0;
+  padding:9px 36px 9px 12px;
+  border-radius:15px;
+  font-size:14px;
+  font-weight:680;
+}
+
+#plan .planning-actions-top{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+  margin-top:9px;
+}
+
+#plan .planning-actions-top button{
+  min-width:0;
+  min-height:42px;
+  padding-inline:8px;
+  border-radius:14px;
+  font-size:12.5px;
+}
+
+#plan .planning-current{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:8px;
+  margin-top:10px;
+  padding:8px 2px 1px;
+  border:0;
+  border-top:1px solid var(--v104-divider);
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+}
+
+#plan .planning-current > span{
+  align-self:center;
+  padding:3px 7px;
+  border:1px solid rgba(255,255,255,.50);
+  border-radius:999px;
+  background:rgba(255,255,255,.38);
+  color:#7d8895;
+  font-size:9.5px;
+  font-weight:700;
+  line-height:1.2;
+}
+
+#plan .planning-current > strong{
+  align-self:center;
+  color:#46515e;
+  font-size:12.5px;
+  font-weight:720;
+}
+
+/* Plan exercise cards follow the same hierarchy as training cards. */
+#planningWorkoutList{
+  gap:11px;
+}
+
+#plan .planning-exercise-card{
+  padding:14px 12px 12px;
+  border-radius:24px;
+  border-color:rgba(255,255,255,.84);
+  background:var(--v104-glass-bg);
+  -webkit-backdrop-filter:blur(18px) saturate(144%);
+  backdrop-filter:blur(18px) saturate(144%);
+  box-shadow:
+    0 9px 24px rgba(31,38,48,.052),
+    inset 0 1.5px 0 rgba(255,255,255,.96);
+}
+
+#plan .planning-exercise-head{
+  margin-bottom:9px;
+  padding:0 3px;
+}
+
+#plan .planning-exercise-head h3{
+  color:var(--v104-title);
+  font-size:18px;
+  font-weight:840;
+  line-height:1.22;
+}
+
+#plan .planning-exercise-head p{
+  display:inline-flex;
+  width:auto;
+  max-width:100%;
+  margin-top:6px;
+  padding:4px 8px;
+  border:1px solid rgba(255,255,255,.46);
+  border-radius:11px;
+  background:rgba(255,255,255,.31);
+  color:#768290;
+  font-size:10.5px;
+  line-height:1.35;
+}
+
+#plan .planning-exercise-head p:empty{
+  display:none;
+}
+
+#plan .planning-context-grid{
+  gap:7px;
+}
+
+#plan .planning-context{
+  padding:9px 10px;
+  border-radius:16px;
+  background:rgba(255,255,255,.30);
+}
+
+#plan .planning-context > span,
+#plan .planning-context > small{
+  color:#9099a4;
+  font-size:9.5px;
+}
+
+#plan .planning-context strong{
+  margin:3px 0 2px;
+  color:#414c59;
+  font-size:12.5px;
+  font-weight:760;
+}
+
+#plan .planning-target-panel{
+  margin-top:7px;
+  padding:10px;
+  border-radius:17px;
+  background:rgba(255,255,255,.39);
+}
+
+#plan .planning-target-head strong{
+  font-size:12px;
+}
+
+#plan .planning-target-head small{
+  font-size:9.5px;
+}
+
+#plan .planning-set-row input{
+  min-height:39px;
+  height:39px;
+  border-radius:13px;
+  font-size:14px;
+}
+
+/* History: hero stands alone; every session is a separate glass sheet. */
+#history .history-hero{
+  padding:15px 14px 13px;
+}
+
+#history .history-heading{
+  margin-bottom:11px;
+}
+
+#history .history-filter-field{
+  display:grid;
+  gap:5px;
+  margin:0;
+  color:var(--v104-muted);
+  font-size:10.5px;
+  font-weight:650;
+}
+
+#history .history-filter-field select{
+  min-height:42px;
+  margin:0;
+  border-radius:14px;
+  font-size:13px;
+  font-weight:660;
+}
+
+#historyList{
+  display:grid;
+  gap:11px;
+  margin-top:11px;
+}
+
+#history .history-card{
+  padding:14px;
+  border:1px solid rgba(255,255,255,.84);
+  border-radius:24px;
+  background:var(--v104-glass-bg);
+  -webkit-backdrop-filter:blur(18px) saturate(144%);
+  backdrop-filter:blur(18px) saturate(144%);
+  box-shadow:
+    0 10px 26px rgba(31,38,48,.056),
+    inset 0 1.5px 0 rgba(255,255,255,.96);
+}
+
+#history .history-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  padding:0;
+  border:0;
+}
+
+#history .history-head-copy{
+  min-width:0;
+}
+
+#history .history-head-copy strong{
+  display:block;
+  overflow:hidden;
+  color:var(--v104-title);
+  font-size:16px;
+  font-weight:820;
+  line-height:1.25;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+#history .history-head-copy span{
+  display:block;
+  margin-top:3px;
+  color:var(--v104-muted);
+  font-size:10.5px;
+}
+
+#history .history-summary-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px 12px;
+  margin-top:10px;
+  padding:9px 0 1px;
+  border-top:1px solid var(--v104-divider);
+  color:#707c8a;
+  font-size:11px;
+  font-weight:630;
+}
+
+#history .history-details{
+  margin-top:8px;
+  padding-top:7px;
+  border-top:1px solid var(--v104-divider);
+}
+
+#history .history-details > summary{
+  cursor:pointer;
+  list-style:none;
+  color:#697584;
+  font-size:11px;
+  font-weight:700;
+}
+
+#history .history-details > summary::-webkit-details-marker{
+  display:none;
+}
+
+#history .history-details > summary::after{
+  content:"展开";
+  float:right;
+  color:#98a1ac;
+  font-weight:580;
+}
+
+#history .history-details[open] > summary::after{
+  content:"收起";
+}
+
+#history .history-details-body{
+  display:grid;
+  gap:7px;
+  margin-top:8px;
+}
+
+#history .history-exercise{
+  margin:0;
+  padding:8px 9px;
+  border-radius:14px;
+}
+
+#history .history-exercise-name{
+  font-size:11.5px;
+}
+
+#history .history-set-list{
+  margin-top:5px;
+}
+
+/* Progress and body data are equal page-level cards. */
+#progress{
+  display:none;
+}
+
+#progress.active{
+  display:grid;
+  gap:12px;
+}
+
+#progress .progress-card{
+  padding:15px 14px 14px;
+}
+
+#progress .progress-card > h2{
+  margin-bottom:12px;
+}
+
+#progress .progress-exercise-field{
+  display:grid;
+  gap:5px;
+  margin:0;
+  color:var(--v104-muted);
+  font-size:10.5px;
+  font-weight:650;
+}
+
+#progress .progress-exercise-field select{
+  margin:0;
+  min-height:42px;
+  border-radius:14px;
+  font-size:13px;
+  font-weight:660;
+}
+
+#progressRange{
+  margin-top:9px;
+}
+
+#progress #progressChart{
+  margin-top:10px;
+}
+
+#progress #progressSummary{
+  margin-top:8px;
+  font-size:11px;
+}
+
+#progress .body-input-grid{
+  gap:8px;
+  padding:9px;
+  border-radius:18px;
+}
+
+#progress .body-input-grid > label{
+  display:grid;
+  gap:5px;
+  margin:0;
+  color:var(--v104-muted);
+  font-size:10.5px;
+  font-weight:650;
+}
+
+#progress .body-input-wrap{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:6px;
+}
+
+#progress .body-input-wrap input{
+  min-width:0;
+  min-height:38px;
+  height:38px;
+  padding:7px 8px;
+  border-radius:13px;
+  text-align:center;
+  font-size:14px;
+  font-variant-numeric:tabular-nums;
+}
+
+#progress .body-input-wrap small{
+  min-width:20px;
+  color:#99a2ad;
+  font-size:9.5px;
+  font-weight:600;
+}
+
+#progress #saveBodyBtn{
+  min-height:40px;
+  margin-top:9px;
+  border-radius:14px;
+}
+
+#progress #bodyHistory:not(:empty){
+  margin-top:11px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+}
+
+#progress .body-latest-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:7px;
+  padding:0 2px;
+}
+
+#progress .body-latest-head span{
+  color:#687482;
+  font-size:11px;
+  font-weight:730;
+}
+
+#progress .body-latest-head strong{
+  color:#99a2ad;
+  font-size:9.5px;
+  font-weight:620;
+}
+
+#progress .body-metric-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+
+#progress .body-metric{
+  min-width:0;
+  padding:10px;
+  border:1px solid var(--v104-inner-border);
+  border-radius:15px;
+  background:var(--v104-inner-bg);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.76);
+}
+
+#progress .body-metric-label{
+  display:block;
+  color:#8b95a1;
+  font-size:9.5px;
+  font-weight:650;
+}
+
+#progress .body-metric strong{
+  display:block;
+  margin-top:3px;
+  color:#38434f;
+  font-size:15px;
+  font-weight:800;
+  line-height:1.25;
+  font-variant-numeric:tabular-nums;
+}
+
+#progress .body-metric small{
+  display:block;
+  min-height:14px;
+  margin-top:3px;
+  color:#929ca8;
+  font-size:9.5px;
+  font-variant-numeric:tabular-nums;
+}
+
+#progress .body-history-details{
+  margin-top:8px;
+  padding:8px 2px 0;
+  border-top:1px solid var(--v104-divider);
+}
+
+#progress .body-history-details > summary{
+  cursor:pointer;
+  list-style:none;
+  color:#7a8592;
+  font-size:10.5px;
+  font-weight:680;
+}
+
+#progress .body-history-details > summary::-webkit-details-marker{
+  display:none;
+}
+
+#progress .body-history-rows{
+  margin-top:6px;
+}
+
+#progress .body-history-row{
+  display:grid;
+  grid-template-columns:82px minmax(0,1fr);
+  gap:8px;
+  padding:7px 0;
+  font-size:10px;
+}
+
+#progress .body-history-row strong{
+  font-size:10px;
+}
+
+#progress .body-history-row span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+@media(max-width:680px){
+  #today .today-overview,
+  #plan .planning-hero,
+  #history .history-hero,
+  #progress .progress-card,
+  #plan .planning-exercise-card,
+  #history .history-card{
+    -webkit-backdrop-filter:blur(15px) saturate(142%);
+    backdrop-filter:blur(15px) saturate(142%);
+  }
+
+  #workoutContainer .exercise-card{
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+
+  #workoutContainer .exercise-title{
+    font-size:18px;
+  }
+
+  #workoutContainer .exercise-summary-panel{
+    padding:9px 10px;
+  }
+
+  #workoutContainer .exercise-panel .context-target{
+    font-size:13px;
+  }
+
+  #plan .planning-actions-top button{
+    font-size:12px;
+  }
+}
+
+@media(max-width:390px){
+  #today .today-plan-bar{
+    grid-template-columns:1fr;
+  }
+
+  #today #pullPlansTodayBtn{
+    justify-self:start;
+    width:auto;
+  }
+
+  #plan .planning-actions-top{
+    gap:5px;
+  }
+
+  #plan .planning-actions-top button{
+    padding-inline:5px;
+    font-size:11.5px;
+  }
+
+  #workoutContainer .exercise-summary-grid,
+  #plan .planning-context-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media(prefers-reduced-transparency:reduce){
+  #today .today-overview,
+  #plan .planning-hero,
+  #plan .planning-exercise-card,
+  #history .history-hero,
+  #history .history-card,
+  #progress .progress-card{
+    background:#f8f9fb;
+    border-color:rgba(205,211,220,.48);
+    box-shadow:0 4px 12px rgba(37,48,64,.04);
+  }
+}
