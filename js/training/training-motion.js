@@ -15,6 +15,7 @@
   const TARGET_TOLERANCE = 8;
   const FALLBACK_SETTLE_DELAY = 120;
   const SUPPORTS_SCROLLEND = "onscrollend" in window;
+  const SUPPORTS_VIEW_TIMELINE = !!window.CSS?.supports?.("animation-timeline: view()");
   const INTERACTIVE_SELECTOR = "input,button,select,textarea,a,label,summary,details,[contenteditable='true'],[role='button']";
 
   let enabled = false;
@@ -184,6 +185,11 @@
     setMode("exercise");
     setOverviewCurrent(false);
 
+    if (SUPPORTS_VIEW_TIMELINE) {
+      setCurrentCard(null);
+      return;
+    }
+
     const nearBottom = document.documentElement.scrollHeight - (y + window.innerHeight) <= 220;
     if (nearBottom && Math.abs(y - actionsTargetY) <= TARGET_TOLERANCE) {
       setCurrentCard(null);
@@ -201,7 +207,7 @@
   function onScroll() {
     if (!enabled) return;
     updateModeDuringScroll();
-    if (!SUPPORTS_SCROLLEND) armFallbackSettle();
+    if (!SUPPORTS_VIEW_TIMELINE && !SUPPORTS_SCROLLEND) armFallbackSettle();
   }
 
   function onResize() {
@@ -227,6 +233,7 @@
     metricsFrame = 0;
     root.classList.remove(
       "training-snap-ready",
+      "training-view-timeline",
       "training-overview-mode",
       "training-exercise-mode"
     );
@@ -255,7 +262,7 @@
 
     if (active) {
       window.addEventListener("scroll", onScroll, { passive: true });
-      if (SUPPORTS_SCROLLEND) {
+      if (!SUPPORTS_VIEW_TIMELINE && SUPPORTS_SCROLLEND) {
         window.addEventListener("scrollend", settleScrollState, { passive: true });
       }
       window.addEventListener("resize", onResize, { passive: true });
@@ -267,7 +274,9 @@
     }
 
     window.removeEventListener("scroll", onScroll);
-    if (SUPPORTS_SCROLLEND) window.removeEventListener("scrollend", settleScrollState);
+    if (!SUPPORTS_VIEW_TIMELINE && SUPPORTS_SCROLLEND) {
+      window.removeEventListener("scrollend", settleScrollState);
+    }
     window.removeEventListener("resize", onResize);
     contentObserver.disconnect();
     resizeObserver?.disconnect();
@@ -284,6 +293,7 @@
 
     enabled = shouldEnable;
     root.classList.toggle("training-snap-ready", enabled);
+    root.classList.toggle("training-view-timeline", enabled && SUPPORTS_VIEW_TIMELINE);
     setRuntimeListening(enabled);
 
     if (!enabled) {
@@ -320,9 +330,9 @@
     if (!target) return;
     setMode("exercise");
     setOverviewCurrent(false);
-    setCurrentCard(card);
+    if (!SUPPORTS_VIEW_TIMELINE) setCurrentCard(card);
     window.scrollTo({ top: target.targetY, behavior: "smooth" });
-    if (!SUPPORTS_SCROLLEND) armFallbackSettle();
+    if (!SUPPORTS_VIEW_TIMELINE && !SUPPORTS_SCROLLEND) armFallbackSettle();
   });
 
   overview.addEventListener("click", event => {
@@ -332,7 +342,7 @@
     setOverviewCurrent(true);
     setCurrentCard(null);
     window.scrollTo({ top: overviewTargetY, behavior: "smooth" });
-    if (!SUPPORTS_SCROLLEND) armFallbackSettle();
+    if (!SUPPORTS_VIEW_TIMELINE && !SUPPORTS_SCROLLEND) armFallbackSettle();
   });
 
   document.addEventListener("visibilitychange", syncState);
