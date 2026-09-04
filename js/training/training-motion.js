@@ -13,6 +13,8 @@
   const OVERVIEW_TOP = 68;
   const OVERVIEW_TOLERANCE = 26;
   const TARGET_TOLERANCE = 8;
+  const AREA_TIE_TOLERANCE = 18;
+  const SETTLE_TOLERANCE = 4;
   const FALLBACK_SETTLE_DELAY = 120;
   const SUPPORTS_SCROLLEND = "onscrollend" in window;
   const SUPPORTS_VIEW_TIMELINE = !!window.CSS?.supports?.("animation-timeline: view()");
@@ -32,8 +34,13 @@
   let lastSnapHeight = null;
   let overviewTargetY = 0;
   let actionsTargetY = 0;
+  let settlingTargetY = null;
 
   const todayActive = () => todayPage.classList.contains("active");
+  const canActivate = () =>
+    MOBILE_QUERY.matches &&
+    todayActive() &&
+    !body.classList.contains("app-booting");
 
   function snapGeometry() {
     const snapBottom = Math.max(SNAP_TOP + 160, window.innerHeight - SNAP_BOTTOM);
@@ -126,6 +133,43 @@
     return bestCard;
   }
 
+  function largestVisibleCard() {
+    const geometry = snapGeometry();
+    let best = null;
+
+    for (const entry of targets) {
+      const rect = entry.card.getBoundingClientRect();
+      const visibleTop = Math.max(rect.top, geometry.snapTop);
+      const visibleBottom = Math.min(rect.bottom, geometry.snapBottom);
+      const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+      if (visibleHeight <= 0) continue;
+
+      const centerDistance = Math.abs((rect.top + rect.bottom) / 2 - geometry.snapCenter);
+      const candidate = { entry, rect, visibleHeight, centerDistance };
+
+      if (!best || visibleHeight > best.visibleHeight + AREA_TIE_TOLERANCE) {
+        best = candidate;
+        continue;
+      }
+
+      if (
+        Math.abs(visibleHeight - best.visibleHeight) <= AREA_TIE_TOLERANCE &&
+        centerDistance < best.centerDistance
+      ) {
+        best = candidate;
+      }
+    }
+
+    if (!best) return null;
+
+    const isLongCard = best.entry.card.classList.contains("snap-start");
+    if (isLongCard && best.rect.top < geometry.snapTop - SETTLE_TOLERANCE) {
+      return { hold: true, entry: best.entry };
+    }
+
+    return { hold: false, entry: best.entry };
+  }
+
   function setCurrentCard(nextCard) {
     if (currentCard === nextCard) return;
     if (currentCard?.isConnected) currentCard.classList.remove("is-current");
@@ -166,48 +210,79 @@
     }
   }
 
-  function settleScrollState() {
+  function smoothSettleTo(targetY) {
+    if (Math.abs(window.scrollY - targetY) <= SETTLE_TOLERANCE) {
+      settlingTargetY = null;
+      return;
+    }
+    settlingTargetY = targetY;
+    window.scrollTo({ top: targetY, behavior: "smooth" });
+  }
+
+  function settleScrollState({ allowAreaSettle = false } = {}) {
     clearTimeout(settleTimer);
     settleTimer = null;
-    if (!enabled) return;
+    if (!enabled || document.hidden) return;
 
     refreshCards();
     rebuildMetrics();
 
     const y = window.scrollY;
-    if (Math.abs(y - overviewTargetY) <= OVERVIEW_TOLERANCE) {
+    if (y <= overviewTargetY + OVERVIEW_TOLERANCE) {
       setMode("overview");
       setOverviewCurrent(true);
       setCurrentCard(null);
+      if (allowAreaSettle && !root.classList.contains("training-form-editing")) {
+        smoothSettleTo(overviewTargetY);
+      }
       return;
     }
 
     setMode("exercise");
     setOverviewCurrent(false);
 
-    if (SUPPORTS_VIEW_TIMELINE) {
-      setCurrentCard(null);
+    if (!SUPPORTS_VIEW_TIMELINE) {
+      const nearBottom = document.documentElement.scrollHeight - (y + window.innerHeight) <= 220;
+      if (nearBottom && Math.abs(y - actionsTargetY) <= TARGET_TOLERANCE) {
+        setCurrentCard(null);
+        return;
+      }
+      setCurrentCard(closestCard(y));
       return;
     }
 
-    const nearBottom = document.documentElement.scrollHeight - (y + window.innerHeight) <= 220;
-    if (nearBottom && Math.abs(y - actionsTargetY) <= TARGET_TOLERANCE) {
-      setCurrentCard(null);
-      return;
+    setCurrentCard(null);
+    if (!allowAreaSettle || root.classList.contains("training-form-editing")) return;
+
+    if (settlingTargetY !== null) {
+      if (Math.abs(y - settlingTargetY) <= SETTLE_TOLERANCE) {
+        settlingTargetY = null;
+        return;
+      }
+      settlingTargetY = null;
     }
 
-    setCurrentCard(closestCard(y));
+    const winner = largestVisibleCard();
+    if (!winner || winner.hold) return;
+    smoothSettleTo(winner.entry.targetY);
   }
 
   function armFallbackSettle() {
     clearTimeout(settleTimer);
-    settleTimer = setTimeout(settleScrollState, FALLBACK_SETTLE_DELAY);
+    settleTimer = setTimeout(
+      () => settleScrollState({ allowAreaSettle: SUPPORTS_VIEW_TIMELINE }),
+      FALLBACK_SETTLE_DELAY
+    );
   }
 
   function onScroll() {
     if (!enabled) return;
     updateModeDuringScroll();
-    if (!SUPPORTS_VIEW_TIMELINE && !SUPPORTS_SCROLLEND) armFallbackSettle();
+    if (!SUPPORTS_SCROLLEND) armFallbackSettle();
+  }
+
+  function onScrollEnd() {
+    settleScrollState({ allowAreaSettle: SUPPORTS_VIEW_TIMELINE });
   }
 
   function onResize() {
@@ -219,11 +294,23 @@
     if (metricsFrame) return;
     metricsFrame = requestAnimationFrame(() => {
       metricsFrame = 0;
-      if (!enabled) return;
+      if (!enabled || document.hidden) return;
       refreshCards();
       rebuildMetrics(true);
       settleScrollState();
     });
+  }
+
+  function applyTrainingClasses() {
+    root.classList.add("training-snap-ready");
+    root.classList.toggle("training-view-timeline", SUPPORTS_VIEW_TIMELINE);
+  }
+
+  function rebindViewTimeline() {
+    if (!SUPPORTS_VIEW_TIMELINE) return;
+    root.classList.remove("training-view-timeline");
+    void root.offsetWidth;
+    root.classList.add("training-view-timeline");
   }
 
   function clearTrainingState() {
@@ -231,6 +318,7 @@
     settleTimer = null;
     if (metricsFrame) cancelAnimationFrame(metricsFrame);
     metricsFrame = 0;
+    settlingTargetY = null;
     root.classList.remove(
       "training-snap-ready",
       "training-view-timeline",
@@ -248,12 +336,12 @@
   const contentObserver = new MutationObserver(() => {
     refreshCards();
     invalidateMetrics();
-    if (enabled) scheduleMetricsRefresh();
+    if (enabled && !document.hidden) scheduleMetricsRefresh();
   });
 
   const resizeObserver = window.ResizeObserver ? new ResizeObserver(() => {
     invalidateMetrics();
-    if (enabled) scheduleMetricsRefresh();
+    if (enabled && !document.hidden) scheduleMetricsRefresh();
   }) : null;
 
   function setRuntimeListening(active) {
@@ -262,8 +350,8 @@
 
     if (active) {
       window.addEventListener("scroll", onScroll, { passive: true });
-      if (!SUPPORTS_VIEW_TIMELINE && SUPPORTS_SCROLLEND) {
-        window.addEventListener("scrollend", settleScrollState, { passive: true });
+      if (SUPPORTS_SCROLLEND) {
+        window.addEventListener("scrollend", onScrollEnd, { passive: true });
       }
       window.addEventListener("resize", onResize, { passive: true });
       contentObserver.observe(container, { childList: true, subtree: true });
@@ -274,9 +362,7 @@
     }
 
     window.removeEventListener("scroll", onScroll);
-    if (!SUPPORTS_VIEW_TIMELINE && SUPPORTS_SCROLLEND) {
-      window.removeEventListener("scrollend", settleScrollState);
-    }
+    if (SUPPORTS_SCROLLEND) window.removeEventListener("scrollend", onScrollEnd);
     window.removeEventListener("resize", onResize);
     contentObserver.disconnect();
     resizeObserver?.disconnect();
@@ -284,36 +370,59 @@
     settleTimer = null;
   }
 
-  function syncState() {
-    const shouldEnable =
-      MOBILE_QUERY.matches &&
-      todayActive() &&
-      !body.classList.contains("app-booting") &&
-      !document.hidden;
-
-    enabled = shouldEnable;
-    root.classList.toggle("training-snap-ready", enabled);
-    root.classList.toggle("training-view-timeline", enabled && SUPPORTS_VIEW_TIMELINE);
-    setRuntimeListening(enabled);
-
-    if (!enabled) {
-      clearTrainingState();
-      return;
-    }
-
+  function resumeTrainingMotion({ hard = false } = {}) {
+    if (!enabled || document.hidden) return;
+    applyTrainingClasses();
+    if (hard) rebindViewTimeline();
+    setRuntimeListening(true);
     refreshCards();
     rebuildMetrics(true);
     settleScrollState();
   }
 
-  const pageObserver = new MutationObserver(syncState);
+  function syncState({ hardResume = false } = {}) {
+    if (!canActivate()) {
+      enabled = false;
+      setRuntimeListening(false);
+      clearTrainingState();
+      return;
+    }
+
+    enabled = true;
+    applyTrainingClasses();
+
+    if (document.hidden) {
+      setRuntimeListening(false);
+      settlingTargetY = null;
+      return;
+    }
+
+    resumeTrainingMotion({ hard: hardResume });
+  }
+
+  function onVisibilityChange() {
+    if (!enabled) {
+      syncState({ hardResume: !document.hidden });
+      return;
+    }
+
+    if (document.hidden) {
+      setRuntimeListening(false);
+      settlingTargetY = null;
+      return;
+    }
+
+    resumeTrainingMotion({ hard: true });
+  }
+
+  const pageObserver = new MutationObserver(() => syncState());
   pageObserver.observe(todayPage, { attributes: true, attributeFilter: ["class"] });
 
   if (body.classList.contains("app-booting")) {
     const bootObserver = new MutationObserver(() => {
       if (body.classList.contains("app-booting")) return;
       bootObserver.disconnect();
-      syncState();
+      syncState({ hardResume: true });
     });
     bootObserver.observe(body, { attributes: true, attributeFilter: ["class"] });
   }
@@ -321,7 +430,7 @@
   const isInteractiveTarget = target => !!target.closest(INTERACTIVE_SELECTOR);
 
   container.addEventListener("click", event => {
-    if (!enabled || isInteractiveTarget(event.target)) return;
+    if (!enabled || document.hidden || isInteractiveTarget(event.target)) return;
     const card = event.target.closest(".exercise-card");
     if (!card || !container.contains(card)) return;
 
@@ -331,30 +440,35 @@
     setMode("exercise");
     setOverviewCurrent(false);
     if (!SUPPORTS_VIEW_TIMELINE) setCurrentCard(card);
+    settlingTargetY = SUPPORTS_VIEW_TIMELINE ? target.targetY : null;
     window.scrollTo({ top: target.targetY, behavior: "smooth" });
-    if (!SUPPORTS_VIEW_TIMELINE && !SUPPORTS_SCROLLEND) armFallbackSettle();
+    if (!SUPPORTS_SCROLLEND) armFallbackSettle();
   });
 
   overview.addEventListener("click", event => {
-    if (!enabled || isInteractiveTarget(event.target)) return;
+    if (!enabled || document.hidden || isInteractiveTarget(event.target)) return;
     rebuildMetrics();
     setMode("overview");
     setOverviewCurrent(true);
     setCurrentCard(null);
+    settlingTargetY = SUPPORTS_VIEW_TIMELINE ? overviewTargetY : null;
     window.scrollTo({ top: overviewTargetY, behavior: "smooth" });
-    if (!SUPPORTS_VIEW_TIMELINE && !SUPPORTS_SCROLLEND) armFallbackSettle();
+    if (!SUPPORTS_SCROLLEND) armFallbackSettle();
   });
 
-  document.addEventListener("visibilitychange", syncState);
-  window.addEventListener("pageshow", syncState, { passive: true });
-  window.addEventListener("pagehide", () => setRuntimeListening(false), { passive: true });
-  MOBILE_QUERY.addEventListener?.("change", syncState);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("pageshow", () => syncState({ hardResume: true }), { passive: true });
+  window.addEventListener("pagehide", () => {
+    setRuntimeListening(false);
+    settlingTargetY = null;
+  }, { passive: true });
+  MOBILE_QUERY.addEventListener?.("change", () => syncState({ hardResume: true }));
 
   refreshCards();
-  syncState();
+  syncState({ hardResume: true });
 })();
 
-/* Form-editing guard: temporarily releases snap while Android resizes around the soft keyboard. */
+/* Form-editing guard: temporarily releases motion settling while Android resizes around the soft keyboard. */
 (() => {
   const root = document.documentElement;
   const container = document.getElementById("workoutContainer");
