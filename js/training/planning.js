@@ -319,11 +319,6 @@
     render();
   }
 
-  async function hasSyncCredentials() {
-    const saved = await App.idbGet("syncCredentialsV7") || await App.idbGet("syncConfig") || {};
-    return !!(saved.owner && saved.repo && saved.token);
-  }
-
   async function pushPlan() {
     const index = currentIndex();
     const plan = App.state.plans[index];
@@ -359,7 +354,7 @@
     await App.refresh("planned-workout");
     App.toast("训练计划已推送", "success");
 
-    if (await hasSyncCredentials() && App.sync?.push) {
+    if (App.sync?.push && await App.sync.hasCredentials?.()) {
       await App.sync.push();
       const syncStatus = document.getElementById("todaySyncStatus");
       if (syncStatus?.classList.contains("sync-error")) {
