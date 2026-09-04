@@ -248,3 +248,76 @@
   window.addEventListener("pageshow", scheduleRuntimeResume, { passive: true });
   window.addEventListener("pagehide", suspendRuntime, { passive: true });
 })();
+
+/* Numeric fields stay inert until the user activates them, reducing browser autofill prompts. */
+(() => {
+  const SELECTOR = [
+    "#today .workout-number-input",
+    "#plan #planningWorkoutList input[data-plan-key]",
+    "#plan #planningTemplateList input[type='number']"
+  ].join(",");
+  const roots = [
+    document.getElementById("workoutContainer"),
+    document.getElementById("planningWorkoutList"),
+    document.getElementById("planningTemplateList")
+  ].filter(Boolean);
+  if (!roots.length) return;
+
+  function nextFieldName() {
+    return `manual-number-${crypto.randomUUID()}`;
+  }
+
+  function prepareInput(input) {
+    if (!input?.matches?.(SELECTOR)) return;
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("aria-autocomplete", "none");
+    input.setAttribute("autocorrect", "off");
+    input.setAttribute("autocapitalize", "off");
+    input.setAttribute("spellcheck", "false");
+    input.setAttribute("data-form-type", "other");
+    input.setAttribute("data-lpignore", "true");
+    input.setAttribute("data-1p-ignore", "true");
+    input.setAttribute("data-bwignore", "true");
+    input.setAttribute("data-protonpass-ignore", "true");
+    input.name = nextFieldName();
+    if (document.activeElement !== input) input.readOnly = true;
+  }
+
+  function activateInput(input) {
+    if (!input?.matches?.(SELECTOR)) return;
+    input.name = nextFieldName();
+    input.readOnly = false;
+  }
+
+  function scan(rootNode) {
+    if (!rootNode) return;
+    if (rootNode.matches?.(SELECTOR)) prepareInput(rootNode);
+    rootNode.querySelectorAll?.(SELECTOR).forEach(prepareInput);
+  }
+
+  roots.forEach(scan);
+  const observer = new MutationObserver(records => {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        if (node.nodeType === Node.ELEMENT_NODE) scan(node);
+      }
+    }
+  });
+  roots.forEach(rootNode => observer.observe(rootNode, { childList: true, subtree: true }));
+
+  document.addEventListener("pointerdown", event => {
+    const input = event.target.closest?.(SELECTOR);
+    if (input) activateInput(input);
+  }, true);
+
+  document.addEventListener("focusin", event => {
+    const input = event.target.matches?.(SELECTOR) ? event.target : null;
+    if (input) activateInput(input);
+  }, true);
+
+  document.addEventListener("focusout", event => {
+    const input = event.target.matches?.(SELECTOR) ? event.target : null;
+    if (!input) return;
+    setTimeout(() => prepareInput(input), 0);
+  }, true);
+})();
