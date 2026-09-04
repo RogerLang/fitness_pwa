@@ -36,6 +36,9 @@
   let currentCard = null;
   let overviewCurrent = false;
   let lastClassifiedSnapHeight = null;
+  let runtimeListening = false;
+  let scrolling = false;
+  let pendingScrollDelta = 0;
 
   const todayActive = () => todayPage.classList.contains("active");
 
@@ -77,25 +80,29 @@
     };
   }
 
-  function overviewSettled() {
+  function overviewSettled(rect = overview.getBoundingClientRect()) {
     if (!todayActive()) return false;
-    return Math.abs(overview.getBoundingClientRect().top - OVERVIEW_TOP) <= OVERVIEW_TOLERANCE;
+    return Math.abs(rect.top - OVERVIEW_TOP) <= OVERVIEW_TOLERANCE;
   }
 
-  function overviewVisibleRatio() {
-    const rect = overview.getBoundingClientRect();
+  function overviewVisibleRatio(rect = overview.getBoundingClientRect()) {
     if (rect.height <= 0) return 0;
     const visible = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
     return Math.min(1, visible / rect.height);
   }
 
-  function overviewDepartureDistance() {
-    return Math.max(0, OVERVIEW_TOP - overview.getBoundingClientRect().top);
+  function overviewDepartureDistance(rect = overview.getBoundingClientRect()) {
+    return Math.max(0, OVERVIEW_TOP - rect.top);
   }
 
   function actionsSettled(geometry = snapGeometry()) {
     const rect = actions.getBoundingClientRect();
     return Math.abs(rect.bottom - geometry.snapBottom) <= TARGET_TOLERANCE;
+  }
+
+  function nearPageBottom(buffer = 220) {
+    const remaining = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+    return remaining <= buffer;
   }
 
   function setMode(nextMode, force = false) {
@@ -112,22 +119,28 @@
     overview.classList.toggle("is-current", active);
   }
 
-  function updateOverviewFocusLock(delta = 0) {
-    if (mode === "overview" || overviewSettled()) {
+  function setScrolling(active) {
+    if (scrolling === active) return;
+    scrolling = active;
+    root.classList.toggle("training-scrolling", active);
+  }
+
+  function updateOverviewFocusLock(delta = 0, rect = overview.getBoundingClientRect()) {
+    if (mode === "overview" || overviewSettled(rect)) {
       overviewFocusLocked = true;
       return;
     }
 
     if (!overviewFocusLocked) {
       const returningUp = delta < -1 || freeGlideDirection === "up";
-      if (returningUp && overviewVisibleRatio() >= OVERVIEW_FOCUS_ACQUIRE_RATIO) {
+      if (returningUp && overviewVisibleRatio(rect) >= OVERVIEW_FOCUS_ACQUIRE_RATIO) {
         overviewFocusLocked = true;
       }
       return;
     }
 
     const leavingDown = delta > 1 || freeGlideDirection === "down";
-    if (leavingDown && overviewDepartureDistance() >= OVERVIEW_FOCUS_RELEASE_DISTANCE) {
+    if (leavingDown && overviewDepartureDistance(rect) >= OVERVIEW_FOCUS_RELEASE_DISTANCE) {
       overviewFocusLocked = false;
     }
   }
@@ -195,18 +208,28 @@
       "training-snap-ready",
       "training-overview-mode",
       "training-exercise-mode",
-      "training-free-glide"
+      "training-free-glide",
+      "training-scrolling"
     );
     setOverviewCurrent(false);
     for (const card of getCards()) card.classList.remove("is-current", "snap-start");
     currentCard = null;
     overviewCurrent = false;
+    scrolling = false;
+    pendingScrollDelta = 0;
     invalidateCardMetrics();
   }
 
   function syncState() {
-    enabled = MOBILE_QUERY.matches && todayActive() && !body.classList.contains("app-booting");
+    const shouldEnable =
+      MOBILE_QUERY.matches &&
+      todayActive() &&
+      !body.classList.contains("app-booting") &&
+      !document.hidden;
+
+    enabled = shouldEnable;
     root.classList.toggle("training-snap-ready", enabled);
+    setRuntimeListening(enabled);
 
     if (!enabled) {
       clearTrainingState();
@@ -220,12 +243,32 @@
     overviewFocusLocked = mode === "overview";
     setOverviewCurrent(overviewFocusLocked);
     lastY = window.scrollY;
+    pendingScrollDelta = 0;
     scheduleUpdate();
   }
 
   function updateCurrentCard() {
     ticking = false;
     if (!enabled) return;
+
+    const scrollDelta = pendingScrollDelta;
+    pendingScrollDelta = 0;
+    const overviewRect = overview.getBoundingClientRect();
+
+    if (!freeGlideDirection && !programmaticTarget && mode === "overview" && scrollDelta > 1) {
+      setMode("exercise");
+      body.classList.add("chrome-hidden");
+    } else if (
+      !freeGlideDirection &&
+      !programmaticTarget &&
+      mode === "exercise" &&
+      scrollDelta < -1 &&
+      overviewSettled(overviewRect)
+    ) {
+      setMode("overview");
+    }
+
+    updateOverviewFocusLock(scrollDelta, overviewRect);
 
     const geometry = snapGeometry();
     classifyCards(geometry);
@@ -254,7 +297,7 @@
 
     setOverviewCurrent(false);
 
-    if (actionsSettled(geometry)) {
+    if (nearPageBottom() && actionsSettled(geometry)) {
       clearCurrentCardState();
       return;
     }
@@ -299,6 +342,7 @@
   function finishFreeGlide() {
     freeGlideDirection = null;
     root.classList.remove("training-free-glide");
+    setScrolling(false);
     programmaticTarget = null;
     setMode(overviewSettled() ? "overview" : "exercise");
     overviewFocusLocked = mode === "overview";
@@ -328,6 +372,7 @@
         return;
       }
       programmaticTarget = null;
+      setScrolling(false);
       setMode("exercise");
       overviewFocusLocked = false;
       setOverviewCurrent(false);
@@ -336,6 +381,7 @@
       return;
     }
 
+    setScrolling(false);
     setMode(overviewSettled() ? "overview" : "exercise");
     if (mode === "overview") overviewFocusLocked = true;
     else if (overviewDepartureDistance() >= OVERVIEW_FOCUS_RELEASE_DISTANCE) overviewFocusLocked = false;
@@ -354,11 +400,13 @@
     setOverviewCurrent(false);
     body.classList.add("chrome-hidden");
     programmaticTarget = card;
+    setScrolling(true);
     setCurrentCard(card);
 
     const targetTop = targetScrollForCard(card);
     if (Math.abs(targetTop - window.scrollY) <= TARGET_TOLERANCE) {
       programmaticTarget = null;
+      setScrolling(false);
       scheduleUpdate();
       return;
     }
@@ -375,6 +423,7 @@
     programmaticTarget = null;
     freeGlideDirection = direction;
     root.classList.add("training-free-glide");
+    setScrolling(true);
 
     if (direction === "down") {
       setMode("exercise");
@@ -394,6 +443,7 @@
     programmaticTarget = null;
     freeGlideDirection = "up";
     root.classList.add("training-free-glide");
+    setScrolling(true);
     overviewFocusLocked = true;
     setOverviewCurrent(true);
     clearCurrentCardState();
@@ -412,17 +462,9 @@
     if (!enabled) return;
 
     const y = window.scrollY;
-    const delta = y - lastY;
+    pendingScrollDelta += y - lastY;
     lastY = y;
-
-    if (!freeGlideDirection && !programmaticTarget && mode === "overview" && delta > 1) {
-      setMode("exercise");
-      body.classList.add("chrome-hidden");
-    } else if (!freeGlideDirection && !programmaticTarget && mode === "exercise" && delta < -1 && overviewSettled()) {
-      setMode("overview");
-    }
-
-    updateOverviewFocusLock(delta);
+    setScrolling(true);
     scheduleUpdate();
     armSettle();
   }
@@ -438,6 +480,7 @@
       else if (overviewDepartureDistance() >= OVERVIEW_FOCUS_RELEASE_DISTANCE) overviewFocusLocked = false;
     }
     programmaticTarget = null;
+    setScrolling(true);
 
     const touch = event.touches[0];
     touchGesture = {
@@ -482,6 +525,7 @@
 
     if (fastUpReturn) startFreeGlide("up");
     else if (fastDownAdvance) startFreeGlide("down");
+    else armSettle();
   }
 
   function isInteractiveTarget(target) {
@@ -496,7 +540,6 @@
     invalidateCardMetrics();
     scheduleUpdate();
   });
-  contentObserver.observe(container, { childList: true, subtree: true });
 
   const pageObserver = new MutationObserver(syncState);
   pageObserver.observe(todayPage, { attributes: true, attributeFilter: ["class"] });
@@ -505,9 +548,49 @@
     invalidateCardMetrics();
     if (enabled) scheduleUpdate();
   }) : null;
-  resizeObserver?.observe(container);
-  resizeObserver?.observe(actions);
-  resizeObserver?.observe(overview);
+
+  function onResize() {
+    invalidateCardMetrics();
+    syncState();
+  }
+
+  function onTouchCancel() {
+    touchGesture = null;
+    armSettle();
+  }
+
+  function setRuntimeListening(active) {
+    if (runtimeListening === active) return;
+    runtimeListening = active;
+
+    if (active) {
+      window.addEventListener("scroll", onScroll, { passive: true });
+      if ("onscrollend" in window) window.addEventListener("scrollend", settleScrollState, { passive: true });
+      window.addEventListener("resize", onResize, { passive: true });
+      window.addEventListener("touchstart", onTouchStart, { passive: true });
+      window.addEventListener("touchmove", onTouchMove, { passive: true });
+      window.addEventListener("touchend", onTouchEnd, { passive: true });
+      window.addEventListener("touchcancel", onTouchCancel, { passive: true });
+      contentObserver.observe(container, { childList: true, subtree: true });
+      resizeObserver?.observe(container);
+      resizeObserver?.observe(actions);
+      resizeObserver?.observe(overview);
+      return;
+    }
+
+    window.removeEventListener("scroll", onScroll);
+    if ("onscrollend" in window) window.removeEventListener("scrollend", settleScrollState);
+    window.removeEventListener("resize", onResize);
+    window.removeEventListener("touchstart", onTouchStart);
+    window.removeEventListener("touchmove", onTouchMove);
+    window.removeEventListener("touchend", onTouchEnd);
+    window.removeEventListener("touchcancel", onTouchCancel);
+    contentObserver.disconnect();
+    resizeObserver?.disconnect();
+    clearTimeout(settleTimer);
+    settleTimer = null;
+    setScrolling(false);
+  }
 
   if (body.classList.contains("app-booting")) {
     const bootObserver = new MutationObserver(() => {
@@ -518,16 +601,9 @@
     bootObserver.observe(body, { attributes: true, attributeFilter: ["class"] });
   }
 
-  window.addEventListener("scroll", onScroll, { passive: true });
-  if ("onscrollend" in window) window.addEventListener("scrollend", settleScrollState, { passive: true });
-  window.addEventListener("resize", () => {
-    invalidateCardMetrics();
-    syncState();
-  }, { passive: true });
-  window.addEventListener("touchstart", onTouchStart, { passive: true });
-  window.addEventListener("touchmove", onTouchMove, { passive: true });
-  window.addEventListener("touchend", onTouchEnd, { passive: true });
-  window.addEventListener("touchcancel", () => { touchGesture = null; }, { passive: true });
+  document.addEventListener("visibilitychange", syncState);
+  window.addEventListener("pageshow", syncState, { passive: true });
+  window.addEventListener("pagehide", () => setRuntimeListening(false), { passive: true });
 
   container.addEventListener("click", event => {
     if (!enabled) return;
