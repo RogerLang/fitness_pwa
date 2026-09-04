@@ -65,7 +65,7 @@
   }
 
   function workoutNumberInput({ label, ei, si, key, value, placeholder, decimal = false, done = false }) {
-    return `<input class="workout-number-input" aria-label="${App.esc(label)}" type="text" inputmode="${decimal ? "decimal" : "numeric"}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="${done ? "done" : "next"}" data-e="${ei}" data-s="${si}" data-k="${key}" value="${App.esc(value)}" placeholder="${App.esc(placeholder ?? "")}">`;
+    return `<input class="workout-number-input" aria-label="${App.esc(label)}" type="text" inputmode="${decimal ? "decimal" : "numeric"}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore enterkeyhint="${done ? "done" : "next"}" data-e="${ei}" data-s="${si}" data-k="${key}" value="${App.esc(value)}" placeholder="${App.esc(placeholder ?? "")}">`;
   }
 
   function plannedSetFor(ex, si) {
