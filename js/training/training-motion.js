@@ -15,6 +15,7 @@
   const TARGET_TOLERANCE = 8;
   const FALLBACK_SETTLE_DELAY = 120;
   const SUPPORTS_SCROLLEND = "onscrollend" in window;
+  const INTERACTIVE_SELECTOR = "input,button,select,textarea,a,label,summary,details,[contenteditable='true'],[role='button']";
 
   let enabled = false;
   let runtimeListening = false;
@@ -28,8 +29,6 @@
   let overviewCurrent = false;
   let metricsDirty = true;
   let lastSnapHeight = null;
-  let overviewDocumentTop = 0;
-  let overviewHeight = 0;
   let overviewTargetY = 0;
   let actionsTargetY = 0;
 
@@ -67,25 +66,22 @@
       next.length !== cards.length ||
       next.some((card, index) => card !== cards[index]);
 
-    if (!changed) return false;
+    if (!changed) return;
     cards = next;
     if (currentCard && !cards.includes(currentCard)) currentCard = null;
     invalidateMetrics();
-    return true;
   }
 
   function rebuildMetrics(force = false) {
     const geometry = snapGeometry();
-    if (!force && !metricsDirty && lastSnapHeight === geometry.snapHeight) return geometry;
+    if (!force && !metricsDirty && lastSnapHeight === geometry.snapHeight) return;
 
     const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
     const threshold = geometry.snapHeight - 20;
     const nextTargets = [];
     const nextTargetByCard = new WeakMap();
 
-    overviewDocumentTop = elementDocumentTop(overview);
-    overviewHeight = overview.offsetHeight;
-    overviewTargetY = Math.max(0, overviewDocumentTop - OVERVIEW_TOP);
+    overviewTargetY = Math.max(0, elementDocumentTop(overview) - OVERVIEW_TOP);
 
     for (const card of cards) {
       const height = card.offsetHeight;
@@ -114,7 +110,6 @@
     targetByCard = nextTargetByCard;
     metricsDirty = false;
     lastSnapHeight = geometry.snapHeight;
-    return geometry;
   }
 
   function closestCard(y = window.scrollY) {
@@ -143,8 +138,8 @@
     overview.classList.toggle("is-current", active);
   }
 
-  function setMode(nextMode, force = false) {
-    if (!force && mode === nextMode) return;
+  function setMode(nextMode) {
+    if (mode === nextMode) return;
     mode = nextMode;
     root.classList.toggle("training-overview-mode", mode === "overview");
     root.classList.toggle("training-exercise-mode", mode === "exercise");
@@ -233,9 +228,7 @@
     root.classList.remove(
       "training-snap-ready",
       "training-overview-mode",
-      "training-exercise-mode",
-      "training-free-glide",
-      "training-scrolling"
+      "training-exercise-mode"
     );
     body.classList.remove("chrome-hidden");
     setOverviewCurrent(false);
@@ -315,9 +308,10 @@
     bootObserver.observe(body, { attributes: true, attributeFilter: ["class"] });
   }
 
+  const isInteractiveTarget = target => !!target.closest(INTERACTIVE_SELECTOR);
+
   container.addEventListener("click", event => {
-    if (!enabled) return;
-    if (event.target.closest("input,button,select,textarea,a,label,summary,details,[contenteditable='true'],[role='button']")) return;
+    if (!enabled || isInteractiveTarget(event.target)) return;
     const card = event.target.closest(".exercise-card");
     if (!card || !container.contains(card)) return;
 
@@ -332,8 +326,7 @@
   });
 
   overview.addEventListener("click", event => {
-    if (!enabled) return;
-    if (event.target.closest("input,button,select,textarea,a,label,summary,details,[contenteditable='true'],[role='button']")) return;
+    if (!enabled || isInteractiveTarget(event.target)) return;
     rebuildMetrics();
     setMode("overview");
     setOverviewCurrent(true);
