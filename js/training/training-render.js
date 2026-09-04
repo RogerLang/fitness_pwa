@@ -5,7 +5,7 @@
   const NextWorkout = window.TrainingNextWorkout;
   if (!Progression || !Draft || !NextWorkout) throw new Error("Training dependencies must load before TrainingRenderer");
 
-  const { buildHistoryContext, previousSummary, valueOrNull } = Progression;
+  const { buildHistoryContext, previousSummary, valueOrNull, loadType, usesWeight, loadLabel } = Progression;
   const AUTOFILL_GUARD = 'autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore data-bwignore="true" data-protonpass-ignore="true"';
 
   function currentWorkoutEntry() {
@@ -28,11 +28,14 @@
     </section>`;
   }
 
-  function plannedSetText(set) {
+  function plannedSetText(set, ex) {
+    const type = loadType(ex);
     const weight = valueOrNull(set?.weight);
     const reps = valueOrNull(set?.reps);
-    if (weight !== null && reps !== null) return `${weight}kg × ${reps}`;
-    if (weight !== null) return `${weight}kg`;
+    if (type === "bodyweight") return reps !== null ? `${reps}次` : "待定";
+    const prefix = type === "added-weight" ? "+" : "";
+    if (weight !== null && weight > 0 && reps !== null) return `${prefix}${weight}kg × ${reps}`;
+    if (weight !== null && weight > 0) return `${prefix}${weight}kg`;
     if (reps !== null) return `${reps}次`;
     return "待定";
   }
@@ -40,13 +43,17 @@
   function plannedSummary(ex) {
     const sets = Array.isArray(ex?.sets) ? ex.sets : [];
     if (!sets.length) return "暂无目标";
-    const weights = sets.map(set => valueOrNull(set?.weight));
+    const type = loadType(ex);
     const reps = sets.map(set => valueOrNull(set?.reps));
-    const first = weights[0];
-    const sameWeight = first !== null && weights.every(weight => weight === first);
+    if (type === "bodyweight") return `${reps.map(rep => rep ?? "–").join(" / ")} 次`;
+
+    const weights = sets.map(set => valueOrNull(set?.weight));
+    const positive = weights.filter(weight => weight !== null && weight > 0);
+    const sameWeight = positive.length === sets.length && positive.every(weight => weight === positive[0]);
+    const prefix = type === "added-weight" ? "+" : "";
     return sameWeight
-      ? `${first} kg · ${reps.map(rep => rep ?? "–").join(" / ")} 次`
-      : sets.map(plannedSetText).join(" · ");
+      ? `${prefix}${positive[0]} kg · ${reps.map(rep => rep ?? "–").join(" / ")} 次`
+      : sets.map(set => plannedSetText(set, ex)).join(" · ");
   }
 
   function plannedHtml(ex, workout) {
@@ -75,11 +82,13 @@
   function renderExerciseCard(ex, ei, historyContext, workout, renderToken) {
     const history = historyContext.history(ex.name);
     const previous = history[0]?.exercise || null;
-    const summary = previousSummary(previous);
+    const summary = previousSummary(previous, ex);
     const baseSets = Math.max(1, ex.sets?.length || 1);
     const sets = Draft.effectiveSetCount(ei, baseSets);
     const meta = ex.note || (ex.warmup ? "专项热身" : "");
     const repRange = Array.isArray(ex.repRange) ? ex.repRange : null;
+    const weighted = usesWeight(ex);
+    const loadName = loadLabel(ex);
     const setsMeta = ex.warmup
       ? `${sets} 组 · 专项热身${sets !== baseSets ? " · 临时调整" : ""}`
       : `${sets} 组${repRange ? ` · ${repRange[0]}–${repRange[1]} 次` : ""}${sets !== baseSets ? " · 临时调整" : ""}`;
@@ -92,16 +101,20 @@
       const repsValue = Draft.getValue(ei, si, "reps");
       const rirValue = Draft.getValue(ei, si, "rir");
       const done = Draft.isCompleted(ei, si);
-      rows += `<div class="set-row workout-set-row${done ? " set-completed" : ""}" data-e="${ei}" data-s="${si}">
+      rows += `<div class="set-row workout-set-row${done ? " set-completed" : ""}${weighted ? "" : " bodyweight-set-row"}" data-e="${ei}" data-s="${si}">
         <span class="set-number">${si + 1}</span>
-        ${workoutNumberInput({ label: `第 ${si + 1} 组重量`, ei, si, key: "weight", value: weightValue, placeholder: target.weight, decimal: true, renderToken })}
+        ${weighted ? workoutNumberInput({ label: `第 ${si + 1} 组${loadName}`, ei, si, key: "weight", value: weightValue, placeholder: target.weight, decimal: true, renderToken }) : ""}
         ${workoutNumberInput({ label: `第 ${si + 1} 组次数`, ei, si, key: "reps", value: repsValue, placeholder: target.reps, renderToken })}
         ${workoutNumberInput({ label: `第 ${si + 1} 组 RIR`, ei, si, key: "rir", value: rirValue, placeholder: ex.warmup ? "" : (prev?.rir ?? "1–2"), done: true, renderToken })}
         <button type="button" class="set-complete${done ? "" : " secondary"}" data-e="${ei}" data-s="${si}" aria-pressed="${done}">${done ? "✓" : "完成"}</button>
       </div>`;
     }
 
-    return `<article class="card exercise-card${ex.warmup ? " warmup-card" : ""}" data-e="${ei}">
+    const header = weighted
+      ? `<div class="set-row set-header"><span>组</span><span>${App.esc(loadName)} kg</span><span>次数</span><span>RIR</span><span>完成</span></div>`
+      : '<div class="set-row set-header bodyweight-set-row"><span>组</span><span>次数</span><span>RIR</span><span>完成</span></div>';
+
+    return `<article class="card exercise-card${ex.warmup ? " warmup-card" : ""}" data-e="${ei}" data-load-type="${App.esc(loadType(ex))}">
       <div class="exercise-head">
         <div class="exercise-title-wrap">
           <div class="exercise-title-line"><div class="exercise-title">${App.esc(ex.name || "未命名动作")}</div>${ex.warmup ? '<span class="badge warmup-badge">热身</span>' : ""}</div>
@@ -116,7 +129,7 @@
           ${plannedHtml(ex, workout)}
         </div>
 
-        <section class="exercise-panel exercise-sets-panel">
+        <section class="exercise-panel exercise-sets-panel${weighted ? "" : " bodyweight-sets-panel"}">
           <div class="exercise-panel-heading training-set-heading">
             <div>
               <div class="exercise-panel-title">动作组</div>
@@ -128,7 +141,7 @@
               <button type="button" class="small secondary add-set" data-e="${ei}" aria-label="本次训练增加一组">+</button>
             </div>
           </div>
-          <div class="set-row set-header"><span>组</span><span>重量 kg</span><span>次数</span><span>RIR</span><span>完成</span></div>
+          ${header}
           ${rows}
         </section>
       </div>
