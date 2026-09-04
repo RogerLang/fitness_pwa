@@ -369,3 +369,12 @@
 #progress .body-input-wrap input{
   min-width:0;
 }
+
+/* v107: saving is the only primary workout completion action; sync follows automatically. */
+#today .sticky-actions{
+  grid-template-columns:minmax(0,1.55fr) minmax(0,.72fr);
+}
+
+#today #syncTodayBtn{
+  display:none!important;
+}
