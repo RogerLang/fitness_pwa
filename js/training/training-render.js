@@ -130,10 +130,9 @@
     </article>`;
   }
 
-  function renderPlanStatus() {
+  function renderPlanStatus(active) {
     const name = document.getElementById("todayPlanName");
     const meta = document.getElementById("todayPlanMeta");
-    const active = currentWorkoutEntry();
     if (!name || !meta) return;
     if (!active) {
       name.textContent = "尚未推送下一次训练";
@@ -150,27 +149,27 @@
   function renderWorkout() {
     const container = document.getElementById("workoutContainer");
     if (!container) return;
+
+    const active = currentWorkoutEntry();
+    renderPlanStatus(active);
+
     if (!App.state.plans.length) {
       container.innerHTML = '<div class="card empty-state"><strong>当前没有训练模板</strong><span>可从 GitHub 拉取已有模板，或导入本地备份。</span></div>';
-      renderPlanStatus();
       return;
     }
 
-    const active = currentWorkoutEntry();
     if (!active) {
       container.innerHTML = `<div class="card training-plan-empty">
         <strong>还没有待训练计划</strong>
         <span>在计划页选择训练模板，检查系统建议并推送后，这里会直接显示那一份计划。</span>
         <button type="button" class="go-plan-page">去制定计划</button>
       </div>`;
-      renderPlanStatus();
       return;
     }
 
     Draft.ensurePlan(active.index);
     const historyContext = buildHistoryContext(active.plan.name);
     container.innerHTML = active.workout.exercises.map((ex, ei) => renderExerciseCard(ex, ei, historyContext, active.workout)).join("");
-    renderPlanStatus();
   }
 
   window.TrainingRenderer = Object.freeze({
