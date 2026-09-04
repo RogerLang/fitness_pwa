@@ -1,9 +1,8 @@
-/* Exercise-card interior layout. Loaded after glass-cards.css so the three content blocks stay visually distinct. */
+/* Exercise-card layout and material treatment. Keep training-card visuals in one place. */
 
 #workoutContainer .exercise-card{
   padding:15px 12px 12px;
   contain:layout style;
-  /* Avoid a late first paint when the next exercise approaches the viewport. */
   content-visibility:visible;
   contain-intrinsic-size:none;
 }
@@ -32,22 +31,27 @@
 
 #workoutContainer .exercise-panel{
   min-width:0;
-  border:1px solid rgba(151,164,181,.34);
+  border:1px solid rgba(255,255,255,.32);
   border-radius:20px;
-  background:linear-gradient(180deg,rgba(255,255,255,.74),rgba(246,249,252,.60));
+  background:
+    radial-gradient(118% 88% at 12% -8%,rgba(255,255,255,.54) 0%,rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,rgba(255,255,255,.68),rgba(245,248,252,.54));
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.94),
-    inset 0 -1px 0 rgba(88,103,123,.045),
-    0 3px 9px rgba(30,35,44,.04);
+    0 4px 12px rgba(37,48,64,.045),
+    inset 0 1.5px 0 rgba(255,255,255,.96),
+    inset 0 -1px 0 rgba(96,112,134,.028);
 }
 
 #workoutContainer .exercise-summary-panel{
   min-height:86px;
-  padding:14px 14px;
+  padding:14px;
 }
 
 #workoutContainer .exercise-plan-panel{
-  background:linear-gradient(180deg,rgba(250,252,255,.82),rgba(241,247,253,.66));
+  border-color:rgba(255,255,255,.34);
+  background:
+    radial-gradient(118% 88% at 12% -8%,rgba(255,255,255,.58) 0%,rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,rgba(250,252,255,.72),rgba(242,247,252,.56));
 }
 
 #workoutContainer .exercise-panel .context-head{
@@ -89,14 +93,16 @@
 }
 
 #workoutContainer .exercise-sets-panel{
-  padding:14px 12px 14px;
-  border-color:rgba(126,145,169,.30);
+  padding:14px 12px;
+  border-color:rgba(255,255,255,.36);
   border-radius:20px;
-  background:linear-gradient(180deg,rgba(255,255,255,.84),rgba(241,247,252,.70));
+  background:
+    radial-gradient(116% 84% at 10% -5%,rgba(255,255,255,.60) 0%,rgba(255,255,255,0) 60%),
+    linear-gradient(180deg,rgba(255,255,255,.72),rgba(241,246,251,.58));
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.98),
-    inset 0 -1px 0 rgba(78,96,122,.055),
-    0 4px 12px rgba(28,40,57,.045);
+    0 5px 14px rgba(34,46,64,.052),
+    inset 0 1.5px 0 rgba(255,255,255,.98),
+    inset 0 -1px 0 rgba(84,103,130,.03);
 }
 
 #workoutContainer .exercise-panel-heading{
@@ -106,7 +112,7 @@
   gap:10px;
   padding:0 2px 9px;
   margin-bottom:3px;
-  border-bottom:1px solid rgba(126,145,169,.16);
+  border-bottom:1px solid rgba(126,145,169,.10);
 }
 
 #workoutContainer .exercise-panel-title{
@@ -142,7 +148,6 @@
   margin-top:7px;
 }
 
-/* Set number and editable values share the same lightweight glass surface as the idle Complete button. */
 #workoutContainer .exercise-sets-panel .set-number,
 #workoutContainer .exercise-sets-panel .set-row input{
   border:1px solid rgba(255,255,255,.72);
@@ -203,20 +208,39 @@
 }
 
 @media(max-width:680px){
+  .card:not(.today-boot-card){
+    -webkit-backdrop-filter:blur(12px) saturate(138%);
+    backdrop-filter:blur(12px) saturate(138%);
+  }
+
   #workoutContainer .exercise-card{
     padding:12px 10px 10px;
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
-    transition:opacity .12s ease;
+    transition:none;
   }
 
-  /* Keep outer depth constant while the focus class changes. */
   #workoutContainer .exercise-card,
   html.training-snap-ready #workoutContainer .exercise-card.is-current,
   html.training-form-editing #workoutContainer .exercise-card.form-editing-card{
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
     box-shadow:0 8px 20px rgba(31,36,45,.048),0 2px 5px rgba(31,36,45,.026);
+  }
+
+  #today .sticky-actions{
+    -webkit-backdrop-filter:blur(12px) saturate(140%);
+    backdrop-filter:blur(12px) saturate(140%);
+  }
+
+  #today .today-overview{
+    transition:opacity .16s ease,transform .16s ease;
+  }
+
+  body.chrome-hidden .app-header,
+  body.chrome-hidden .bottom-nav{
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
   }
 
   #workoutContainer .exercise-head{
@@ -226,7 +250,6 @@
 
   #workoutContainer .exercise-card-layout{
     gap:8px;
-    margin-inline:0;
   }
 
   #workoutContainer .exercise-summary-grid{
@@ -235,12 +258,17 @@
   }
 
   #workoutContainer .exercise-panel{
+    border-color:rgba(255,255,255,.30);
     border-radius:18px;
+    box-shadow:
+      0 3px 9px rgba(37,48,64,.038),
+      inset 0 1.5px 0 rgba(255,255,255,.96),
+      inset 0 -1px 0 rgba(96,112,134,.024);
   }
 
   #workoutContainer .exercise-summary-panel{
     min-height:84px;
-    padding:12px 12px;
+    padding:12px;
   }
 
   #workoutContainer .exercise-panel .context-head{
@@ -270,7 +298,12 @@
 
   #workoutContainer .exercise-sets-panel{
     padding:13px 12px 14px;
+    border-color:rgba(255,255,255,.32);
     border-radius:20px;
+    box-shadow:
+      0 4px 11px rgba(34,46,64,.045),
+      inset 0 1.5px 0 rgba(255,255,255,.98),
+      inset 0 -1px 0 rgba(84,103,130,.026);
   }
 
   #workoutContainer .exercise-panel-heading{
@@ -361,9 +394,9 @@
 
 @media(prefers-reduced-transparency:reduce){
   #workoutContainer .exercise-panel{
+    border-color:rgba(205,211,220,.42);
     background:#f8f9fb;
-    border-color:#dfe3e9;
-    box-shadow:none;
+    box-shadow:0 3px 9px rgba(37,48,64,.04);
   }
 
   #workoutContainer .exercise-sets-panel .set-number,
