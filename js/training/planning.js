@@ -353,7 +353,7 @@
     render();
   }
 
-  async function pushPlan() {
+  async function pushPlan({ sync = true } = {}) {
     const index = currentIndex();
     const plan = App.state.plans[index];
     const draft = draftFor(index);
@@ -386,18 +386,24 @@
     drafts.delete(index);
     await App.persist("plans");
     await App.refresh("planned-workout");
-    App.toast("训练计划已推送", "success");
 
-    if (App.sync?.push && await App.sync.hasCredentials?.()) {
-      try {
-        await App.sync.push();
-        const syncStatus = document.getElementById("todaySyncStatus");
-        if (syncStatus?.classList.contains("sync-error")) {
-          App.toast(syncStatus.textContent || "训练计划已保存在本机，GitHub 同步未完成", "error");
-        }
-      } catch (error) {
-        App.toast(error?.message || "训练计划已保存在本机，GitHub 同步未完成", "error");
+    if (!sync) return true;
+
+    if (!App.sync?.push || !await App.sync.hasCredentials?.()) {
+      App.toast("训练计划已保存在本机，但尚未配置 GitHub 同步", "error");
+      return true;
+    }
+
+    try {
+      await App.sync.push();
+      const syncStatus = document.getElementById("todaySyncStatus");
+      if (syncStatus?.classList.contains("sync-error")) {
+        App.toast(syncStatus.textContent || "训练计划已保存在本机，GitHub 同步未完成", "error");
+      } else {
+        App.toast("训练计划已推送到云端", "success");
       }
+    } catch (error) {
+      App.toast(error?.message || "训练计划已保存在本机，GitHub 同步未完成", "error");
     }
     return true;
   }
@@ -435,9 +441,16 @@
   }
 
   async function goTrain() {
-    const pushed = await pushPlan();
+    const pushed = await pushPlan({ sync: false });
     if (!pushed) return;
+
     await App.switchPage("today", { historyMode: "replace" });
+    App.toast("训练计划已载入，正在后台同步", "success");
+
+    Promise.resolve().then(async () => {
+      if (!App.sync?.push || !await App.sync.hasCredentials?.()) return;
+      await App.sync.push();
+    }).catch(error => console.warn("go-train plan sync", error));
   }
 
   function bindEvents() {
