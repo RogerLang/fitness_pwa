@@ -2,6 +2,20 @@ const Storage = window.FitnessStorage;
 if (!Storage) throw new Error("FitnessStorage must load before app.js");
 
 const PAGE_IDS = new Set(["today", "plan", "history", "progress", "settings"]);
+const STATE_KEYS = Object.freeze(["plans", "sessions", "body"]);
+const PERSIST_SCOPES = Object.freeze({
+  plans: ["plans"],
+  sessions: ["sessions"],
+  body: ["body"],
+  workout: ["plans", "sessions"],
+  maintenance: ["sessions"],
+  ids: ["sessions", "body"],
+  remote: STATE_KEYS,
+  import: STATE_KEYS,
+  wipe: STATE_KEYS,
+  reset: STATE_KEYS,
+  data: STATE_KEYS
+});
 
 let db = null;
 let state = { plans: [], sessions: [], body: [] };
@@ -53,11 +67,16 @@ async function loadState() {
   state = await Storage.readState(db);
 }
 
+function persistKeys(reason) {
+  return PERSIST_SCOPES[reason] || STATE_KEYS;
+}
+
 async function persist(reason = "data") {
-  await Storage.writeState(db, state);
+  const keys = persistKeys(reason);
+  await Storage.writeKeys(db, state, keys);
   for (const hook of persistHooks) {
     try {
-      await hook(reason);
+      await hook(reason, keys);
     } catch (error) {
       console.warn("persist hook failed", error);
     }

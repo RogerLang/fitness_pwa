@@ -2,6 +2,7 @@
   const DB_NAME = "fitness-pwa-db";
   const DB_VERSION = 1;
   const STORE = "kv";
+  const STATE_KEYS = Object.freeze(["plans", "sessions", "body"]);
 
   function open() {
     return new Promise((resolve, reject) => {
@@ -46,17 +47,21 @@
     };
   }
 
-  function writeState(db, state) {
+  function writeKeys(db, state, keys = STATE_KEYS) {
+    const selected = [...new Set(keys)].filter(key => STATE_KEYS.includes(key));
+    if (!selected.length) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
       const store = tx.objectStore(STORE);
-      store.put(state.plans, "plans");
-      store.put(state.sessions, "sessions");
-      store.put(state.body, "body");
+      for (const key of selected) store.put(state[key], key);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
   }
 
-  window.FitnessStorage = Object.freeze({ open, get, set, readState, writeState });
+  function writeState(db, state) {
+    return writeKeys(db, state, STATE_KEYS);
+  }
+
+  window.FitnessStorage = Object.freeze({ open, get, set, readState, writeKeys, writeState });
 })();
