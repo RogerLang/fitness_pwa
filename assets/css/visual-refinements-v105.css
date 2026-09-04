@@ -339,14 +339,14 @@
   gap:6px;
   margin:0;
   padding:5px 0;
-  border:0!important;
+  border:0;
   border-radius:0;
   background:transparent;
   box-shadow:none;
 }
 
 #history .history-exercise + .history-exercise{
-  border-top:1px solid rgba(126,145,169,.09)!important;
+  border-top:1px solid rgba(126,145,169,.09);
 }
 
 #history .history-exercise-name{
