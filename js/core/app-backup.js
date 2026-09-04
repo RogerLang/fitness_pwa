@@ -2,6 +2,10 @@
   const App = window.FitnessApp;
   if (!App) throw new Error("FitnessApp must load before app-backup.js");
 
+  const WIPE_CONFIRM_WINDOW = 5000;
+  let wipeConfirmTimer = null;
+  let wipeArmedUntil = 0;
+
   function exportData() {
     const payload = {
       format: "fitness-pwa-backup-v3",
@@ -37,6 +41,29 @@
     App.toast("本机训练数据已清空", "success");
   }
 
+  function setWipeArmed(button, armed) {
+    clearTimeout(wipeConfirmTimer);
+    wipeConfirmTimer = null;
+    wipeArmedUntil = armed ? Date.now() + WIPE_CONFIRM_WINDOW : 0;
+    button.classList.toggle("is-confirming", armed);
+    const title = button.querySelector(".backup-action-title");
+    if (title) title.textContent = armed ? "确认删除" : "删除";
+    button.setAttribute("aria-label", armed ? "再次点击确认删除本机训练和身体数据" : "删除本机训练和身体数据");
+    if (armed) {
+      wipeConfirmTimer = setTimeout(() => setWipeArmed(button, false), WIPE_CONFIRM_WINDOW);
+    }
+  }
+
+  async function requestWipe(button) {
+    const armed = wipeArmedUntil > Date.now();
+    if (!armed) {
+      setWipeArmed(button, true);
+      return;
+    }
+    setWipeArmed(button, false);
+    await wipeData();
+  }
+
   function init() {
     const exportButton = document.getElementById("exportBtn");
     const importInput = document.getElementById("importInput");
@@ -50,7 +77,7 @@
         event.target.value = "";
       };
     }
-    if (wipeButton) wipeButton.onclick = wipeData;
+    if (wipeButton) wipeButton.onclick = () => requestWipe(wipeButton);
   }
 
   App.registerModule({ init, critical: true });

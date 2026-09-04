@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="assets/css/nav-motion.css?v=72" />
   <link rel="stylesheet" href="assets/css/glass-cards.css?v=72" />
   <link rel="stylesheet" href="assets/css/exercise-card.css?v=72" />
-  <link rel="stylesheet" href="assets/css/page-unification.css?v=88" />
+  <link rel="stylesheet" href="assets/css/page-unification.css?v=89" />
   <title>练了么</title>
 </head>
 <body class="app-booting">
@@ -143,8 +143,10 @@
             <span class="backup-action-meta">JSON 文件</span>
             <input id="importInput" type="file" accept="application/json,.json">
           </label>
+          <button id="wipeBtn" class="backup-action backup-delete-action" type="button" aria-label="删除本机训练和身体数据">
+            <span class="backup-action-title">删除</span>
+          </button>
         </div>
-        <button id="wipeBtn" type="button" class="danger">删除本机全部训练和身体数据</button>
       </div>
       <p class="muted">训练中的未保存输入会自动保存在当前浏览器，并在刷新后恢复。</p>
     </div>
