@@ -11,7 +11,6 @@
 
   const SNAP_TOP = 10;
   const SNAP_BOTTOM = 126;
-  const OVERVIEW_TOP = 68;
   const OVERVIEW_TOLERANCE = 26;
   const TARGET_TOLERANCE = 8;
   const AREA_TIE_TOLERANCE = 18;
@@ -98,7 +97,7 @@
     const nextTargets = [];
     const nextTargetByCard = new WeakMap();
 
-    overviewTargetY = Math.max(0, elementDocumentTop(overview) - OVERVIEW_TOP);
+    overviewTargetY = 0;
 
     for (const card of cards) {
       const height = card.offsetHeight;
