@@ -4,6 +4,7 @@
   if (!Remote) throw new Error("FitnessSyncRemote must load before sync.js");
 
   const CREDS_KEY = "syncCredentialsV7";
+  const LEGACY_CONFIG_KEY = "syncConfig";
   const META_KEY = "syncMetaV11";
   let applyingRemote = false;
   let todayStatusTimer = null;
@@ -14,6 +15,15 @@
       repo: document.getElementById("syncRepo")?.value.trim() || "",
       token: document.getElementById("syncToken")?.value.trim() || ""
     };
+  }
+
+  async function readCredentials() {
+    return await App.idbGet(CREDS_KEY) || await App.idbGet(LEGACY_CONFIG_KEY) || {};
+  }
+
+  async function hasCredentials() {
+    const saved = await readCredentials();
+    return !!(saved.owner && saved.repo && saved.token);
   }
 
   function status(message, ok = null) {
@@ -84,13 +94,13 @@
       return false;
     }
     await App.idbSet(CREDS_KEY, c);
-    await App.idbSet("syncConfig", { owner: c.owner, repo: c.repo });
+    await App.idbSet(LEGACY_CONFIG_KEY, { owner: c.owner, repo: c.repo });
     if (showStatus) status("GitHub 同步信息已保存在当前设备。", true);
     return true;
   }
 
   async function loadCredentials() {
-    const saved = await App.idbGet(CREDS_KEY) || await App.idbGet("syncConfig") || {};
+    const saved = await readCredentials();
     const values = { syncOwner: saved.owner, syncRepo: saved.repo, syncToken: saved.token };
     for (const [id, value] of Object.entries(values)) {
       const input = document.getElementById(id);
@@ -282,5 +292,5 @@
     if (["plans", "import", "wipe"].includes(reason)) await refreshMeta();
   });
   App.registerModule({ init, onDataReset });
-  App.sync = { push, pull, saveCredentials, refreshMeta };
+  App.sync = { push, pull, saveCredentials, hasCredentials, refreshMeta };
 })();
