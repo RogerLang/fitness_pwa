@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="assets/css/exercise-card.css?v=72" />
   <link rel="stylesheet" href="assets/css/page-unification.css?v=90" />
   <link rel="stylesheet" href="assets/css/planning.css?v=95" />
+  <link rel="stylesheet" href="assets/css/visual-hierarchy.css?v=104" />
   <title>练了么</title>
 </head>
 <body class="app-booting">
@@ -53,10 +54,8 @@
 
     <div class="card today-overview">
       <div class="today-heading">
-        <div>
-          <h2>今日训练</h2>
-          <p id="todayDate" class="muted"></p>
-        </div>
+        <h2>今日训练</h2>
+        <p id="todayDate" class="muted"></p>
       </div>
       <div class="today-plan-bar">
         <div class="today-plan-current">
@@ -81,17 +80,16 @@
   <section id="plan" class="page">
     <div class="card planning-hero">
       <div class="planning-heading">
-        <div>
-          <h2>制定下一次训练</h2>
-        </div>
+        <h2>制定下一次训练</h2>
       </div>
-      <div class="planning-plan-bar">
+      <label class="planning-select-field">
+        <span>选择训练模板</span>
         <select id="planningPlanSelect" aria-label="选择训练模板"></select>
-        <button id="planningRegenerateBtn" type="button" class="small secondary">重新生成</button>
-      </div>
+      </label>
       <div class="planning-actions-top">
-        <button id="planningPushTopBtn" type="button">推送训练计划</button>
-        <button id="planningGoTrainTopBtn" type="button" class="secondary hidden">去训练当前计划</button>
+        <button id="planningRegenerateBtn" type="button" class="secondary">重新生成</button>
+        <button id="planningPushTopBtn" type="button">推送计划</button>
+        <button id="planningGoTrainTopBtn" type="button" class="secondary hidden">去训练</button>
       </div>
       <div id="planningCurrentPlan" class="planning-current"></div>
     </div>
@@ -112,16 +110,24 @@
   </section>
 
   <section id="history" class="page">
-    <div class="card">
-      <h2>历史记录</h2>
-      <div id="historyList"></div>
+    <div class="card history-hero">
+      <div class="history-heading">
+        <h2>历史记录</h2>
+      </div>
+      <label class="history-filter-field">
+        <span>训练计划</span>
+        <select id="historyPlanFilter" aria-label="按训练计划筛选历史记录">
+          <option value="all">全部训练</option>
+        </select>
+      </label>
     </div>
+    <div id="historyList"></div>
   </section>
 
   <section id="progress" class="page">
-    <div class="card">
+    <div class="card progress-card progress-trend-card">
       <h2>进步趋势</h2>
-      <label>动作<select id="progressExercise"></select></label>
+      <label class="progress-exercise-field"><span>动作</span><select id="progressExercise"></select></label>
       <div id="progressRange" aria-label="趋势时间范围">
         <button class="v16-range-btn" data-range="3m" type="button">3个月</button>
         <button class="v16-range-btn" data-range="6m" type="button">6个月</button>
@@ -132,15 +138,15 @@
       <p id="progressSummary" class="muted"></p>
     </div>
 
-    <div class="card">
-      <h3>身体数据</h3>
-      <div class="grid2">
-        <label>体重 kg<input id="bodyWeight" type="number" step="0.1" inputmode="decimal"></label>
-        <label>胸围 cm<input id="chestCirc" type="number" step="0.1" inputmode="decimal"></label>
-        <label>腰围 cm<input id="waistCirc" type="number" step="0.1" inputmode="decimal"></label>
-        <label>上臂围 cm<input id="armCirc" type="number" step="0.1" inputmode="decimal"></label>
+    <div class="card progress-card body-data-card">
+      <h2>身体数据</h2>
+      <div class="grid2 body-input-grid">
+        <label><span>体重</span><div class="body-input-wrap"><input id="bodyWeight" type="number" step="0.1" inputmode="decimal"><small>kg</small></div></label>
+        <label><span>胸围</span><div class="body-input-wrap"><input id="chestCirc" type="number" step="0.1" inputmode="decimal"><small>cm</small></div></label>
+        <label><span>腰围</span><div class="body-input-wrap"><input id="waistCirc" type="number" step="0.1" inputmode="decimal"><small>cm</small></div></label>
+        <label><span>上臂围</span><div class="body-input-wrap"><input id="armCirc" type="number" step="0.1" inputmode="decimal"><small>cm</small></div></label>
       </div>
-      <button id="saveBodyBtn" type="button">保存身体数据</button>
+      <button id="saveBodyBtn" type="button">保存本次数据</button>
       <div id="bodyHistory"></div>
     </div>
   </section>
@@ -204,13 +210,13 @@
 <script src="js/pwa/sw-register.js?v=72"></script>
 <script src="js/core/app-storage.js?v=98"></script>
 <script src="js/core/app.js?v=98"></script>
-<script src="js/core/app-body.js?v=98"></script>
+<script src="js/core/app-body.js?v=104"></script>
 <script src="js/core/app-backup.js?v=98"></script>
 <script src="js/training/training-progression.js?v=72"></script>
 <script src="js/training/training-next-workout.js?v=92"></script>
 <script src="js/training/training-draft.js?v=96"></script>
-<script src="js/training/training-render.js?v=97"></script>
-<script src="js/training/training-insights.js?v=72"></script>
+<script src="js/training/training-render.js?v=104"></script>
+<script src="js/training/training-insights.js?v=104"></script>
 <script src="js/training/training-maintenance.js?v=72"></script>
 <script src="js/training/training.js?v=96"></script>
 <script src="js/training/planning.js?v=98"></script>
