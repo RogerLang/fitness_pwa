@@ -98,7 +98,7 @@ async function refresh(reason = "refresh") {
   const date = document.getElementById("todayDate");
   if (date) date.textContent = fmtDate();
   for (const module of appModules) {
-    if (module.refresh) await module.refresh(reason);
+    if (module.refresh && initializedModules.has(module)) await module.refresh(reason);
   }
 }
 
@@ -207,7 +207,7 @@ async function start() {
     await loadState();
     bindCoreEvents();
 
-    const criticalModules = appModules.filter(module => module.critical === true || typeof module.refresh === "function");
+    const criticalModules = appModules.filter(module => module.critical === true);
     const auxiliaryModules = appModules.filter(module => !criticalModules.includes(module));
     for (const module of criticalModules) await initModule(module);
 
