@@ -6,6 +6,12 @@ async function waitForApp(page) {
   await expect(page.locator("body")).toHaveClass(/app-ready/);
 }
 
+async function activateAndFill(locator, value) {
+  await locator.click();
+  await expect(locator).not.toHaveAttribute("readonly", "");
+  await locator.fill(value);
+}
+
 async function seed(page) {
   await page.evaluate(async () => {
     await window.FitnessApp.resetData({
@@ -64,7 +70,7 @@ test("core workout lifecycle survives real browser navigation and reload", async
 
   const candidateWeight = page.locator('#planningWorkoutList input[data-plan-key="weight"]').first();
   await expect(candidateWeight).toHaveValue("40");
-  await candidateWeight.fill("47.5");
+  await activateAndFill(candidateWeight, "47.5");
   await expect(candidateWeight).toHaveValue("47.5");
 
   await page.reload();
@@ -88,7 +94,7 @@ test("core workout lifecycle survives real browser navigation and reload", async
   const plannedBeforeTemplateChange = await page.evaluate(() => JSON.stringify(window.TrainingNextWorkout.snapshot()));
   await page.locator("#plan .planning-template-shell > summary").click();
   const defaultWeight = page.locator('#planningTemplateList input[data-template-edit="defaultWeight"]').first();
-  await defaultWeight.fill("60");
+  await activateAndFill(defaultWeight, "60");
   await defaultWeight.press("Tab");
 
   await expect.poll(() => page.evaluate(() => JSON.stringify(window.TrainingNextWorkout.snapshot()))).toBe(plannedBeforeTemplateChange);
