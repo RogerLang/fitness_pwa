@@ -126,18 +126,35 @@
   }
 
   function planIdentity(ref) {
-    if (typeof ref === "string") return { id: "", name: ref };
+    if (typeof ref === "string") {
+      const name = ref;
+      const current = App.state.plans.find(plan => String(plan?.name || "") === name) || null;
+      return { id: String(current?.planId || ""), name, current };
+    }
+    const requestedId = String(ref?.planId || "");
+    const requestedName = String(ref?.name || ref?.planName || "");
+    const current = (requestedId && App.state.plans.find(plan => String(plan?.planId || "") === requestedId)) ||
+      (requestedName && App.state.plans.find(plan => String(plan?.name || "") === requestedName)) || null;
     return {
-      id: String(ref?.planId || ""),
-      name: String(ref?.name || ref?.planName || "")
+      id: requestedId || String(current?.planId || ""),
+      name: requestedName || String(current?.name || ""),
+      current
     };
   }
 
-  function exerciseIdentity(ref) {
-    if (typeof ref === "string") return { id: "", name: ref };
+  function exerciseIdentity(ref, plan = null) {
+    if (typeof ref === "string") {
+      const name = ref;
+      const current = plan?.exercises?.find(exercise => String(exercise?.name || "") === name) || null;
+      return { id: String(current?.exerciseId || ""), name };
+    }
+    const requestedId = String(ref?.exerciseId || "");
+    const requestedName = String(ref?.name || "");
+    const current = (requestedId && plan?.exercises?.find(exercise => String(exercise?.exerciseId || "") === requestedId)) ||
+      (requestedName && plan?.exercises?.find(exercise => String(exercise?.name || "") === requestedName)) || null;
     return {
-      id: String(ref?.exerciseId || ""),
-      name: String(ref?.name || "")
+      id: requestedId || String(current?.exerciseId || ""),
+      name: requestedName || String(current?.name || "")
     };
   }
 
@@ -160,7 +177,7 @@
     const sameName = plan.name ? index.byPlanName.get(plan.name) : null;
     return {
       history(exerciseRef) {
-        const exercise = exerciseIdentity(exerciseRef);
+        const exercise = exerciseIdentity(exerciseRef, plan.current);
         return firstHistory(
           historyFromBucket(sameId, exercise),
           historyFromBucket(sameName, exercise),
