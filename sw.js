@@ -1,4 +1,4 @@
-const SHELL_CACHE = "fitness-pwa-shell-v129";
+const SHELL_CACHE = "fitness-pwa-shell-v130";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
@@ -53,14 +53,20 @@ self.addEventListener("install", event => {
   event.waitUntil(cacheShell());
 });
 
+self.addEventListener("message", event => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
 self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
       keys
         .filter(key => key.startsWith("fitness-pwa-") && key !== SHELL_CACHE)
         .map(key => caches.delete(key))
-    ))
-  );
+    );
+    await self.clients.claim();
+  })());
 });
 
 async function appShellNavigation(request) {
