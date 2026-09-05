@@ -126,6 +126,9 @@ if (appCore.includes("DATA_SCHEMA_VERSION")) fail("ambiguous DATA_SCHEMA_VERSION
 if (!appCore.includes("const Schema = window.FitnessSchema")) fail("app.js must consume FitnessSchema");
 
 const candidateWorkout = read("js/training/candidate-workout.js");
+const trainingDraft = read("js/training/training-draft.js");
+const trainingRender = read("js/training/training-render.js");
+const trainingCore = read("js/training/training.js");
 const planningEntry = read("js/training/planning.js");
 const planningCore = read("js/training/planning-core.js");
 const plannedWorkout = read("js/training/planned-workout.js");
@@ -155,6 +158,15 @@ if (planningCore.includes("FitnessPlanningV165") || planningEntry.includes("Fitn
 if (!plannedWorkout.includes('const STORE_KEY = "plannedWorkoutV1"')) fail("global Planned Workout store key is missing");
 if (!plannedWorkout.includes("delete plan.plannedWorkout")) fail("legacy embedded Planned Workout migration is missing");
 
+if (!trainingDraft.includes('const DRAFTS_KEY = "workoutDraftsV9"')) fail("Training Draft must use the planId/exerciseId v9 store");
+if (!trainingDraft.includes("currentPlanId") || !trainingDraft.includes("exerciseIdsForLegacyPlan")) fail("Training Draft stable-ID API or migration is missing");
+if (!trainingRender.includes("data-exercise-id") || !trainingRender.includes("historyContext.history(ex)")) fail("Training renderer must bind draft/history by exerciseId");
+if (!trainingCore.includes("Draft.setValue(exerciseId") || !trainingCore.includes("Draft.resetPlan(sessionPlanId)")) fail("Training orchestration must address draft data by stable IDs");
+if (trainingCore.includes("plan.plannedWorkout =")) fail("Training completion must not mutate Template with Planned Workout state");
+if (!planningCore.includes("async function invalidate(planId") || !planningCore.includes("planById(planId)")) fail("Planning invalidation boundary must use planId");
+if (!assistantCore.includes("targetPlanId") || !assistantCore.includes("snapshot.targetPlanId")) fail("Assistant Proposal target identity must use planId");
+if (assistantCore.includes("App.planning?.invalidate?.(index")) fail("Assistant Proposal must not invalidate Candidate by array index");
+
 if (!githubPrivateRepo.includes("window.FitnessGitHubPrivateRepo")) fail("shared Private GitHub client export is missing");
 if (!githubPrivateRepo.includes("privateCheck") || !githubPrivateRepo.includes("getJson") || !githubPrivateRepo.includes("putJson") || !githubPrivateRepo.includes("deleteJson")) fail("shared Private GitHub client API is incomplete");
 for (const [name, source] of [
@@ -163,9 +175,7 @@ for (const [name, source] of [
   ["assistant-proposals-core.js", assistantCore]
 ]) {
   if (!source.includes("FitnessGitHubPrivateRepo")) fail(`${name} must consume the shared Private GitHub client`);
-  if (/function\s+(?:apiHeaders|apiRequest|fileUrl|bytesToBase64|base64ToBytes|decodeBase64Json)\b/.test(source)) {
-    fail(`${name} must not reimplement shared GitHub transport helpers`);
-  }
+  if (/function\s+(?:apiHeaders|apiRequest|fileUrl|bytesToBase64|base64ToBytes|decodeBase64Json)\b/.test(source)) fail(`${name} must not reimplement shared GitHub transport helpers`);
 }
 if (!syncCore.includes('const PLANNED_PATH = "planned-workout.json"')) fail("independent Planned Workout remote file is missing");
 if (!syncCore.includes('format: "fitness-planned-workout-v1"')) fail("Planned Workout remote payload format is missing");
