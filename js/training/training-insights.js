@@ -33,7 +33,7 @@
     }
     for (const session of orderedSessions()) {
       for (const ex of session.exercises || []) {
-        if (ex?.name && !warmupNames.has(ex.name)) names.add(ex.name);
+        if (ex?.name && ex.warmup !== true && !warmupNames.has(ex.name)) names.add(ex.name);
       }
     }
     return [...names];
