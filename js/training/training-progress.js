@@ -6,22 +6,43 @@
 
   let progressRange = "1y";
 
-  function allExerciseNames() {
-    const names = new Set();
+  function exerciseKey(exercise) {
+    const id = String(exercise?.exerciseId || "");
+    const name = String(exercise?.name || "");
+    return id ? `id:${id}` : `name:${name}`;
+  }
+
+  function matchesExercise(exercise, key) {
+    if (String(key).startsWith("id:")) return String(exercise?.exerciseId || "") === String(key).slice(3);
+    if (String(key).startsWith("name:")) return String(exercise?.name || "") === String(key).slice(5);
+    return String(exercise?.name || "") === String(key || "");
+  }
+
+  function allExerciseOptions() {
+    const options = new Map();
+    const warmupKeys = new Set();
     const warmupNames = new Set();
     for (const plan of App.state.plans) {
       for (const ex of plan.exercises || []) {
         if (!ex?.name) continue;
-        if (ex.warmup) warmupNames.add(ex.name);
-        else names.add(ex.name);
+        const key = exerciseKey(ex);
+        if (ex.warmup) {
+          warmupKeys.add(key);
+          warmupNames.add(ex.name);
+        } else if (!options.has(key)) {
+          options.set(key, { key, name: ex.name });
+        }
       }
     }
     for (const session of SessionData.orderedSessions()) {
       for (const ex of session.exercises || []) {
-        if (ex?.name && ex.warmup !== true && !warmupNames.has(ex.name)) names.add(ex.name);
+        if (!ex?.name || ex.warmup === true) continue;
+        const key = exerciseKey(ex);
+        if (warmupKeys.has(key) || warmupNames.has(ex.name) || options.has(key)) continue;
+        options.set(key, { key, name: ex.name });
       }
     }
-    return [...names];
+    return [...options.values()];
   }
 
   function rangeCutoff() {
@@ -41,11 +62,11 @@
     return !Number.isNaN(parsed.getTime()) && parsed >= cutoff;
   }
 
-  function progressData(name) {
+  function progressData(key) {
     const history = SessionData.orderedSessions()
       .filter(session => withinRange(session.date))
       .reverse()
-      .map(session => ({ date: session.date, ex: (session.exercises || []).find(ex => ex.name === name) }))
+      .map(session => ({ date: session.date, ex: (session.exercises || []).find(ex => matchesExercise(ex, key)) }))
       .filter(item => item.ex);
     const typed = [...history].reverse().find(item => item.ex?.loadType)?.ex || history.at(-1)?.ex || null;
     const type = Progression.loadType(typed);
@@ -81,8 +102,8 @@
     const select = document.getElementById("progressExercise");
     if (!select) return;
     const old = select.value;
-    const names = allExerciseNames();
-    select.innerHTML = names.map(name => `<option>${App.esc(name)}</option>`).join("");
+    const options = allExerciseOptions();
+    select.innerHTML = options.map(option => `<option value="${App.esc(option.key)}">${App.esc(option.name)}</option>`).join("");
     if ([...select.options].some(option => option.value === old)) select.value = old;
   }
 
@@ -98,12 +119,13 @@
   function drawProgress() {
     if (!document.getElementById("progress")?.classList.contains("active")) return;
     const select = document.getElementById("progressExercise");
-    const name = select?.value || "";
+    const key = select?.value || "";
+    const name = select?.selectedOptions?.[0]?.textContent || "";
     const canvas = document.getElementById("progressChart");
     const summary = document.getElementById("progressSummary");
     if (!canvas || !summary) return;
 
-    const { history, metricType, points } = progressData(name);
+    const { history, metricType, points } = progressData(key);
     const weighted = metricType !== "reps";
     const ctx = canvas.getContext("2d");
     const W = canvas.width;
