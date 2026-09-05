@@ -1,4 +1,4 @@
-/* v104 visual hierarchy: compact page heroes, shared exercise hierarchy and body metrics. */
+/* v104 visual hierarchy: compact Training and Planning hierarchy plus shared visual tokens. */
 
 :root{
   --v104-glass-border:rgba(255,255,255,.82);
@@ -16,8 +16,7 @@
 
 /* Shared page-level card title rhythm. */
 #today .today-overview h2,
-#plan .planning-hero h2,
-#progress .progress-card h2{
+#plan .planning-hero h2{
   margin:0;
   color:var(--v104-title);
   font-size:21px;
@@ -242,215 +241,9 @@
   font-weight:620;
 }
 
-/* Progress and body data are equal page-level cards. */
-#progress{
-  display:none;
-}
-
-#progress.active{
-  display:grid;
-  gap:12px;
-}
-
-#progress .progress-card{
-  padding:15px 14px 14px;
-}
-
-#progress .progress-card > h2{
-  margin-bottom:12px;
-}
-
-#progress .progress-exercise-field{
-  display:grid;
-  gap:5px;
-  margin:0;
-  color:var(--v104-muted);
-  font-size:10.5px;
-  font-weight:650;
-}
-
-#progress .progress-exercise-field select{
-  margin:0;
-  min-height:42px;
-  border-radius:14px;
-  font-size:13px;
-  font-weight:660;
-}
-
-#progressRange{
-  margin-top:9px;
-}
-
-#progress #progressChart{
-  margin-top:10px;
-}
-
-#progress #progressSummary{
-  margin-top:8px;
-  font-size:11px;
-}
-
-#progress .body-input-grid{
-  gap:8px;
-  padding:9px;
-  border-radius:18px;
-}
-
-#progress .body-input-grid > label{
-  display:grid;
-  gap:5px;
-  margin:0;
-  color:var(--v104-muted);
-  font-size:10.5px;
-  font-weight:650;
-}
-
-#progress .body-input-wrap{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  align-items:center;
-  gap:6px;
-}
-
-#progress .body-input-wrap input{
-  min-width:0;
-  min-height:38px;
-  height:38px;
-  padding:7px 8px;
-  border-radius:13px;
-  text-align:center;
-  font-size:14px;
-  font-variant-numeric:tabular-nums;
-}
-
-#progress .body-input-wrap small{
-  min-width:20px;
-  color:#99a2ad;
-  font-size:9.5px;
-  font-weight:600;
-}
-
-#progress #saveBodyBtn{
-  min-height:40px;
-  margin-top:9px;
-  border-radius:14px;
-}
-
-#progress #bodyHistory:not(:empty){
-  margin-top:11px;
-  padding:0;
-  border:0;
-  border-radius:0;
-  background:none;
-  box-shadow:none;
-}
-
-#progress .body-latest-head{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:7px;
-  padding:0 2px;
-}
-
-#progress .body-latest-head span{
-  color:#687482;
-  font-size:11px;
-  font-weight:730;
-}
-
-#progress .body-latest-head strong{
-  color:#99a2ad;
-  font-size:9.5px;
-  font-weight:620;
-}
-
-#progress .body-metric-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:7px;
-}
-
-#progress .body-metric{
-  min-width:0;
-  padding:10px;
-  border:1px solid var(--v104-inner-border);
-  border-radius:15px;
-  background:var(--v104-inner-bg);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.76);
-}
-
-#progress .body-metric-label{
-  display:block;
-  color:#8b95a1;
-  font-size:9.5px;
-  font-weight:650;
-}
-
-#progress .body-metric strong{
-  display:block;
-  margin-top:3px;
-  color:#38434f;
-  font-size:15px;
-  font-weight:800;
-  line-height:1.25;
-  font-variant-numeric:tabular-nums;
-}
-
-#progress .body-metric small{
-  display:block;
-  min-height:14px;
-  margin-top:3px;
-  color:#929ca8;
-  font-size:9.5px;
-  font-variant-numeric:tabular-nums;
-}
-
-#progress .body-history-details{
-  margin-top:8px;
-  padding:8px 2px 0;
-  border-top:1px solid var(--v104-divider);
-}
-
-#progress .body-history-details > summary{
-  cursor:pointer;
-  list-style:none;
-  color:#7a8592;
-  font-size:10.5px;
-  font-weight:680;
-}
-
-#progress .body-history-details > summary::-webkit-details-marker{
-  display:none;
-}
-
-#progress .body-history-rows{
-  margin-top:6px;
-}
-
-#progress .body-history-row{
-  display:grid;
-  grid-template-columns:82px minmax(0,1fr);
-  gap:8px;
-  padding:7px 0;
-  font-size:10px;
-}
-
-#progress .body-history-row strong{
-  font-size:10px;
-}
-
-#progress .body-history-row span{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
 @media(max-width:680px){
   #today .today-overview,
   #plan .planning-hero,
-  #progress .progress-card,
   #plan .planning-exercise-card{
     -webkit-backdrop-filter:blur(15px) saturate(142%);
     backdrop-filter:blur(15px) saturate(142%);
@@ -501,8 +294,7 @@
 @media(prefers-reduced-transparency:reduce){
   #today .today-overview,
   #plan .planning-hero,
-  #plan .planning-exercise-card,
-  #progress .progress-card{
+  #plan .planning-exercise-card{
     background:#f8f9fb;
     border-color:rgba(205,211,220,.48);
     box-shadow:0 4px 12px rgba(37,48,64,.04);
