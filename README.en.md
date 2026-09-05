@@ -6,18 +6,13 @@
 
 ## What it does
 
-- Generates your next workout from a training template and previous sessions
-- Lets you adjust weight, reps, and sets before training
-- Keeps one active workout ready to execute on the Training page
-- Records weight, reps, RIR, and completion status for every set
-- Lets you temporarily add or remove sets without changing the long-term template
-- Automatically saves unfinished workout input so you can continue after a reload or restart
-- Shows workout history and exercise trends
-- Tracks body weight, chest, waist, and arm measurements
-- Supports training-template changes proposed through ChatGPT and confirmed inside the Plan page
+- Generates, adjusts, and pushes your next workout from your training template and history
+- Records weight, reps, RIR, and set completion while automatically saving unfinished input
+- Lets you temporarily change set counts without altering the long-term template
+- Shows workout history, exercise trends, and body measurements
+- Supports training-template changes proposed through ChatGPT and confirmed in the app
 - Optionally syncs data across devices through a Private GitHub repository
-- Imports and exports JSON backups
-- Can be installed as a PWA on desktop or mobile
+- Supports JSON backups and installation as a PWA on desktop or mobile
 
 ## How to use it
 
@@ -32,15 +27,11 @@ The normal workflow is straightforward:
 
 There is only one active workout for the whole app. Pushing another plan directly replaces the previous active workout.
 
-## Plans and templates
+## Planning a workout
 
-A **training template** contains your long-term rules, such as exercises, target rep ranges, planned set counts, and starting weights.
+Choose a training template on the **Plan** page and the app will generate your next-workout suggestion from that template and your previous sessions. You can adjust weight, reps, and sets before pushing it as the active workout.
 
-A **workout suggestion** is the next-session draft generated from the template and your training history. You can adjust it before deciding to push it.
-
-The **active workout** is the workout you have explicitly chosen to perform next.
-
-Changing a training template only affects future suggestions. It does not modify an active workout that has already been pushed.
+The training template contains your long-term rules, such as exercises, target rep ranges, planned set counts, and starting weights. Editing the template only affects future suggestions and does not modify an active workout that has already been pushed.
 
 ### Regenerate
 
