@@ -1,6 +1,7 @@
 /* Canonical History styles. Keep final page, card, and compact-log values in one explicit layer. */
 
 #history .history-hero{
+  overflow:hidden;
   padding:15px 14px 13px;
 }
 
@@ -32,6 +33,7 @@
 }
 
 #history .history-card{
+  margin:0;
   padding:14px;
   border:1px solid rgba(255,255,255,.84);
   border-radius:24px;
@@ -137,6 +139,10 @@
   border-top:1px solid rgba(126,145,169,.09);
 }
 
+#history .history-exercise:last-child{
+  border-bottom:1px solid rgba(255,255,255,.34);
+}
+
 #history .history-exercise-name{
   margin:0;
   font-size:11.5px;
@@ -146,4 +152,21 @@
 #history .history-set-list{
   margin-top:0;
   gap:4px;
+}
+
+#history .history-set-chip{
+  border-color:rgba(255,255,255,.56);
+  background:rgba(255,255,255,.50);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+}
+
+#history .load-more-row{
+  margin:2px 0 0;
+}
+
+#history .load-more-row button{
+  width:100%;
+  background:rgba(255,255,255,.44);
+  border:1px solid rgba(255,255,255,.52);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
 }
