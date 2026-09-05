@@ -1,0 +1,317 @@
+/* Canonical Progress styles. Final values mirror the validated pre-v143 cascade. */
+
+#progress{
+  display:none;
+}
+
+#progress.active{
+  display:grid;
+  gap:12px;
+}
+
+#progress > .card{
+  overflow:hidden;
+}
+
+#progress .progress-card{
+  padding:15px 14px 14px;
+}
+
+#progress .progress-card h2{
+  margin:0 0 12px;
+  color:var(--v104-title);
+  font-size:21px;
+  font-weight:840;
+  line-height:1.18;
+  letter-spacing:-.018em;
+}
+
+#progress h3{
+  margin-bottom:12px;
+  color:var(--workout-text-primary);
+  font-weight:820;
+  letter-spacing:-.012em;
+}
+
+#progress .progress-exercise-field{
+  display:grid;
+  gap:5px;
+  margin:0;
+  padding:11px 12px;
+  border:1px solid var(--ui-panel-border);
+  border-radius:18px;
+  background:var(--ui-panel-bg);
+  color:var(--v104-muted);
+  font-size:10.5px;
+  font-weight:650;
+  box-shadow:var(--ui-panel-shadow);
+}
+
+#progress .progress-exercise-field select{
+  min-height:42px;
+  margin:0;
+  border-radius:14px;
+  font-size:13px;
+  font-weight:660;
+}
+
+#progressRange{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:9px 0 0;
+  padding:8px;
+  border:1px solid var(--ui-panel-border);
+  border-radius:18px;
+  background:rgba(255,255,255,.32);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+#progressRange .v16-range-btn{
+  padding:7px 10px;
+  border:1px solid rgba(255,255,255,.62);
+  border-radius:999px;
+  background:rgba(255,255,255,.46);
+  color:var(--workout-text-secondary);
+  font-size:12px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.76);
+  transition:background .18s ease,color .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+
+#progressRange .v16-range-btn.active{
+  border-color:rgba(255,255,255,.88);
+  background:rgba(255,255,255,.88);
+  color:var(--workout-text-primary);
+  box-shadow:
+    0 4px 12px rgba(35,40,48,.055),
+    inset 0 1px 0 rgba(255,255,255,.98);
+}
+
+#progress #progressChart{
+  width:100%;
+  height:auto;
+  margin-top:10px;
+  border:1px solid rgba(255,255,255,.48);
+  border-radius:20px;
+  background:rgba(255,255,255,.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.88),
+    0 3px 9px rgba(37,48,64,.032);
+}
+
+#progress #progressSummary{
+  margin:8px 0 0;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.36);
+  border-radius:16px;
+  background:rgba(255,255,255,.32);
+  color:var(--workout-text-muted);
+  font-size:11px;
+  line-height:1.45;
+}
+
+#progress .body-input-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px 10px;
+  padding:10px;
+  border:1px solid var(--ui-panel-border);
+  border-radius:18px;
+  background:var(--ui-panel-bg);
+  box-shadow:var(--ui-panel-shadow);
+}
+
+#progress .body-input-grid > label{
+  display:grid;
+  min-width:0;
+  gap:5px;
+  margin:0;
+  color:var(--v104-muted);
+  font-size:10.5px;
+  font-weight:650;
+}
+
+#progress .body-input-wrap{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  min-width:0;
+  min-height:38px;
+  align-items:center;
+  gap:6px;
+}
+
+#progress .body-input-wrap input{
+  min-width:0;
+  min-height:38px;
+  height:38px;
+  padding:6px 34px 6px 9px;
+  border-radius:13px;
+  text-align:center;
+  font-size:15px;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+
+#progress .body-input-wrap small{
+  min-width:20px;
+  right:10px;
+  color:#99a2ad;
+  font-size:10.5px;
+  font-weight:600;
+}
+
+#progress #saveBodyBtn{
+  width:100%;
+  min-height:40px;
+  margin-top:9px;
+  border-radius:14px;
+}
+
+#progress #bodyHistory:not(:empty){
+  margin-top:11px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+}
+
+#progress .body-latest-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:7px;
+  padding:0 2px;
+}
+
+#progress .body-latest-head span{
+  color:#687482;
+  font-size:11px;
+  font-weight:730;
+}
+
+#progress .body-latest-head strong{
+  color:#99a2ad;
+  font-size:9.5px;
+  font-weight:620;
+}
+
+#progress .body-metric-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+
+#progress .body-metric{
+  min-width:0;
+  padding:10px;
+  border:1px solid var(--v104-inner-border);
+  border-radius:15px;
+  background:var(--v104-inner-bg);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.76);
+}
+
+#progress .body-metric-label{
+  display:block;
+  color:#8b95a1;
+  font-size:9.5px;
+  font-weight:650;
+}
+
+#progress .body-metric strong{
+  display:block;
+  margin-top:3px;
+  color:#38434f;
+  font-size:15px;
+  font-weight:800;
+  line-height:1.25;
+  font-variant-numeric:tabular-nums;
+}
+
+#progress .body-metric small{
+  display:block;
+  min-height:14px;
+  margin-top:3px;
+  color:#929ca8;
+  font-size:9.5px;
+  font-variant-numeric:tabular-nums;
+}
+
+#progress .body-history-details{
+  margin-top:8px;
+  padding:8px 2px 0;
+  border-top:1px solid var(--v104-divider);
+}
+
+#progress .body-history-details > summary{
+  cursor:pointer;
+  list-style:none;
+  color:#7a8592;
+  font-size:10.5px;
+  font-weight:680;
+}
+
+#progress .body-history-details > summary::-webkit-details-marker{
+  display:none;
+}
+
+#progress .body-history-rows{
+  margin-top:6px;
+}
+
+#progress .body-history-row{
+  display:grid;
+  grid-template-columns:82px minmax(0,1fr);
+  gap:8px;
+  padding:7px 0;
+  border-bottom-color:rgba(126,145,169,.10);
+  font-size:10px;
+}
+
+#progress .body-history-row strong{
+  color:var(--workout-text-strong);
+  font-size:10px;
+}
+
+#progress .body-history-row span{
+  overflow:hidden;
+  color:var(--workout-text-muted);
+  text-align:right;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+@media(max-width:680px){
+  #progress .progress-card{
+    -webkit-backdrop-filter:blur(15px) saturate(142%);
+    backdrop-filter:blur(15px) saturate(142%);
+  }
+
+  #progressRange{
+    gap:5px;
+    padding:7px;
+  }
+
+  #progressRange .v16-range-btn{
+    flex:1 1 auto;
+    min-width:68px;
+  }
+}
+
+@media(prefers-reduced-transparency:reduce){
+  #progress .progress-card{
+    background:#f8f9fb;
+    border-color:rgba(205,211,220,.48);
+    box-shadow:0 4px 12px rgba(37,48,64,.04);
+  }
+
+  #progress .progress-exercise-field,
+  #progressRange,
+  #progress #progressSummary,
+  #progress .body-input-grid{
+    background:#f8f9fb;
+    border-color:rgba(205,211,220,.42);
+    box-shadow:none;
+  }
+}
