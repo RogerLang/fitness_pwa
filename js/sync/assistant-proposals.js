@@ -281,6 +281,32 @@
     return !!proposal && proposal.index >= 0 && selectedIndex() === proposal.index;
   }
 
+  function ensureReviewRoot() {
+    let root = document.getElementById("planningAssistantReview");
+    if (root) return root;
+
+    const actions = document.querySelector("#plan .planning-actions-top");
+    if (!actions) return null;
+
+    root = document.createElement("div");
+    root.id = "planningAssistantReview";
+    root.className = "planning-assistant-review is-idle";
+    root.setAttribute("aria-live", "polite");
+    actions.before(root);
+    return root;
+  }
+
+  function renderIdle() {
+    const root = ensureReviewRoot();
+    if (!root) return;
+    root.className = "planning-assistant-review is-idle";
+    root.innerHTML = `
+      <span class="planning-assistant-review-kicker">ChatGPT 修改</span>
+      <strong>暂无待确认修改</strong>
+      <small>这里会显示 ChatGPT 对当前训练模板提出的修改。</small>
+    `;
+  }
+
   function currentPendingText() {
     const live = proposal?.index >= 0 ? App.state.plans[proposal.index] : null;
     const workout = live?.plannedWorkout;
@@ -290,11 +316,11 @@
 
   function decorateStale() {
     if (!proposal?.stale || !isTargetSelected()) return;
-    const root = document.getElementById("planningCurrentPlan");
+    const root = ensureReviewRoot();
     if (!root) return;
-    root.className = "planning-current assistant-proposal";
+    root.className = "planning-assistant-review is-stale";
     root.innerHTML = `
-      <span>ChatGPT 修改 · 已过期</span>
+      <span class="planning-assistant-review-kicker">ChatGPT 修改 · 已过期</span>
       <strong>${App.esc(proposal.summary)}</strong>
       <small>${App.esc(proposal.reason || "请重新生成修改。")}</small>
       <div class="planning-proposal-actions">
@@ -322,15 +348,15 @@
 
   function decorateProposal() {
     if (!proposal || proposal.stale || !isTargetSelected()) return;
-    const root = document.getElementById("planningCurrentPlan");
+    const root = ensureReviewRoot();
     if (!root) return;
     const detail = proposal.changes.length ? proposal.changes.join(" · ") : "已生成候选模板和候选训练计划";
     const stateText = proposal.approved
       ? "修改已确认；点击“推送计划”或“去训练”后正式写入模板和本次计划。"
       : `${detail} · ${currentPendingText()}`;
-    root.className = "planning-current assistant-proposal";
+    root.className = `planning-assistant-review${proposal.approved ? " is-approved" : " is-pending"}`;
     root.innerHTML = `
-      <span>${proposal.approved ? "ChatGPT 修改 · 已确认" : "ChatGPT 已调整 · 待确认"}</span>
+      <span class="planning-assistant-review-kicker">${proposal.approved ? "ChatGPT 修改 · 已确认" : "ChatGPT 已调整 · 待确认"}</span>
       <strong>${App.esc(proposal.summary)}</strong>
       <small>${App.esc(stateText)}</small>
       <div class="planning-proposal-actions">
@@ -349,13 +375,21 @@
   }
 
   function renderPreview({ selectTarget = false } = {}) {
-    if (!initialized || !proposal || !App.planning?.render) return;
+    if (!initialized || !App.planning?.render) return;
+    ensureReviewRoot();
+    if (!proposal) {
+      renderIdle();
+      return;
+    }
     const select = document.getElementById("planningPlanSelect");
     if (selectTarget && proposal.index >= 0 && autoSelectedProposalId !== proposal.id && select && !select.disabled) {
       select.value = String(proposal.index);
       autoSelectedProposalId = proposal.id;
     }
-    if (!isTargetSelected()) return;
+    if (!isTargetSelected()) {
+      renderIdle();
+      return;
+    }
 
     if (proposal.stale) {
       decorateStale();
@@ -394,6 +428,7 @@
       autoSelectedProposalId = "";
       if (index >= 0) App.planning?.invalidate?.(index);
       App.planning?.render?.();
+      renderIdle();
       App.toast("已忽略 ChatGPT 的模板修改", "success");
     } catch (error) {
       App.toast(error?.message || "无法忽略这份修改", "error");
@@ -461,6 +496,7 @@
       autoSelectedProposalId = "";
       if (!goTrain) {
         App.planning?.render?.();
+        renderIdle();
         App.toast("ChatGPT 修改已应用并同步", "success");
       }
     } catch (error) {
@@ -509,6 +545,8 @@
   async function init() {
     bindEvents();
     initialized = true;
+    ensureReviewRoot();
+    renderIdle();
     loadProposal({ force: true }).then(() => schedulePreview({ selectTarget: true })).catch(() => {});
   }
 
@@ -528,6 +566,7 @@
     proposal = null;
     preparedProposalId = "";
     autoSelectedProposalId = "";
+    renderIdle();
   }
 
   App.assistantPlans = {
