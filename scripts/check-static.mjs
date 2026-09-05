@@ -12,6 +12,7 @@ const exists = file => fs.existsSync(path.join(root, normalizeLocal(file)));
 
 const indexHtml = read("index.html");
 const serviceWorker = read("sw.js");
+const appCore = read("js/core/app.js");
 
 const localRefs = [...indexHtml.matchAll(/\b(?:href|src)="([^"]+)"/g)]
   .map(match => match[1])
@@ -38,6 +39,17 @@ if (!shellMatch) {
     const normalized = normalizeLocal(ref);
     if (!/\.(?:css|js|webmanifest|png)$/i.test(normalized)) continue;
     if (!shellSet.has(normalized)) fail(`index asset is missing from SHELL_ASSETS: ${ref}`);
+  }
+
+  const pageScriptsMatch = appCore.match(/const PAGE_SCRIPTS = Object\.freeze\(\{([\s\S]*?)\}\);/);
+  if (!pageScriptsMatch) {
+    fail("app.js does not expose a parseable PAGE_SCRIPTS map");
+  } else {
+    const pageScripts = [...pageScriptsMatch[1].matchAll(/"([^"]+\.js)"/g)].map(match => match[1]);
+    for (const script of pageScripts) {
+      if (!exists(script)) fail(`PAGE_SCRIPTS references missing file: ${script}`);
+      if (!shellSet.has(normalizeLocal(script))) fail(`PAGE_SCRIPTS asset is missing from SHELL_ASSETS: ${script}`);
+    }
   }
 }
 
