@@ -7,9 +7,27 @@
   let historyLimit = 20;
   let historyPlanFilter = "all";
 
+  function planKey(session) {
+    const id = String(session?.planId || "");
+    const name = String(session?.plan || "");
+    return id ? `id:${id}` : `name:${name}`;
+  }
+
   function historyPlans() {
-    return [...new Set(SessionData.orderedSessions().map(session => session?.plan).filter(Boolean))]
-      .sort((a, b) => String(a).localeCompare(String(b), "zh-CN"));
+    const currentNames = new Map(App.state.plans
+      .filter(plan => plan?.planId)
+      .map(plan => [String(plan.planId), String(plan.name || "训练")]));
+    const plans = new Map();
+    for (const session of SessionData.orderedSessions()) {
+      const key = planKey(session);
+      if (!key || key === "name:") continue;
+      const currentName = session?.planId ? currentNames.get(String(session.planId)) : "";
+      const label = currentName || String(session?.plan || "训练");
+      if (!plans.has(key)) plans.set(key, label);
+    }
+    return [...plans.entries()]
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "zh-CN"));
   }
 
   function renderHistoryFilter() {
@@ -17,8 +35,8 @@
     if (!select) return;
     const plans = historyPlans();
     const current = historyPlanFilter;
-    select.innerHTML = '<option value="all">全部训练</option>' + plans.map(plan => `<option value="${App.esc(plan)}">${App.esc(plan)}</option>`).join("");
-    historyPlanFilter = current === "all" || plans.includes(current) ? current : "all";
+    select.innerHTML = '<option value="all">全部训练</option>' + plans.map(plan => `<option value="${App.esc(plan.key)}">${App.esc(plan.label)}</option>`).join("");
+    historyPlanFilter = current === "all" || plans.some(plan => plan.key === current) ? current : "all";
     select.value = historyPlanFilter;
   }
 
@@ -58,7 +76,7 @@
     const box = document.getElementById("historyList");
     if (!box) return;
     renderHistoryFilter();
-    const arr = SessionData.orderedSessions().filter(session => historyPlanFilter === "all" || session.plan === historyPlanFilter);
+    const arr = SessionData.orderedSessions().filter(session => historyPlanFilter === "all" || planKey(session) === historyPlanFilter);
     if (!arr.length) {
       box.innerHTML = `<div class="card empty">${historyPlanFilter === "all" ? "暂无训练记录" : "暂无此训练计划的记录"}</div>`;
       return;

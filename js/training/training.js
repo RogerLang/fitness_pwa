@@ -96,11 +96,12 @@
 
     Draft.capture();
     const sessionPlanName = workout.planName || plan.name;
-    const historyContext = buildHistoryContext(sessionPlanName);
+    const sessionPlanId = workout.planId || plan.planId || "";
+    const historyContext = buildHistoryContext({ planId: sessionPlanId, name: sessionPlanName });
     const exercises = (workout.exercises || []).map((ex, ei) => {
       const type = loadType(ex);
       const weighted = usesWeight(ex);
-      const previous = historyContext.latest(ex.name);
+      const previous = historyContext.latest(ex);
       const baseCount = Math.max(1, ex.sets?.length || 1);
       const count = Draft.effectiveSetCount(ei, baseCount);
       const sets = [];
@@ -134,6 +135,7 @@
 
       const result = {
         name: ex.name,
+        exerciseId: ex.exerciseId || "",
         warmup: !!ex.warmup,
         loadType: type,
         sets,
@@ -168,6 +170,7 @@
       date: App.isoDate(new Date(completedAt)),
       completedAt,
       plan: sessionPlanName,
+      planId: sessionPlanId,
       plannedWorkoutId: workout.id,
       plannedRevision: workout.revision,
       exercises
