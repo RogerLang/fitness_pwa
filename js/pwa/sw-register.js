@@ -2,6 +2,7 @@
   if (!("serviceWorker" in navigator) || window.__fitnessSwRegisterStarted) return;
   window.__fitnessSwRegisterStarted = true;
 
+  const hadController = !!navigator.serviceWorker.controller;
   let reloading = false;
   let promptedWorker = null;
 
@@ -13,7 +14,7 @@
   }
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloading) return;
+    if (!hadController || reloading) return;
     reloading = true;
     window.location.reload();
   });
