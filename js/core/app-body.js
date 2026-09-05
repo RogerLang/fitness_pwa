@@ -131,5 +131,5 @@
     if (keys.includes("body")) orderedBodyCache = null;
   });
 
-  App.registerModule({ init, refresh, onPage });
+  App.registerModule({ init, refresh, onPage, pages: ["progress"] });
 })();

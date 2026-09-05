@@ -104,5 +104,7 @@
     if (id === "history") renderHistory();
   }
 
-  window.TrainingHistory = Object.freeze({ init, refresh, onPage, render: renderHistory });
+  const module = { init, refresh, onPage };
+  App.registerModule(module);
+  window.TrainingHistory = Object.freeze({ ...module, render: renderHistory });
 })();

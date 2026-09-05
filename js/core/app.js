@@ -2,6 +2,19 @@ const Storage = window.FitnessStorage;
 if (!Storage) throw new Error("FitnessStorage must load before app.js");
 
 const PAGE_IDS = new Set(["today", "plan", "history", "progress", "settings"]);
+const PAGE_SCRIPTS = Object.freeze({
+  plan: ["js/training/planning.js"],
+  history: [
+    "js/training/training-session-data.js",
+    "js/training/training-history.js"
+  ],
+  progress: [
+    "js/training/training-session-data.js",
+    "js/training/training-progress.js",
+    "js/core/app-body.js"
+  ],
+  settings: ["js/core/app-backup.js"]
+});
 const STATE_KEYS = Object.freeze(["plans", "sessions", "body"]);
 const PERSIST_SCOPES = Object.freeze({
   plans: ["plans"],
@@ -24,6 +37,7 @@ let deferredPrompt = null;
 const appModules = [];
 const persistHooks = [];
 const initializedModules = new WeakSet();
+const scriptLoads = new Map();
 let appStarted = false;
 let auxiliaryInitStarted = false;
 let toastTimer = null;
@@ -58,6 +72,52 @@ function normalizeState(next) {
 function pageFromLocation() {
   const id = window.location.hash.slice(1).split("/")[0];
   return PAGE_IDS.has(id) ? id : "today";
+}
+
+function modulePages(module) {
+  return Array.isArray(module?.pages) ? module.pages : [];
+}
+
+function moduleHandlesPage(module, pageId) {
+  return modulePages(module).includes(pageId);
+}
+
+function pagesForScript(src) {
+  const source = String(src || "").split("?")[0];
+  if (!source) return [];
+  return Object.entries(PAGE_SCRIPTS)
+    .filter(([, scripts]) => scripts.includes(source))
+    .map(([pageId]) => pageId);
+}
+
+function currentScriptSource() {
+  return document.currentScript?.getAttribute("src")?.split("?")[0] || "";
+}
+
+function loadScript(src) {
+  if (scriptLoads.has(src)) return scriptLoads.get(src);
+  const existing = [...document.scripts].find(script => script.getAttribute("src")?.split("?")[0] === src);
+  if (existing) {
+    const ready = Promise.resolve();
+    scriptLoads.set(src, ready);
+    return ready;
+  }
+
+  const promise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.dataset.fitnessPageModule = "true";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`页面模块加载失败：${src}`));
+    document.body.appendChild(script);
+  });
+  scriptLoads.set(src, promise);
+  return promise;
+}
+
+async function ensurePageScripts(pageId) {
+  for (const src of PAGE_SCRIPTS[pageId] || []) await loadScript(src);
 }
 
 const idbGet = key => Storage.get(db, key);
@@ -104,21 +164,36 @@ async function refresh(reason = "refresh") {
 
 async function resetData(next, reason = "reset") {
   for (const module of appModules) {
-    if (module.beforeDataReset) await module.beforeDataReset(reason);
+    if (module.beforeDataReset && initializedModules.has(module)) await module.beforeDataReset(reason);
   }
 
   state = normalizeState(next);
   await persist(reason);
 
   for (const module of appModules) {
-    if (module.onDataReset) await module.onDataReset(reason);
+    if (module.onDataReset && initializedModules.has(module)) await module.onDataReset(reason);
   }
   await refresh(reason);
+}
+
+async function initModule(module) {
+  if (!module?.init || initializedModules.has(module)) return;
+  await module.init();
+  initializedModules.add(module);
+}
+
+async function initPageModules(pageId) {
+  for (const module of appModules) {
+    if (moduleHandlesPage(module, pageId)) await initModule(module);
+  }
 }
 
 async function switchPage(id, { historyMode = "replace", scroll = true } = {}) {
   const pageId = PAGE_IDS.has(id) ? id : "today";
   const nextHash = `#${pageId}`;
+
+  await ensurePageScripts(pageId);
+  await initPageModules(pageId);
 
   if (historyMode === "replace" && window.location.hash !== nextHash) {
     window.history.replaceState(null, "", nextHash);
@@ -171,17 +246,12 @@ function initChromeAutoHide() {
   }, { passive: true });
 }
 
-async function initModule(module) {
-  if (!module?.init || initializedModules.has(module)) return;
-  await module.init();
-  initializedModules.add(module);
-}
-
 function initAuxiliaryModules(modules) {
   if (auxiliaryInitStarted || !modules.length) return;
   auxiliaryInitStarted = true;
   requestAnimationFrame(() => setTimeout(async () => {
     for (const module of modules) {
+      if (modulePages(module).length) continue;
       try {
         await initModule(module);
         if (module.onPage && initializedModules.has(module)) await module.onPage(pageFromLocation());
@@ -208,7 +278,7 @@ async function start() {
     await loadState();
     bindCoreEvents();
 
-    const criticalModules = appModules.filter(module => module.critical === true);
+    const criticalModules = appModules.filter(module => module.critical === true && modulePages(module).length === 0);
     const auxiliaryModules = appModules.filter(module => !criticalModules.includes(module));
     for (const module of criticalModules) await initModule(module);
 
@@ -247,6 +317,10 @@ window.FitnessApp = {
   resetData,
   switchPage,
   registerModule(module) {
+    if (!Array.isArray(module?.pages)) {
+      const inferredPages = pagesForScript(currentScriptSource());
+      if (inferredPages.length) module.pages = inferredPages;
+    }
     appModules.push(module);
   },
   registerPersistHook(hook) {
