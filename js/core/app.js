@@ -74,12 +74,11 @@ function normalizeSet(value) {
   return { ...objectValue(value) };
 }
 
-function normalizeExercise(value) {
+function normalizeTemplateExercise(value) {
   const exercise = objectValue(value);
   const normalized = {
     ...exercise,
-    name: normalizedString(exercise.name),
-    sets: Array.isArray(exercise.sets) ? exercise.sets.map(normalizeSet) : []
+    name: normalizedString(exercise.name)
   };
   if (Object.prototype.hasOwnProperty.call(exercise, "setPresets")) {
     normalized.setPresets = Array.isArray(exercise.setPresets) ? exercise.setPresets.map(normalizeSet) : [];
@@ -87,12 +86,21 @@ function normalizeExercise(value) {
   return normalized;
 }
 
+function normalizeWorkoutExercise(value) {
+  const exercise = objectValue(value);
+  return {
+    ...exercise,
+    name: normalizedString(exercise.name),
+    sets: Array.isArray(exercise.sets) ? exercise.sets.map(normalizeSet) : []
+  };
+}
+
 function normalizeWorkout(value) {
   const workout = objectValue(value);
   return {
     ...workout,
     planName: normalizedString(workout.planName),
-    exercises: Array.isArray(workout.exercises) ? workout.exercises.map(normalizeExercise) : []
+    exercises: Array.isArray(workout.exercises) ? workout.exercises.map(normalizeWorkoutExercise) : []
   };
 }
 
@@ -101,7 +109,7 @@ function normalizePlan(value) {
   const normalized = {
     ...plan,
     name: normalizedString(plan.name),
-    exercises: Array.isArray(plan.exercises) ? plan.exercises.map(normalizeExercise) : []
+    exercises: Array.isArray(plan.exercises) ? plan.exercises.map(normalizeTemplateExercise) : []
   };
   if (plan.plannedWorkout && typeof plan.plannedWorkout === "object" && !Array.isArray(plan.plannedWorkout)) {
     normalized.plannedWorkout = normalizeWorkout(plan.plannedWorkout);
@@ -110,7 +118,7 @@ function normalizePlan(value) {
 }
 
 function normalizeSessionExercise(value) {
-  const exercise = normalizeExercise(value);
+  const exercise = normalizeWorkoutExercise(value);
   if (exercise.planned && typeof exercise.planned === "object" && !Array.isArray(exercise.planned)) {
     exercise.planned = {
       ...exercise.planned,
@@ -161,7 +169,8 @@ function stateChangedByNormalization(before, after) {
 const Schema = Object.freeze({
   version: DATA_SCHEMA_VERSION,
   normalizeSet,
-  normalizeExercise,
+  normalizeTemplateExercise,
+  normalizeWorkoutExercise,
   normalizeWorkout,
   normalizePlan,
   normalizeSession,
