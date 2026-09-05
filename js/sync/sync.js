@@ -118,6 +118,16 @@
     return meta;
   }
 
+  function currentSchemaVersion() {
+    return Number(App.schema?.version || 0);
+  }
+
+  function stampSchemaVersion(meta) {
+    const version = currentSchemaVersion();
+    if (version > 0) meta.schemaVersion = version;
+    return meta;
+  }
+
   async function refreshMeta() {
     if (!App.db) return {};
     const meta = await readMeta();
@@ -126,10 +136,44 @@
       meta.plansSig = sig;
       meta.plansDirty = false;
       meta.plansBaseRevision = meta.plansBaseRevision || null;
+      stampSchemaVersion(meta);
     } else if (!applyingRemote && meta.plansSig !== sig) {
       meta.plansSig = sig;
       meta.plansDirty = true;
+    } else if (!meta.plansDirty) {
+      stampSchemaVersion(meta);
     }
+    return writeMeta(meta);
+  }
+
+  async function reconcileSchemaMigrationDirty({ configValue = null, remoteState = null } = {}) {
+    const version = currentSchemaVersion();
+    const meta = await readMeta();
+    if (!version || Number(meta.schemaVersion || 0) >= version) return meta;
+
+    const localSig = await Remote.jsonSig(App.state.plans);
+    if (!meta.plansDirty) {
+      meta.plansSig = localSig;
+      stampSchemaVersion(meta);
+      return writeMeta(meta);
+    }
+
+    const c = configValue || await credentialsForSync();
+    if (!configValue) await Remote.privateCheck(c);
+    const remote = remoteState || await Remote.loadManifest(c);
+    const remoteRev = remote.manifest?.plans?.revision || null;
+
+    if (remote.exists && remoteRev) {
+      const remotePlans = await Remote.downloadPlans(c, remote.manifest);
+      const remoteSig = await Remote.jsonSig(remotePlans);
+      if (remoteSig === localSig) {
+        meta.plansSig = localSig;
+        meta.plansDirty = false;
+        meta.plansBaseRevision = remoteRev;
+      }
+    }
+
+    stampSchemaVersion(meta);
     return writeMeta(meta);
   }
 
@@ -231,8 +275,9 @@
       await Remote.privateCheck(c);
       await ensureIds();
       await refreshMeta();
-      const meta = await readMeta();
+      let meta = await readMeta();
       const remote = await Remote.loadManifest(c);
+      meta = await reconcileSchemaMigrationDirty({ configValue: c, remoteState: remote });
       const manifest = remote.manifest;
       const remoteRev = manifest.plans?.revision || null;
 
@@ -257,6 +302,7 @@
         ? `同步完成：新增 ${addedSessions} 条训练、${addedBody} 条身体记录。`
         : "GitHub 已包含本机全部记录。";
 
+      stampSchemaVersion(meta);
       if (changed) {
         await Remote.saveManifest(c, manifest, remote.sha);
         await writeMeta(meta);
@@ -283,8 +329,9 @@
       await Remote.privateCheck(c);
       await ensureIds();
       await refreshMeta();
-      const meta = await readMeta();
+      let meta = await readMeta();
       const remote = await Remote.loadManifest(c);
+      meta = await reconcileSchemaMigrationDirty({ configValue: c, remoteState: remote });
       if (!remote.exists) throw new Error("GitHub 还没有同步数据，请先在有完整数据的设备执行增量同步。");
       const manifest = remote.manifest;
       const remoteRev = manifest.plans?.revision || null;
@@ -318,19 +365,21 @@
       } finally {
         applyingRemote = false;
       }
+      stampSchemaVersion(meta);
       await writeMeta(meta);
       await App.training?.prepareRemotePlans(oldPlanName, plansChanged);
       await App.refresh("remote");
 
       const updates = [
+        meta.plansDirty ? "本机训练计划有未同步修改" : "",
         plansChanged ? "计划已更新" : "",
         addedSessions ? `新增 ${addedSessions} 条训练` : "",
         addedBody ? `新增 ${addedBody} 条身体记录` : "",
         removed ? `清理 ${removed} 条旧重复记录` : ""
       ].filter(Boolean);
       const message = updates.length ? updates.join(" · ") : "计划与数据已是最新";
-      status(message, true);
-      return { ok: true, kind: "pull", plansChanged, addedSessions, addedBody, removed, message };
+      status(message, meta.plansDirty ? null : true);
+      return { ok: true, kind: "pull", plansChanged, plansDirty: !!meta.plansDirty, addedSessions, addedBody, removed, message };
     } catch (error) {
       applyingRemote = false;
       const message = error?.message || "同步失败";
@@ -360,12 +409,21 @@
     }
     if (App.training?.hasDraft?.()) return { ok: true, skipped: "training-draft" };
     if (!await hasCredentials()) return { ok: true, skipped: "no-credentials" };
-    if (await plansAreDirty()) return { ok: true, skipped: "local-plans-dirty" };
 
     autoChecking = true;
     lastAutoCheckAt = Date.now();
     try {
+      await reconcileSchemaMigrationDirty();
+      if (await plansAreDirty()) {
+        const message = "本机训练计划有未同步修改";
+        status(message);
+        return { ok: true, skipped: "local-plans-dirty", message };
+      }
       return await pull({ source: "today" });
+    } catch (error) {
+      const message = error?.message || "同步失败";
+      status(message, false);
+      return { ok: false, kind: "auto-check", message, error };
     } finally {
       autoChecking = false;
     }
@@ -399,7 +457,12 @@
 
   async function onDataReset(reason) {
     if (reason !== "wipe") return;
-    await writeMeta({ plansBaseRevision: null, plansDirty: false, plansSig: await Remote.jsonSig([]) });
+    const meta = stampSchemaVersion({
+      plansBaseRevision: null,
+      plansDirty: false,
+      plansSig: await Remote.jsonSig([])
+    });
+    await writeMeta(meta);
   }
 
   async function init() {
