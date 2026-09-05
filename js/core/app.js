@@ -29,7 +29,7 @@ const PERSIST_SCOPES = Object.freeze({
   reset: STATE_KEYS,
   data: STATE_KEYS
 });
-const DATA_SCHEMA_VERSION = 1;
+const DATA_SCHEMA_VERSION = 2;
 
 let db = null;
 let state = { plans: [], sessions: [], body: [] };
@@ -70,15 +70,33 @@ function normalizedString(value) {
   return value === undefined || value === null ? "" : String(value);
 }
 
+function normalizedId(value) {
+  return normalizedString(value).trim();
+}
+
+function legacyId(prefix, ...parts) {
+  const seed = parts.map(part => normalizedString(part).trim()).join("\u001f");
+  let h1 = 0x811c9dc5;
+  let h2 = 0x9e3779b9;
+  for (let i = 0; i < seed.length; i++) {
+    const code = seed.charCodeAt(i);
+    h1 = Math.imul(h1 ^ code, 0x01000193);
+    h2 = Math.imul(h2 ^ code, 0x85ebca6b);
+  }
+  return `${prefix}-${(h1 >>> 0).toString(36)}${(h2 >>> 0).toString(36)}`;
+}
+
 function normalizeSet(value) {
   return { ...objectValue(value) };
 }
 
-function normalizeTemplateExercise(value) {
+function normalizeTemplateExercise(value, planId = "") {
   const exercise = objectValue(value);
+  const name = normalizedString(exercise.name);
   const normalized = {
     ...exercise,
-    name: normalizedString(exercise.name)
+    name,
+    exerciseId: normalizedId(exercise.exerciseId) || legacyId("exercise", planId, name)
   };
   if (Object.prototype.hasOwnProperty.call(exercise, "setPresets")) {
     normalized.setPresets = Array.isArray(exercise.setPresets) ? exercise.setPresets.map(normalizeSet) : [];
@@ -86,39 +104,67 @@ function normalizeTemplateExercise(value) {
   return normalized;
 }
 
-function normalizeWorkoutExercise(value) {
+function exerciseLookup(exercises = []) {
+  const byId = new Map();
+  const byName = new Map();
+  for (const exercise of exercises) {
+    const id = normalizedId(exercise?.exerciseId);
+    const name = normalizedString(exercise?.name);
+    if (id && !byId.has(id)) byId.set(id, exercise);
+    if (name && !byName.has(name)) byName.set(name, exercise);
+  }
+  return { byId, byName };
+}
+
+function normalizeWorkoutExercise(value, planId = "", templates = null) {
   const exercise = objectValue(value);
+  const name = normalizedString(exercise.name);
+  const existingId = normalizedId(exercise.exerciseId);
+  const matched = existingId ? templates?.byId?.get(existingId) : templates?.byName?.get(name);
   return {
     ...exercise,
-    name: normalizedString(exercise.name),
+    name,
+    exerciseId: existingId || normalizedId(matched?.exerciseId) || legacyId("exercise", planId, name),
     sets: Array.isArray(exercise.sets) ? exercise.sets.map(normalizeSet) : []
   };
 }
 
-function normalizeWorkout(value) {
+function normalizeWorkout(value, fallbackPlanId = "", templateExercises = []) {
   const workout = objectValue(value);
+  const planName = normalizedString(workout.planName);
+  const planId = normalizedId(workout.planId) || normalizedId(fallbackPlanId) || legacyId("plan", planName);
+  const templates = exerciseLookup(templateExercises);
   return {
     ...workout,
-    planName: normalizedString(workout.planName),
-    exercises: Array.isArray(workout.exercises) ? workout.exercises.map(normalizeWorkoutExercise) : []
+    planName,
+    planId,
+    exercises: Array.isArray(workout.exercises)
+      ? workout.exercises.map(exercise => normalizeWorkoutExercise(exercise, planId, templates))
+      : []
   };
 }
 
 function normalizePlan(value) {
   const plan = objectValue(value);
+  const name = normalizedString(plan.name);
+  const planId = normalizedId(plan.planId) || legacyId("plan", name);
+  const exercises = Array.isArray(plan.exercises)
+    ? plan.exercises.map(exercise => normalizeTemplateExercise(exercise, planId))
+    : [];
   const normalized = {
     ...plan,
-    name: normalizedString(plan.name),
-    exercises: Array.isArray(plan.exercises) ? plan.exercises.map(normalizeTemplateExercise) : []
+    name,
+    planId,
+    exercises
   };
   if (plan.plannedWorkout && typeof plan.plannedWorkout === "object" && !Array.isArray(plan.plannedWorkout)) {
-    normalized.plannedWorkout = normalizeWorkout(plan.plannedWorkout);
+    normalized.plannedWorkout = normalizeWorkout(plan.plannedWorkout, planId, exercises);
   }
   return normalized;
 }
 
-function normalizeSessionExercise(value) {
-  const exercise = normalizeWorkoutExercise(value);
+function normalizeSessionExercise(value, planId = "", templates = null) {
+  const exercise = normalizeWorkoutExercise(value, planId, templates);
   if (exercise.planned && typeof exercise.planned === "object" && !Array.isArray(exercise.planned)) {
     exercise.planned = {
       ...exercise.planned,
@@ -128,13 +174,33 @@ function normalizeSessionExercise(value) {
   return exercise;
 }
 
-function normalizeSession(value) {
+function planLookup(plans = []) {
+  const byId = new Map();
+  const byName = new Map();
+  for (const plan of plans) {
+    const id = normalizedId(plan?.planId);
+    const name = normalizedString(plan?.name);
+    if (id && !byId.has(id)) byId.set(id, plan);
+    if (name && !byName.has(name)) byName.set(name, plan);
+  }
+  return { byId, byName };
+}
+
+function normalizeSession(value, plans = null) {
   const session = objectValue(value);
+  const planName = normalizedString(session.plan);
+  const existingPlanId = normalizedId(session.planId);
+  const matchedPlan = existingPlanId ? plans?.byId?.get(existingPlanId) : plans?.byName?.get(planName);
+  const planId = existingPlanId || normalizedId(matchedPlan?.planId) || legacyId("plan", planName);
+  const templates = exerciseLookup(matchedPlan?.exercises || []);
   const normalized = {
     ...session,
     date: normalizedString(session.date),
-    plan: normalizedString(session.plan),
-    exercises: Array.isArray(session.exercises) ? session.exercises.map(normalizeSessionExercise) : []
+    plan: planName,
+    planId,
+    exercises: Array.isArray(session.exercises)
+      ? session.exercises.map(exercise => normalizeSessionExercise(exercise, planId, templates))
+      : []
   };
   if (session.id !== undefined && session.id !== null) normalized.id = String(session.id);
   if (session.completedAt !== undefined && session.completedAt !== null) normalized.completedAt = String(session.completedAt);
@@ -151,9 +217,11 @@ function normalizeBodyRecord(value) {
 
 function normalizeState(next) {
   const value = objectValue(next);
+  const plans = Array.isArray(value.plans) ? value.plans.map(normalizePlan) : [];
+  const plansByIdentity = planLookup(plans);
   return {
-    plans: Array.isArray(value.plans) ? value.plans.map(normalizePlan) : [],
-    sessions: Array.isArray(value.sessions) ? value.sessions.map(normalizeSession) : [],
+    plans,
+    sessions: Array.isArray(value.sessions) ? value.sessions.map(session => normalizeSession(session, plansByIdentity)) : [],
     body: Array.isArray(value.body) ? value.body.map(normalizeBodyRecord) : []
   };
 }
@@ -168,6 +236,7 @@ function stateChangedByNormalization(before, after) {
 
 const Schema = Object.freeze({
   version: DATA_SCHEMA_VERSION,
+  legacyId,
   normalizeSet,
   normalizeTemplateExercise,
   normalizeWorkoutExercise,
