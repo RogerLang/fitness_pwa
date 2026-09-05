@@ -1,6 +1,7 @@
 (() => {
   const App = window.FitnessApp;
-  if (!App) throw new Error("FitnessApp must load before app-backup.js");
+  const NextWorkout = window.TrainingNextWorkout;
+  if (!App || !NextWorkout) throw new Error("Backup dependencies must load before app-backup.js");
 
   const WIPE_CONFIRM_WINDOW = 5000;
   let wipeConfirmTimer = null;
@@ -8,9 +9,10 @@
 
   function exportData() {
     const payload = {
-      format: "fitness-pwa-backup-v3",
+      format: "fitness-pwa-backup-v4",
       exportedAt: new Date().toISOString(),
-      ...App.state
+      ...App.state,
+      plannedWorkout: NextWorkout.snapshot()
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
@@ -29,6 +31,11 @@
         sessions: Array.isArray(data.sessions) ? data.sessions : [],
         body: Array.isArray(data.body) ? data.body : []
       }, "import");
+      if (Object.prototype.hasOwnProperty.call(data, "plannedWorkout")) {
+        await NextWorkout.setFromRemote(data.plannedWorkout || null);
+        await App.persist("planned-workout");
+      }
+      await App.refresh("import");
       App.toast("备份已导入", "success");
     } catch (error) {
       App.toast(`导入失败：${error.message}`, "error");
@@ -49,9 +56,7 @@
     const title = button.querySelector(".backup-action-title");
     if (title) title.textContent = armed ? "确认删除" : "删除";
     button.setAttribute("aria-label", armed ? "再次点击确认删除本机训练和身体数据" : "删除本机训练和身体数据");
-    if (armed) {
-      wipeConfirmTimer = setTimeout(() => setWipeArmed(button, false), WIPE_CONFIRM_WINDOW);
-    }
+    if (armed) wipeConfirmTimer = setTimeout(() => setWipeArmed(button, false), WIPE_CONFIRM_WINDOW);
   }
 
   async function requestWipe(button) {
@@ -68,7 +73,6 @@
     const exportButton = document.getElementById("exportBtn");
     const importInput = document.getElementById("importInput");
     const wipeButton = document.getElementById("wipeBtn");
-
     if (exportButton) exportButton.onclick = exportData;
     if (importInput) {
       importInput.onchange = event => {
