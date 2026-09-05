@@ -72,6 +72,10 @@ test("core workout lifecycle survives real browser navigation and reload", async
   await expect(candidateWeight).toHaveValue("40");
   await activateAndFill(candidateWeight, "47.5");
   await expect(candidateWeight).toHaveValue("47.5");
+  await expect.poll(() => page.evaluate(async () => {
+    const stored = await window.FitnessApp.idbGet("planningCandidatesV1");
+    return stored?.["plan-test-a"]?.workout?.exercises?.[0]?.sets?.[0]?.weight ?? null;
+  })).toBe(47.5);
 
   await page.reload();
   await waitForApp(page);
