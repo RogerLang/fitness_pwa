@@ -86,6 +86,7 @@ if (!shellMatch) {
     "js/training/planned-workout.js",
     "js/training/candidate-workout.js",
     "js/training/planning-core.js",
+    "js/sync/github-private-repo.js",
     "js/sync/sync-core.js",
     "js/sync/assistant-proposals-core.js"
   ]) {
@@ -117,6 +118,8 @@ const candidateWorkout = read("js/training/candidate-workout.js");
 const planningEntry = read("js/training/planning.js");
 const planningCore = read("js/training/planning-core.js");
 const plannedWorkout = read("js/training/planned-workout.js");
+const githubPrivateRepo = read("js/sync/github-private-repo.js");
+const syncRemote = read("js/sync/sync-remote.js");
 const syncEntry = read("js/sync/sync.js");
 const syncCore = read("js/sync/sync-core.js");
 const assistantEntry = read("js/sync/assistant-proposals.js");
@@ -140,8 +143,23 @@ if (!planningCore.includes("window.FitnessPlanningCore")) fail("Planning core mu
 if (planningCore.includes("FitnessPlanningV165") || planningEntry.includes("FitnessPlanningV165")) fail("legacy Planning V165 global must stay removed");
 if (!plannedWorkout.includes('const STORE_KEY = "plannedWorkoutV1"')) fail("global Planned Workout store key is missing");
 if (!plannedWorkout.includes("delete plan.plannedWorkout")) fail("legacy embedded Planned Workout migration is missing");
+
+if (!githubPrivateRepo.includes("window.FitnessGitHubPrivateRepo")) fail("shared Private GitHub client export is missing");
+if (!githubPrivateRepo.includes("privateCheck") || !githubPrivateRepo.includes("getJson") || !githubPrivateRepo.includes("putJson") || !githubPrivateRepo.includes("deleteJson")) fail("shared Private GitHub client API is incomplete");
+for (const [name, source] of [
+  ["sync-remote.js", syncRemote],
+  ["sync-core.js", syncCore],
+  ["assistant-proposals-core.js", assistantCore]
+]) {
+  if (!source.includes("FitnessGitHubPrivateRepo")) fail(`${name} must consume the shared Private GitHub client`);
+  if (/function\s+(?:apiHeaders|apiRequest|fileUrl|bytesToBase64|base64ToBytes|decodeBase64Json)\b/.test(source)) {
+    fail(`${name} must not reimplement shared GitHub transport helpers`);
+  }
+}
 if (!syncCore.includes('const PLANNED_PATH = "planned-workout.json"')) fail("independent Planned Workout remote file is missing");
 if (!syncCore.includes('format: "fitness-planned-workout-v1"')) fail("Planned Workout remote payload format is missing");
+if (!syncCore.includes("window.FitnessSyncCore") || syncCore.includes("FitnessSyncV165") || syncEntry.includes("FitnessSyncV165")) fail("Sync core must use the formal global name");
+if (!assistantCore.includes("window.FitnessAssistantProposalsCore") || assistantCore.includes("FitnessAssistantProposalsV165") || assistantEntry.includes("FitnessAssistantProposalsV165")) fail("Proposal core must use the formal global name");
 if (!assistantCore.includes('await App.persist("plans")')) fail("ChatGPT confirmation must persist Template immediately");
 if (!assistantCore.includes("force: true") || !assistantCore.includes("regenerate: true")) fail("ChatGPT confirmation must force Candidate regeneration");
 if (assistantCore.includes("pushPlan({ sync: false })")) fail("ChatGPT confirmation must not push Planned Workout");
