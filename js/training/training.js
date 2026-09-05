@@ -134,6 +134,7 @@
 
       const result = {
         name: ex.name,
+        warmup: !!ex.warmup,
         loadType: type,
         sets,
         planned: {
@@ -161,9 +162,11 @@
     }
 
     const sessionId = crypto.randomUUID();
+    const completedAt = new Date().toISOString();
     App.state.sessions.push({
       id: sessionId,
-      date: App.isoDate(),
+      date: App.isoDate(new Date(completedAt)),
+      completedAt,
       plan: sessionPlanName,
       plannedWorkoutId: workout.id,
       plannedRevision: workout.revision,
@@ -174,7 +177,7 @@
       plan.plannedWorkout = {
         ...workout,
         status: "completed",
-        completedAt: new Date().toISOString(),
+        completedAt,
         completedSessionId: sessionId
       };
     }
