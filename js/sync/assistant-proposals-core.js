@@ -10,6 +10,7 @@
     const REFRESH_COOLDOWN_MS = 15000;
     const ACTION_IDS = ["planningPushTopBtn", "planningPushBottomBtn", "planningGoTrainTopBtn", "planningGoTrainBtn"];
     const clone = value => JSON.parse(JSON.stringify(value));
+    const normalizedId = value => String(value || "").trim();
 
     let proposal = null;
     let loadPromise = null;
@@ -39,26 +40,23 @@
       };
     }
 
-    function findTargetIndex(payload) {
-      const targetId = String(payload?.targetPlanId || "").trim();
-      const targetName = String(payload?.targetPlanName || "").trim();
-      let index = -1;
-      if (targetId) index = App.state.plans.findIndex(plan => String(plan?.planId || "").trim() === targetId);
-      if (index < 0 && targetName) index = App.state.plans.findIndex(plan => String(plan?.name || "") === targetName);
-      return index;
+    function planIndexById(planId) {
+      const id = normalizedId(planId);
+      return id ? App.state.plans.findIndex(plan => normalizedId(plan?.planId) === id) : -1;
     }
 
-    function normalizeCandidate(payload, index) {
-      const live = App.state.plans[index];
+    function targetPlan(payload) {
+      const targetId = normalizedId(payload?.targetPlanId);
+      const targetName = String(payload?.targetPlanName || "").trim();
+      let live = targetId ? App.state.plans.find(plan => normalizedId(plan?.planId) === targetId) || null : null;
+      if (!live && targetName) live = App.state.plans.find(plan => String(plan?.name || "") === targetName) || null;
+      return { live, targetPlanId: normalizedId(live?.planId) || targetId };
+    }
+
+    function normalizeCandidate(payload, live) {
       const proposed = payload?.proposedPlan;
-      if (!live || !proposed || typeof proposed !== "object" || Array.isArray(proposed)) {
-        throw new Error("助手计划提案缺少完整 proposedPlan");
-      }
-      const merged = {
-        ...clone(live),
-        ...clone(proposed),
-        planId: live.planId || proposed.planId
-      };
+      if (!live || !proposed || typeof proposed !== "object" || Array.isArray(proposed)) throw new Error("助手计划提案缺少完整 proposedPlan");
+      const merged = { ...clone(live), ...clone(proposed), planId: live.planId || proposed.planId };
       delete merged.plannedWorkout;
       delete merged.pendingAssistantChange;
       const candidate = App.schema?.normalizePlan ? App.schema.normalizePlan(merged) : merged;
@@ -68,7 +66,7 @@
 
       const ids = new Set();
       for (const exercise of candidate.exercises || []) {
-        const id = String(exercise?.exerciseId || "").trim();
+        const id = normalizedId(exercise?.exerciseId);
         if (!id) throw new Error("候选模板存在缺少 exerciseId 的动作");
         if (ids.has(id)) throw new Error("候选模板存在重复 exerciseId");
         ids.add(id);
@@ -83,27 +81,34 @@
     function normalizeProposal(file, manifest, config, syncMeta = {}) {
       const payload = file?.data;
       if (!payload || payload.format !== "fitness-assistant-proposal-v1") throw new Error("助手计划提案格式不支持");
-      const id = String(payload.id || "").trim();
-      const basePlansRevision = String(payload.basePlansRevision || "").trim();
+      const id = normalizedId(payload.id);
+      const basePlansRevision = normalizedId(payload.basePlansRevision);
       if (!id || !basePlansRevision) throw new Error("助手计划提案缺少 id 或 basePlansRevision");
 
-      const index = findTargetIndex(payload);
+      const target = targetPlan(payload);
       const summary = String(payload.summary || "训练模板已调整").trim() || "训练模板已调整";
       const changes = Array.isArray(payload.changes)
         ? payload.changes.map(item => String(item || "").trim()).filter(Boolean).slice(0, 8)
         : [];
-      const base = { id, sha: file.sha, config, index, summary, changes, basePlansRevision, createdAt: String(payload.createdAt || "") };
-      const remoteRevision = String(manifest?.plans?.revision || "").trim();
+      const base = {
+        id,
+        sha: file.sha,
+        config,
+        targetPlanId: target.targetPlanId,
+        summary,
+        changes,
+        basePlansRevision,
+        createdAt: String(payload.createdAt || "")
+      };
+      const remoteRevision = normalizedId(manifest?.plans?.revision);
 
       if (syncMeta?.plansDirty) return staleResult(base, "本机训练模板有未同步修改，请先处理本机与云端模板冲突。");
-      const localBaseRevision = String(syncMeta?.plansBaseRevision || "").trim();
-      if (localBaseRevision && localBaseRevision !== basePlansRevision) {
-        return staleResult(base, "本机训练模板还没有同步到这份修改的基线，请先检查最新模板。");
-      }
+      const localBaseRevision = normalizedId(syncMeta?.plansBaseRevision);
+      if (localBaseRevision && localBaseRevision !== basePlansRevision) return staleResult(base, "本机训练模板还没有同步到这份修改的基线，请先检查最新模板。");
       if (basePlansRevision !== remoteRevision) return staleResult(base, "这份修改基于旧版训练模板，请在聊天中重新生成。");
-      if (index < 0) return staleResult(base, "找不到这份修改对应的训练模板。");
+      if (!target.live || !target.targetPlanId) return staleResult(base, "找不到这份修改对应的训练模板。");
 
-      return { ...base, stale: false, applied: false, candidate: normalizeCandidate(payload, index) };
+      return { ...base, stale: false, applied: false, candidate: normalizeCandidate(payload, target.live) };
     }
 
     async function loadProposal({ force = false } = {}) {
@@ -116,9 +121,7 @@
             proposal = null;
             return null;
           }
-          await Repo.privateCheck(config, {
-            privateMessage: "助手计划提案只允许从 Private GitHub 仓库读取"
-          });
+          await Repo.privateCheck(config, { privateMessage: "助手计划提案只允许从 Private GitHub 仓库读取" });
           const [manifestFile, proposalFile, syncMeta] = await Promise.all([
             Repo.getJson(config, "manifest.json"),
             Repo.getJson(config, PROPOSAL_PATH),
@@ -144,14 +147,14 @@
       return loadPromise;
     }
 
-    function selectedIndex() {
+    function selectedPlanId() {
       const el = document.getElementById("planningPlanSelect");
       const index = Number(el?.value ?? -1);
-      return Number.isInteger(index) ? index : -1;
+      return Number.isInteger(index) && index >= 0 ? normalizedId(App.state.plans[index]?.planId) : "";
     }
 
     function isTargetSelected() {
-      return !!proposal && proposal.index >= 0 && selectedIndex() === proposal.index;
+      return !!proposal?.targetPlanId && selectedPlanId() === proposal.targetPlanId;
     }
 
     function ensureReviewRoot() {
@@ -171,11 +174,7 @@
       const root = ensureReviewRoot();
       if (!root) return;
       root.className = "planning-assistant-review is-idle";
-      root.innerHTML = `
-        <span class="planning-assistant-review-kicker">ChatGPT 修改</span>
-        <strong>暂无待确认修改</strong>
-        <small>这里会显示 ChatGPT 对当前训练模板提出的修改。</small>
-      `;
+      root.innerHTML = `<span class="planning-assistant-review-kicker">ChatGPT 修改</span><strong>暂无待确认修改</strong><small>这里会显示 ChatGPT 对当前训练模板提出的修改。</small>`;
     }
 
     function currentPendingText() {
@@ -188,25 +187,14 @@
       const root = ensureReviewRoot();
       if (!root) return;
       root.className = "planning-assistant-review is-stale";
-      root.innerHTML = `
-        <span class="planning-assistant-review-kicker">ChatGPT 修改 · 已过期</span>
-        <strong>${App.esc(proposal.summary)}</strong>
-        <small>${App.esc(proposal.reason || "请重新生成修改。")}</small>
-        <div class="planning-proposal-actions">
-          <button type="button" class="secondary" data-assistant-dismiss>忽略这份修改</button>
-        </div>
-      `;
+      root.innerHTML = `<span class="planning-assistant-review-kicker">ChatGPT 修改 · 已过期</span><strong>${App.esc(proposal.summary)}</strong><small>${App.esc(proposal.reason || "请重新生成修改。")}</small><div class="planning-proposal-actions"><button type="button" class="secondary" data-assistant-dismiss>忽略这份修改</button></div>`;
     }
 
     function renderApplied() {
       const root = ensureReviewRoot();
       if (!root) return;
       root.className = "planning-assistant-review is-approved";
-      root.innerHTML = `
-        <span class="planning-assistant-review-kicker">ChatGPT 修改 · 已应用</span>
-        <strong>${App.esc(proposal.summary)}</strong>
-        <small>${App.esc(proposal.syncOk === false ? "模板已在本机更新；GitHub 同步尚未完成。" : "训练模板已更新，并已重新生成下一次训练建议。")}</small>
-      `;
+      root.innerHTML = `<span class="planning-assistant-review-kicker">ChatGPT 修改 · 已应用</span><strong>${App.esc(proposal.summary)}</strong><small>${App.esc(proposal.syncOk === false ? "模板已在本机更新；GitHub 同步尚未完成。" : "训练模板已更新，并已重新生成下一次训练建议。")}</small>`;
     }
 
     function setPendingControls() {
@@ -220,8 +208,7 @@
       if (regenerate) regenerate.disabled = true;
       const addExercise = document.getElementById("planningAddExerciseBtn");
       if (addExercise) addExercise.disabled = true;
-      document.querySelectorAll("#planningTemplateList input,#planningTemplateList select,#planningTemplateList textarea,#planningTemplateList button")
-        .forEach(control => { control.disabled = true; });
+      document.querySelectorAll("#planningTemplateList input,#planningTemplateList select,#planningTemplateList textarea,#planningTemplateList button").forEach(control => { control.disabled = true; });
     }
 
     function renderPending() {
@@ -229,15 +216,7 @@
       if (!root) return;
       const detail = proposal.changes.length ? proposal.changes.join(" · ") : "已生成完整候选模板";
       root.className = "planning-assistant-review is-pending";
-      root.innerHTML = `
-        <span class="planning-assistant-review-kicker">ChatGPT 修改 · 待确认</span>
-        <strong>${App.esc(proposal.summary)}</strong>
-        <small>${App.esc(`${detail} · ${currentPendingText()}`)}</small>
-        <div class="planning-proposal-actions">
-          <button type="button" class="secondary" data-assistant-dismiss>忽略</button>
-          <button type="button" data-assistant-approve ${busy ? "disabled" : ""}>${busy ? "应用中…" : "确认修改"}</button>
-        </div>
-      `;
+      root.innerHTML = `<span class="planning-assistant-review-kicker">ChatGPT 修改 · 待确认</span><strong>${App.esc(proposal.summary)}</strong><small>${App.esc(`${detail} · ${currentPendingText()}`)}</small><div class="planning-proposal-actions"><button type="button" class="secondary" data-assistant-dismiss>忽略</button><button type="button" data-assistant-approve ${busy ? "disabled" : ""}>${busy ? "应用中…" : "确认修改"}</button></div>`;
       setPendingControls();
     }
 
@@ -248,8 +227,9 @@
         return;
       }
       const select = document.getElementById("planningPlanSelect");
-      if (selectTarget && proposal.index >= 0 && autoSelectedProposalId !== proposal.id && select && !select.disabled) {
-        select.value = String(proposal.index);
+      const targetIndex = planIndexById(proposal.targetPlanId);
+      if (selectTarget && targetIndex >= 0 && autoSelectedProposalId !== proposal.id && select && !select.disabled) {
+        select.value = String(targetIndex);
         autoSelectedProposalId = proposal.id;
         App.planning?.render?.();
       }
@@ -297,8 +277,8 @@
     async function applyProposal() {
       if (!proposal || proposal.stale || proposal.applied || busy || !isTargetSelected()) return;
       const snapshot = proposal;
-      const index = snapshot.index;
-      if (!App.state.plans[index]) return;
+      const index = planIndexById(snapshot.targetPlanId);
+      if (index < 0 || !App.state.plans[index]) return;
       busy = true;
       renderPending();
 
@@ -306,9 +286,10 @@
         const candidate = clone(snapshot.candidate);
         delete candidate.plannedWorkout;
         delete candidate.pendingAssistantChange;
+        candidate.planId = snapshot.targetPlanId;
         App.state.plans[index] = candidate;
         await App.persist("plans");
-        await App.planning?.invalidate?.(index, { force: true, regenerate: true, source: "assistant" });
+        await App.planning?.invalidate?.(snapshot.targetPlanId, { force: true, regenerate: true, source: "assistant" });
         await cleanupRemoteProposal(snapshot);
 
         proposal = { ...snapshot, applied: true, appliedAt: new Date().toISOString(), syncOk: null };
@@ -360,10 +341,7 @@
       ensureReviewRoot();
       renderIdle();
       loadProposal({ force: true }).then(() => scheduleRender({ selectTarget: true })).catch(() => {});
-      App.assistantPlans = {
-        refresh: () => loadProposal({ force: true }),
-        current: () => proposal
-      };
+      App.assistantPlans = { refresh: () => loadProposal({ force: true }), current: () => proposal };
     }
 
     function refresh(reason) {
