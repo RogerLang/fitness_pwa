@@ -20,6 +20,7 @@
 
     const clone = value => JSON.parse(JSON.stringify(value));
     const AUTOFILL_GUARD = 'autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore';
+    const normalizedId = value => String(value || "").trim();
 
     function select() {
       return document.getElementById("planningPlanSelect");
@@ -34,6 +35,16 @@
 
     function currentPlan() {
       return App.state.plans[currentIndex()] || null;
+    }
+
+    function planIndexById(planId) {
+      const id = normalizedId(planId);
+      return id ? App.state.plans.findIndex(plan => normalizedId(plan?.planId) === id) : -1;
+    }
+
+    function planById(planId) {
+      const index = planIndexById(planId);
+      return index >= 0 ? App.state.plans[index] : null;
     }
 
     function confirmed() {
@@ -152,18 +163,11 @@
             <div><h3>${App.esc(ex.name || "未命名动作")}</h3><p>${App.esc(ex.note || (ex.warmup ? "专项热身" : ""))}</p></div>
             ${ex.warmup ? '<span class="badge warmup-badge">热身</span>' : ""}
           </div>
-          <div class="planning-context-grid">
-            ${previousPanel(summary)}
-            ${suggestionPanel(ex)}
-          </div>
+          <div class="planning-context-grid">${previousPanel(summary)}${suggestionPanel(ex)}</div>
           <div class="planning-target-panel${usesWeight(ex) ? "" : " bodyweight-target-panel"}">
             <div class="planning-target-head">
               <div><strong>本次计划</strong><small>${count} 组${ex.repRange ? ` · 模板 ${ex.repRange[0]}–${ex.repRange[1]} 次` : ""}</small></div>
-              <div class="planning-set-control">
-                <button type="button" class="small secondary planning-remove-set" data-e="${ei}" ${count <= 1 ? "disabled" : ""}>−</button>
-                <span>${count}</span>
-                <button type="button" class="small secondary planning-add-set" data-e="${ei}">+</button>
-              </div>
+              <div class="planning-set-control"><button type="button" class="small secondary planning-remove-set" data-e="${ei}" ${count <= 1 ? "disabled" : ""}>−</button><span>${count}</span><button type="button" class="small secondary planning-add-set" data-e="${ei}">+</button></div>
             </div>
             <div class="planning-set-list">${plannedRows(ex, ei)}</div>
           </div>
@@ -194,11 +198,7 @@
 
     function loadTypeField(ex) {
       const type = loadType(ex);
-      return `<label>负重类型<select data-template-edit="loadType">
-        <option value="weight"${type === "weight" ? " selected" : ""}>常规重量</option>
-        <option value="bodyweight"${type === "bodyweight" ? " selected" : ""}>徒手</option>
-        <option value="added-weight"${type === "added-weight" ? " selected" : ""}>附加重量</option>
-      </select></label>`;
+      return `<label>负重类型<select data-template-edit="loadType"><option value="weight"${type === "weight" ? " selected" : ""}>常规重量</option><option value="bodyweight"${type === "bodyweight" ? " selected" : ""}>徒手</option><option value="added-weight"${type === "added-weight" ? " selected" : ""}>附加重量</option></select></label>`;
     }
 
     function renderWarmupPresets(ex, ei) {
@@ -206,10 +206,7 @@
       const weighted = usesWeight(ex);
       return `<div class="template-preset-list">${Array.from({ length: count }, (_, si) => {
         const preset = warmupSet(ex, si);
-        return `<div class="template-preset-row${weighted ? "" : " bodyweight-template-preset"}"><span>${si + 1}</span>
-          ${weighted ? `<label>${App.esc(loadLabel(ex))}<input type="number" step="0.5" inputmode="decimal" autocomplete="off" data-template-preset="weight" data-e="${ei}" data-s="${si}" value="${App.esc(preset.weight ?? "")}"></label>` : ""}
-          <label>次数<input type="number" step="1" inputmode="numeric" autocomplete="off" data-template-preset="reps" data-e="${ei}" data-s="${si}" value="${App.esc(preset.reps ?? "")}"></label>
-        </div>`;
+        return `<div class="template-preset-row${weighted ? "" : " bodyweight-template-preset"}"><span>${si + 1}</span>${weighted ? `<label>${App.esc(loadLabel(ex))}<input type="number" step="0.5" inputmode="decimal" autocomplete="off" data-template-preset="weight" data-e="${ei}" data-s="${si}" value="${App.esc(preset.weight ?? "")}"></label>` : ""}<label>次数<input type="number" step="1" inputmode="numeric" autocomplete="off" data-template-preset="reps" data-e="${ei}" data-s="${si}" value="${App.esc(preset.reps ?? "")}"></label></div>`;
       }).join("")}</div>`;
     }
 
@@ -221,10 +218,7 @@
       const root = document.getElementById("planningTemplateList");
       if (!root) return;
       const plan = currentPlan();
-      if (!plan) {
-        root.innerHTML = "";
-        return;
-      }
+      if (!plan) { root.innerHTML = ""; return; }
       if (!force && !templateShell()?.open) return;
 
       root.innerHTML = (plan.exercises || []).map((ex, ei) => {
@@ -247,8 +241,10 @@
       const el = select();
       if (!el) return;
       const raw = el.value;
-      const active = confirmed();
-      const fallback = active?.index >= 0 ? active.index : (App.training?.currentPlanIndex?.() ?? 0);
+      const activePlanId = normalizedId(confirmed()?.workout?.planId);
+      const trainingPlanId = normalizedId(App.training?.currentPlanId?.());
+      const activeIndex = planIndexById(activePlanId || trainingPlanId);
+      const fallback = activeIndex >= 0 ? activeIndex : 0;
       const previous = raw === "" ? fallback : Number(raw);
       if (!App.state.plans.length) {
         el.innerHTML = "<option>暂无训练模板</option>";
@@ -349,11 +345,7 @@
 
     function comparableWorkout(workout) {
       if (!workout) return "";
-      return JSON.stringify({
-        planId: workout.planId || "",
-        planName: workout.planName || "",
-        exercises: workout.exercises || []
-      });
+      return JSON.stringify({ planId: workout.planId || "", planName: workout.planName || "", exercises: workout.exercises || [] });
     }
 
     function sameAsPlanned(draft) {
@@ -367,17 +359,14 @@
       const entry = entryFor(index);
       const draft = entry?.workout;
       if (!plan || !draft) return false;
-
       if (entry.stale) {
         App.toast("训练依据已更新，请先保留当前调整或重新生成", "error");
         return false;
       }
-
       if (confirmed() && App.training?.hasDraft?.()) {
         App.toast("当前训练已经开始记录，请先保存或清空后再推送新计划", "error");
         return false;
       }
-
       if (skipIfSame && sameAsPlanned(draft)) return true;
 
       const now = new Date().toISOString();
@@ -394,14 +383,11 @@
       });
 
       await App.refresh("planned-workout");
-
       if (!sync) return true;
-
       if (!App.sync?.push || !await App.sync.hasCredentials?.()) {
         App.toast("训练计划已保存在本机，但尚未配置 GitHub 同步", "error");
         return true;
       }
-
       const result = await App.sync.push();
       if (!result?.ok) App.toast(result?.message || "训练计划已保存在本机，GitHub 同步未完成", "error");
       else App.toast("训练计划已推送到云端", "success");
@@ -452,7 +438,6 @@
         const pushed = await pushPlan({ sync: false, skipIfSame: true });
         if (!pushed) return;
       }
-
       await App.switchPage("today", { historyMode: "replace" });
       App.toast("训练计划已载入，正在后台同步", "success");
       Promise.resolve().then(async () => {
@@ -461,8 +446,8 @@
       }).catch(error => console.warn("go-train plan sync", error));
     }
 
-    async function invalidate(index = currentIndex(), options = {}) {
-      const plan = App.state.plans[index];
+    async function invalidate(planId = currentPlan()?.planId, options = {}) {
+      const plan = planById(planId);
       if (!plan) return;
       Candidate.invalidate(plan, options);
       if (document.getElementById("plan")?.classList.contains("active")) render();
@@ -500,16 +485,10 @@
         else if (button?.matches("[data-candidate-regenerate]")) regenerate();
       });
       const shell = templateShell();
-      shell?.addEventListener("toggle", () => {
-        if (shell.open) renderTemplate({ force: true });
-      });
+      shell?.addEventListener("toggle", () => { if (shell.open) renderTemplate({ force: true }); });
       document.getElementById("planningRegenerateBtn")?.addEventListener("click", regenerate);
-      for (const id of ["planningPushTopBtn", "planningPushBottomBtn"]) {
-        document.getElementById(id)?.addEventListener("click", () => pushPlan().catch(error => App.toast(error.message, "error")));
-      }
-      for (const id of ["planningGoTrainTopBtn", "planningGoTrainBtn"]) {
-        document.getElementById(id)?.addEventListener("click", () => goTrain().catch(error => App.toast(error.message, "error")));
-      }
+      for (const id of ["planningPushTopBtn", "planningPushBottomBtn"]) document.getElementById(id)?.addEventListener("click", () => pushPlan().catch(error => App.toast(error.message, "error")));
+      for (const id of ["planningGoTrainTopBtn", "planningGoTrainBtn"]) document.getElementById(id)?.addEventListener("click", () => goTrain().catch(error => App.toast(error.message, "error")));
       document.getElementById("planningAddExerciseBtn")?.addEventListener("click", addTemplateExercise);
     }
 
@@ -524,13 +503,8 @@
       render();
     }
 
-    async function onPage(id) {
-      if (id === "plan") render();
-    }
-
-    async function onDataReset() {
-      await Candidate.reset();
-    }
+    async function onPage(id) { if (id === "plan") render(); }
+    async function onDataReset() { await Candidate.reset(); }
 
     const publicApi = { render, pushPlan, invalidate };
     return { init, refresh, onPage, onDataReset, publicApi };
