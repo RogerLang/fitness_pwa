@@ -497,3 +497,287 @@
     box-shadow:none;
   }
 }
+
+/* Canonical Planning values. These mirror the final v104/v105 cascade so Planning can own them directly. */
+#plan .planning-hero{
+  padding:17px 15px 15px;
+}
+
+#plan .planning-hero h2{
+  margin:0;
+  color:var(--v104-title);
+  font-size:21px;
+  font-weight:840;
+  line-height:1.18;
+  letter-spacing:-.018em;
+}
+
+#plan .planning-heading{
+  margin-bottom:16px;
+}
+
+#plan .planning-select-field{
+  display:grid;
+  gap:7px;
+  margin:0;
+  color:var(--v104-muted);
+  font-size:10.5px;
+  font-weight:650;
+}
+
+#plan .planning-select-field select{
+  width:100%;
+  min-height:48px;
+  margin:0;
+  padding:10px 36px 10px 12px;
+  border-radius:15px;
+  font-size:14px;
+  font-weight:680;
+}
+
+#plan .planning-actions-top{
+  display:grid;
+  grid-template-columns:.88fr 1fr 1.18fr;
+  gap:8px;
+  margin-top:15px;
+}
+
+#plan .planning-actions-top button{
+  min-width:0;
+  min-height:44px;
+  padding-inline:8px;
+  border-radius:14px;
+  font-size:12.5px;
+}
+
+#plan #planningRegenerateBtn{
+  background:rgba(255,255,255,.46);
+  color:#66717f;
+}
+
+#plan #planningPushTopBtn,
+#plan #planningPushBottomBtn{
+  border-color:rgba(255,255,255,.62);
+  background:rgba(255,255,255,.72);
+  color:#404a57;
+}
+
+#plan #planningGoTrainTopBtn,
+#plan #planningGoTrainBtn{
+  border-color:rgba(255,255,255,.24);
+  background:rgba(39,45,55,.90);
+  color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 4px 12px rgba(29,34,42,.08);
+}
+
+#plan .planning-current{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:0;
+  margin-top:16px;
+  padding:13px 2px 1px;
+  border:0;
+  border-top:1px solid var(--v104-divider);
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+}
+
+#plan .planning-current > .planning-current-label{
+  align-self:center;
+  justify-self:start;
+  margin:0 0 6px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:none;
+  color:#929ca8;
+  font-size:10.5px;
+  font-weight:650;
+  line-height:1.2;
+  white-space:nowrap;
+}
+
+#plan .planning-current > strong{
+  align-self:center;
+  margin:0 0 5px;
+  color:#38434f;
+  font-size:14px;
+  font-weight:790;
+  line-height:1.32;
+}
+
+#plan .planning-current > small{
+  color:#87929f;
+  font-size:10.5px;
+  line-height:1.4;
+}
+
+#plan .planning-current.is-empty > strong{
+  color:#87929f;
+}
+
+#planningWorkoutList{
+  gap:11px;
+}
+
+#plan .planning-exercise-card{
+  padding:14px 12px 12px;
+  border-color:rgba(255,255,255,.84);
+  border-radius:24px;
+  background:var(--v104-glass-bg);
+  -webkit-backdrop-filter:blur(18px) saturate(144%);
+  backdrop-filter:blur(18px) saturate(144%);
+  box-shadow:
+    0 9px 24px rgba(31,38,48,.052),
+    inset 0 1.5px 0 rgba(255,255,255,.96);
+}
+
+#plan .planning-exercise-head{
+  margin-bottom:11px;
+  padding:0 3px;
+}
+
+#plan .planning-exercise-head h3{
+  color:var(--v104-title);
+  font-size:18px;
+  font-weight:840;
+  line-height:1.22;
+}
+
+#plan .planning-exercise-head p{
+  display:inline-flex;
+  width:auto;
+  max-width:100%;
+  margin-top:7px;
+  padding:4px 8px;
+  border:1px solid rgba(255,255,255,.46);
+  border-radius:11px;
+  background:rgba(255,255,255,.31);
+  color:#768290;
+  font-size:10.5px;
+  line-height:1.35;
+}
+
+#plan .planning-exercise-head p:empty{
+  display:none;
+}
+
+#plan .planning-context-grid{
+  grid-template-columns:1fr;
+  gap:8px;
+}
+
+#plan .planning-context{
+  width:100%;
+  padding:10px 11px;
+  border-radius:16px;
+  background:rgba(255,255,255,.30);
+}
+
+#plan .planning-context > span,
+#plan .planning-context > small{
+  color:#9099a4;
+  font-size:9.5px;
+}
+
+#plan .planning-context strong{
+  margin:3px 0 2px;
+  color:#414c59;
+  font-size:12.5px;
+  font-weight:760;
+}
+
+#plan .planning-target-panel{
+  margin-top:8px;
+  padding:11px;
+  border-radius:17px;
+  background:rgba(255,255,255,.39);
+}
+
+#plan .planning-target-head strong{
+  font-size:12px;
+}
+
+#plan .planning-target-head small{
+  font-size:9.5px;
+}
+
+#plan .planning-set-row input{
+  min-height:39px;
+  height:39px;
+  border-radius:13px;
+  font-size:14px;
+}
+
+#plan .planning-set-header.bodyweight-plan-row,
+#plan .planning-set-row.bodyweight-plan-row{
+  grid-template-columns:24px minmax(0,1fr);
+}
+
+#plan .template-card select[data-template-edit="loadType"]{
+  width:100%;
+}
+
+#plan .template-preset-row.bodyweight-template-preset{
+  grid-template-columns:22px minmax(0,1fr);
+}
+
+#plan .planning-actions{
+  grid-template-columns:1fr 1.18fr;
+  gap:9px;
+}
+
+@media(max-width:680px){
+  #plan .planning-hero{
+    padding:16px 13px 14px;
+    -webkit-backdrop-filter:blur(15px) saturate(142%);
+    backdrop-filter:blur(15px) saturate(142%);
+  }
+
+  #plan .planning-exercise-card{
+    -webkit-backdrop-filter:blur(15px) saturate(142%);
+    backdrop-filter:blur(15px) saturate(142%);
+  }
+
+  #plan .planning-actions-top{
+    grid-template-columns:.88fr 1fr 1.18fr;
+  }
+
+  #plan .planning-actions-top button{
+    font-size:12px;
+  }
+
+  #plan .planning-context-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:390px){
+  #plan .planning-actions-top{
+    gap:5px;
+  }
+
+  #plan .planning-actions-top button{
+    padding-inline:5px;
+    font-size:11.5px;
+  }
+}
+
+@media(prefers-reduced-transparency:reduce){
+  #plan .planning-hero,
+  #plan .planning-exercise-card{
+    background:#f8f9fb;
+    border-color:rgba(205,211,220,.48);
+    box-shadow:0 4px 12px rgba(37,48,64,.04);
+  }
+
+  #plan .planning-context,
+  #plan .planning-target-panel,
+  #plan .planning-current,
+  #plan .template-card{
+    background:#f8f9fb;
+    border-color:rgba(205,211,220,.42);
+    box-shadow:none;
+  }
+}
