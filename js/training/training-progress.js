@@ -254,5 +254,7 @@
     }
   }
 
-  window.TrainingProgress = Object.freeze({ init, refresh, onPage, draw: drawProgress });
+  const module = { init, refresh, onPage };
+  App.registerModule(module);
+  window.TrainingProgress = Object.freeze({ ...module, draw: drawProgress });
 })();
