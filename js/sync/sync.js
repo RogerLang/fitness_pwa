@@ -7,7 +7,7 @@
 
   function ensureCore() {
     if (core) return core;
-    const create = window.FitnessSyncV165?.create;
+    const create = window.FitnessSyncCore?.create;
     if (!create) throw new Error("sync-core.js must load before sync.js");
     core = create(App, Remote);
     return core;
