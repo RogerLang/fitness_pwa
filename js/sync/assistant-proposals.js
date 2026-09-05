@@ -6,7 +6,7 @@
 
   function ensureCore() {
     if (core) return core;
-    const create = window.FitnessAssistantProposalsV165?.create;
+    const create = window.FitnessAssistantProposalsCore?.create;
     if (!create) throw new Error("assistant-proposals-core.js must load before assistant-proposals.js");
     core = create(App);
     return core;

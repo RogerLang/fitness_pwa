@@ -1,15 +1,14 @@
 (() => {
   function create(App, Remote) {
     const NextWorkout = window.TrainingNextWorkout;
-    if (!Remote || !NextWorkout) throw new Error("Sync dependencies must load before sync-v165.js");
+    const Repo = window.FitnessGitHubPrivateRepo;
+    if (!Remote || !NextWorkout || !Repo) throw new Error("Sync dependencies must load before sync-core.js");
 
     const CREDS_KEY = "syncCredentialsV7";
     const LEGACY_CONFIG_KEY = "syncConfig";
     const META_KEY = "syncMetaV11";
     const AUTO_CHECK_COOLDOWN_MS = 60000;
     const PLANNED_PATH = "planned-workout.json";
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
 
     let applyingRemote = false;
     let autoInitialized = false;
@@ -199,53 +198,6 @@
       return writeMeta(meta);
     }
 
-    function bytesToBase64(bytes) {
-      let text = "";
-      for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-      return btoa(text);
-    }
-
-    function base64ToBytes(value) {
-      const text = atob(String(value || "").replace(/\s/g, ""));
-      const bytes = new Uint8Array(text.length);
-      for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
-      return bytes;
-    }
-
-    function apiHeaders(token) {
-      return {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-        "Content-Type": "application/json"
-      };
-    }
-
-    async function apiRequest(url, token, options = {}) {
-      const response = await fetch(url, { ...options, headers: { ...apiHeaders(token), ...(options.headers || {}) } });
-      if (response.status === 404) return { status: 404, data: null };
-      let data = null;
-      try { data = await response.json(); } catch {}
-      if (!response.ok) throw new Error(`GitHub API ${response.status}${data?.message ? `：${data.message}` : ""}`);
-      return { status: response.status, data };
-    }
-
-    function fileUrl(config, path) {
-      return `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/${path.split("/").map(encodeURIComponent).join("/")}`;
-    }
-
-    async function getJson(config, path) {
-      const response = await apiRequest(fileUrl(config, path), config.token);
-      if (!response.data) return null;
-      return { sha: response.data.sha, data: JSON.parse(decoder.decode(base64ToBytes(response.data.content))) };
-    }
-
-    async function putJson(config, path, data, sha, message) {
-      const body = { message, content: bytesToBase64(encoder.encode(JSON.stringify(data, null, 2))) };
-      if (sha) body.sha = sha;
-      return apiRequest(fileUrl(config, path), config.token, { method: "PUT", body: JSON.stringify(body) });
-    }
-
     function ensurePlannedManifest(manifest) {
       manifest.plannedWorkout ||= { path: PLANNED_PATH, revision: null };
       if (!manifest.plannedWorkout.path) manifest.plannedWorkout.path = PLANNED_PATH;
@@ -255,10 +207,10 @@
     async function uploadPlannedWorkout(config, manifest, meta) {
       const pointer = ensurePlannedManifest(manifest);
       const path = pointer.path || PLANNED_PATH;
-      const old = await getJson(config, path);
+      const old = await Repo.getJson(config, path);
       const revision = crypto.randomUUID();
       const workout = NextWorkout.snapshot();
-      await putJson(config, path, {
+      await Repo.putJson(config, path, {
         format: "fitness-planned-workout-v1",
         revision,
         updatedAt: new Date().toISOString(),
@@ -274,7 +226,7 @@
     async function downloadPlannedWorkout(config, manifest) {
       const pointer = ensurePlannedManifest(manifest);
       if (!pointer.revision) return null;
-      const file = await getJson(config, pointer.path || PLANNED_PATH);
+      const file = await Repo.getJson(config, pointer.path || PLANNED_PATH);
       if (!file) throw new Error("云端当前待训练计划文件缺失");
       const payload = file.data;
       if (payload?.format !== "fitness-planned-workout-v1" || payload.revision !== pointer.revision) {
@@ -659,5 +611,5 @@
     return { init, onPage, onDataReset, push, pull, hasCredentials, suppressNextAutoPull, refreshMeta };
   }
 
-  window.FitnessSyncV165 = Object.freeze({ create });
+  window.FitnessSyncCore = Object.freeze({ create });
 })();

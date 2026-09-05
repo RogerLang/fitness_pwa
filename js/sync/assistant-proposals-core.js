@@ -1,5 +1,8 @@
 (() => {
   function create(App) {
+    const Repo = window.FitnessGitHubPrivateRepo;
+    if (!Repo) throw new Error("FitnessGitHubPrivateRepo must load before assistant-proposals-core.js");
+
     const PRIMARY_CREDS_KEY = "syncCredentialsV7";
     const LEGACY_CONFIG_KEY = "syncConfig";
     const SYNC_META_KEY = "syncMetaV11";
@@ -7,7 +10,6 @@
     const REFRESH_COOLDOWN_MS = 15000;
     const ACTION_IDS = ["planningPushTopBtn", "planningPushBottomBtn", "planningGoTrainTopBtn", "planningGoTrainBtn"];
     const clone = value => JSON.parse(JSON.stringify(value));
-    const decoder = new TextDecoder();
 
     let proposal = null;
     let loadPromise = null;
@@ -35,60 +37,6 @@
         repo: primary.repo || legacy.repo,
         token: primary.token || legacy.token
       };
-    }
-
-    function apiHeaders(token) {
-      return {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-        "Content-Type": "application/json"
-      };
-    }
-
-    async function apiRequest(url, token, options = {}) {
-      const response = await fetch(url, { ...options, headers: { ...apiHeaders(token), ...(options.headers || {}) } });
-      if (response.status === 404) return { status: 404, data: null };
-      let data = null;
-      try { data = await response.json(); } catch {}
-      if (!response.ok) throw new Error(`GitHub API ${response.status}${data?.message ? `：${data.message}` : ""}`);
-      return { status: response.status, data };
-    }
-
-    function fileUrl(config, path) {
-      const parts = path.split("/").map(encodeURIComponent).join("/");
-      return `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/${parts}`;
-    }
-
-    function decodeBase64Json(content) {
-      const text = atob(String(content || "").replace(/\s/g, ""));
-      const bytes = new Uint8Array(text.length);
-      for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
-      return JSON.parse(decoder.decode(bytes));
-    }
-
-    async function getJson(config, path) {
-      const response = await apiRequest(fileUrl(config, path), config.token);
-      if (!response.data) return null;
-      return { sha: response.data.sha, data: decodeBase64Json(response.data.content) };
-    }
-
-    async function deleteJson(config, path, sha, message) {
-      if (!sha) return;
-      await apiRequest(fileUrl(config, path), config.token, {
-        method: "DELETE",
-        body: JSON.stringify({ message, sha })
-      });
-    }
-
-    async function assertPrivateRepository(config) {
-      const response = await apiRequest(
-        `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}`,
-        config.token
-      );
-      if (!response.data || response.data.private !== true || response.data.visibility !== "private") {
-        throw new Error("助手计划提案只允许从 Private GitHub 仓库读取");
-      }
     }
 
     function findTargetIndex(payload) {
@@ -168,10 +116,12 @@
             proposal = null;
             return null;
           }
-          await assertPrivateRepository(config);
+          await Repo.privateCheck(config, {
+            privateMessage: "助手计划提案只允许从 Private GitHub 仓库读取"
+          });
           const [manifestFile, proposalFile, syncMeta] = await Promise.all([
-            getJson(config, "manifest.json"),
-            getJson(config, PROPOSAL_PATH),
+            Repo.getJson(config, "manifest.json"),
+            Repo.getJson(config, PROPOSAL_PATH),
             App.idbGet(SYNC_META_KEY)
           ]);
           lastLoadedAt = Date.now();
@@ -323,7 +273,7 @@
       if (!proposal || busy) return;
       busy = true;
       try {
-        await deleteJson(proposal.config, PROPOSAL_PATH, proposal.sha, "Dismiss assistant training plan proposal");
+        await Repo.deleteJson(proposal.config, PROPOSAL_PATH, proposal.sha, "Dismiss assistant training plan proposal");
         proposal = null;
         autoSelectedProposalId = "";
         App.planning?.render?.();
@@ -338,7 +288,7 @@
 
     async function cleanupRemoteProposal(snapshot) {
       try {
-        await deleteJson(snapshot.config, PROPOSAL_PATH, snapshot.sha, "Apply assistant training template proposal");
+        await Repo.deleteJson(snapshot.config, PROPOSAL_PATH, snapshot.sha, "Apply assistant training template proposal");
       } catch (error) {
         console.warn("assistant proposal cleanup", error);
       }
@@ -437,5 +387,5 @@
     return { init, refresh, onPage, onDataReset };
   }
 
-  window.FitnessAssistantProposalsV165 = Object.freeze({ create });
+  window.FitnessAssistantProposalsCore = Object.freeze({ create });
 })();
