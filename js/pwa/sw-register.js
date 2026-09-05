@@ -11,6 +11,15 @@
   let lastUpdateCheckAt = 0;
   let updateBanner = null;
 
+  function ensureUpdateStyles() {
+    if (document.querySelector('link[data-fitness-pwa-update-style]')) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "assets/css/pwa-update.css";
+    link.dataset.fitnessPwaUpdateStyle = "true";
+    document.head.appendChild(link);
+  }
+
   function ensureUpdateBanner() {
     if (updateBanner) return updateBanner;
     const banner = document.createElement("div");
@@ -78,6 +87,8 @@
     lastUpdateCheckAt = now;
     registration.update().catch(error => console.warn("service worker update check", error));
   }
+
+  ensureUpdateStyles();
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!hadController || reloading) return;
