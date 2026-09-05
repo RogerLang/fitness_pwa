@@ -40,21 +40,6 @@
     return NextWorkout.current();
   }
 
-  function assistantChange(plan = currentPlan()) {
-    const value = plan?.pendingAssistantChange;
-    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-    const summary = String(value.summary || "训练模板已调整").trim() || "训练模板已调整";
-    const changes = Array.isArray(value.changes)
-      ? value.changes.map(item => String(item || "").trim()).filter(Boolean).slice(0, 8)
-      : [];
-    return {
-      id: String(value.id || ""),
-      summary,
-      changes,
-      createdAt: String(value.createdAt || "")
-    };
-  }
-
   function warmupSet(ex, si) {
     return Array.isArray(ex?.setPresets) ? (ex.setPresets[si] || {}) : {};
   }
@@ -116,7 +101,7 @@
     if (drafts.has(index)) return drafts.get(index);
 
     const active = confirmed();
-    const draft = !assistantChange(plan) && active?.index === index
+    const draft = active?.index === index
       ? { ...clone(active.workout), status: "draft", revision: null }
       : suggestionSnapshot(plan);
     for (const ex of draft.exercises || []) ex.loadType = loadType(ex);
@@ -150,21 +135,7 @@
   function renderCurrentBanner() {
     const root = document.getElementById("planningCurrentPlan");
     if (!root) return;
-    const plan = currentPlan();
-    const pending = assistantChange(plan);
     const active = confirmed();
-
-    if (pending) {
-      const activeForPlan = active?.index === currentIndex() ? active : null;
-      const currentText = activeForPlan
-        ? `当前待训练仍保留：${activeForPlan.workout?.planName || plan?.name || "本次训练"}`
-        : "当前待训练计划不会在确认前被改写";
-      const detail = pending.changes.length ? pending.changes.join(" · ") : currentText;
-      root.className = "planning-current is-confirmed";
-      root.innerHTML = `<span class="planning-current-label">ChatGPT 已调整 · 待确认</span><strong>${App.esc(pending.summary)}</strong><small>${App.esc(pending.changes.length ? `${detail} · ${currentText}` : detail)}</small>`;
-      return;
-    }
-
     root.className = `planning-current${active ? " is-confirmed" : " is-empty"}`;
     if (!active) {
       root.innerHTML = '<span class="planning-current-label">当前待训练</span><strong>暂无</strong><small>推送后会显示在训练页</small>';
@@ -392,7 +363,6 @@
     const plan = App.state.plans[index];
     const draft = draftFor(index);
     const active = confirmed();
-    const confirmingAssistantChange = !!assistantChange(plan);
     if (!plan || !draft) return false;
 
     if (active && App.training?.hasDraft?.()) {
@@ -417,7 +387,6 @@
       confirmedAt: now,
       exercises: clone((draft.exercises || []).map(ex => ({ ...ex, loadType: loadType(ex) })))
     };
-    if (confirmingAssistantChange) delete plan.pendingAssistantChange;
 
     drafts.delete(index);
     await App.persist("plans");
@@ -436,7 +405,7 @@
       if (syncStatus?.classList.contains("sync-error")) {
         App.toast(syncStatus.textContent || "训练计划已保存在本机，GitHub 同步未完成", "error");
       } else {
-        App.toast(confirmingAssistantChange ? "修改已确认，训练计划已推送到云端" : "训练计划已推送到云端", "success");
+        App.toast("训练计划已推送到云端", "success");
       }
     } catch (error) {
       App.toast(error?.message || "训练计划已保存在本机，GitHub 同步未完成", "error");
