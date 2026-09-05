@@ -3,40 +3,19 @@
   if (!App) return;
 
   let core = null;
-  let loadPromise = null;
 
-  function loadCore() {
-    if (core) return Promise.resolve(core);
-    if (loadPromise) return loadPromise;
-    loadPromise = new Promise((resolve, reject) => {
-      const finish = () => {
-        try {
-          if (!window.FitnessAssistantProposalsV165?.create) throw new Error("assistant-proposals-v165.js did not register");
-          core = window.FitnessAssistantProposalsV165.create(App);
-          resolve(core);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      if (window.FitnessAssistantProposalsV165?.create) {
-        finish();
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = "js/sync/assistant-proposals-v165.js";
-      script.async = false;
-      script.onload = finish;
-      script.onerror = () => reject(new Error("页面模块加载失败：js/sync/assistant-proposals-v165.js"));
-      document.body.appendChild(script);
-    });
-    return loadPromise;
+  function ensureCore() {
+    if (core) return core;
+    const create = window.FitnessAssistantProposalsV165?.create;
+    if (!create) throw new Error("assistant-proposals-core.js must load before assistant-proposals.js");
+    core = create(App);
+    return core;
   }
 
   App.registerModule({
     pages: ["plan"],
     async init() {
-      const module = await loadCore();
-      await module.init();
+      await ensureCore().init();
     },
     async refresh(reason) {
       if (core?.refresh) await core.refresh(reason);
