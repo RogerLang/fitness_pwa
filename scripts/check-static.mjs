@@ -22,6 +22,7 @@ function jsFiles(dir = "js") {
 const indexHtml = read("index.html");
 const serviceWorker = read("sw.js");
 const appCore = read("js/core/app.js");
+const appSchema = read("js/core/app-schema.js");
 
 const localRefs = [...indexHtml.matchAll(/\b(?:href|src)="([^"]+)"/g)]
   .map(match => match[1])
@@ -83,6 +84,7 @@ if (!shellMatch) {
   }
 
   for (const required of [
+    "js/core/app-schema.js",
     "js/training/planned-workout.js",
     "js/training/candidate-workout.js",
     "js/training/planning-core.js",
@@ -113,6 +115,15 @@ const motionJs = read("js/training/training-motion.js");
 const motionCss = read("assets/css/training-motion.css");
 if (!motionJs.includes("overviewTargetY = 0;")) fail("protected overviewTargetY = 0 regression guard failed");
 if (!motionCss.includes("--training-overview-offset:68px;")) fail("protected --training-overview-offset:68px regression guard failed");
+
+if (!appSchema.includes("const LOCAL_STATE_SCHEMA_VERSION = 2")) fail("local state schema version must remain explicit and independent");
+if (!appSchema.includes("window.FitnessSchema")) fail("app-schema.js must export FitnessSchema");
+for (const required of ["normalizePlan", "normalizeWorkout", "normalizeSession", "normalizeState"]) {
+  if (!appSchema.includes(`function ${required}`)) fail(`app-schema.js is missing ${required}`);
+  if (appCore.includes(`function ${required}`)) fail(`app.js must not own ${required}`);
+}
+if (appCore.includes("DATA_SCHEMA_VERSION")) fail("ambiguous DATA_SCHEMA_VERSION name must stay removed");
+if (!appCore.includes("const Schema = window.FitnessSchema")) fail("app.js must consume FitnessSchema");
 
 const candidateWorkout = read("js/training/candidate-workout.js");
 const planningEntry = read("js/training/planning.js");
