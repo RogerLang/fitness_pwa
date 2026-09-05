@@ -154,6 +154,10 @@
     0 2px 6px rgba(30,35,44,.032),
     inset 0 1.5px 0 rgba(255,255,255,.96),
     inset 0 -1px 0 rgba(91,104,122,.05);
+  opacity:1;
+  transform:scale(1);
+  transform-origin:center top;
+  transition:opacity .18s ease,transform .18s ease;
 }
 
 .app-header > div{
@@ -177,7 +181,8 @@
 }
 
 body.chrome-hidden .app-header{
-  transform:none;
+  opacity:.28;
+  transform:scale(.982);
 }
 
 @media(display-mode:standalone){
@@ -204,5 +209,32 @@ body.chrome-hidden .app-header{
 
   main{
     padding-top:4px;
+  }
+}
+
+/* v174: keep the top brand shell and bottom navigation on the same mobile geometry. */
+@media(max-width:680px){
+  :root{
+    --mobile-chrome-height:63px;
+    --mobile-chrome-radius:31px;
+    --mobile-chrome-width:calc(100% - 20px);
+  }
+
+  .app-header{
+    width:var(--mobile-chrome-width);
+    height:var(--mobile-chrome-height);
+    min-height:var(--mobile-chrome-height);
+    margin:10px auto 8px;
+    padding:9px 16px;
+    border-radius:var(--mobile-chrome-radius);
+  }
+
+  .app-header h1{
+    line-height:1.1;
+  }
+
+  .bottom-nav{
+    min-height:var(--mobile-chrome-height);
+    border-radius:var(--mobile-chrome-radius);
   }
 }
