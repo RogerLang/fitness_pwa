@@ -66,9 +66,25 @@
     return null;
   }
 
-  function appendHistory(map, name, item) {
-    if (!map.has(name)) map.set(name, []);
-    map.get(name).push(item);
+  function appendHistory(map, key, item) {
+    if (!key) return;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(item);
+  }
+
+  function historyBucket() {
+    return { byId: new Map(), byName: new Map() };
+  }
+
+  function appendExercise(bucket, exercise, item) {
+    appendHistory(bucket.byId, String(exercise?.exerciseId || ""), item);
+    appendHistory(bucket.byName, String(exercise?.name || ""), item);
+  }
+
+  function bucketFor(map, key) {
+    if (!key) return null;
+    if (!map.has(key)) map.set(key, historyBucket());
+    return map.get(key);
   }
 
   function buildHistoryIndex() {
@@ -79,25 +95,25 @@
         const bt = String(b.session?.completedAt || b.session?.date || "");
         return bt.localeCompare(at) || b.index - a.index;
       });
-    const all = new Map();
-    const byPlan = new Map();
+    const all = historyBucket();
+    const byPlanId = new Map();
+    const byPlanName = new Map();
 
     for (const { session } of sorted) {
+      const planId = String(session?.planId || "");
       const planName = String(session?.plan || "");
-      let planMap = null;
-      if (planName) {
-        if (!byPlan.has(planName)) byPlan.set(planName, new Map());
-        planMap = byPlan.get(planName);
-      }
+      const planIdBucket = bucketFor(byPlanId, planId);
+      const planNameBucket = bucketFor(byPlanName, planName);
       for (const exercise of session?.exercises || []) {
-        if (!exercise?.name) continue;
+        if (!exercise?.name && !exercise?.exerciseId) continue;
         const item = { session, exercise };
-        appendHistory(all, exercise.name, item);
-        if (planMap) appendHistory(planMap, exercise.name, item);
+        appendExercise(all, exercise, item);
+        if (planIdBucket) appendExercise(planIdBucket, exercise, item);
+        if (planNameBucket) appendExercise(planNameBucket, exercise, item);
       }
     }
 
-    historyIndexCache = { all, byPlan };
+    historyIndexCache = { all, byPlanId, byPlanName };
     return historyIndexCache;
   }
 
@@ -109,15 +125,50 @@
     historyIndexCache = null;
   }
 
-  function buildHistoryContext(planName) {
-    const index = historyIndex();
-    const same = index.byPlan.get(String(planName || "")) || null;
+  function planIdentity(ref) {
+    if (typeof ref === "string") return { id: "", name: ref };
     return {
-      history(name) {
-        const preferred = same?.get(name);
-        return preferred?.length ? preferred : (index.all.get(name) || []);
+      id: String(ref?.planId || ""),
+      name: String(ref?.name || ref?.planName || "")
+    };
+  }
+
+  function exerciseIdentity(ref) {
+    if (typeof ref === "string") return { id: "", name: ref };
+    return {
+      id: String(ref?.exerciseId || ""),
+      name: String(ref?.name || "")
+    };
+  }
+
+  function firstHistory(...candidates) {
+    return candidates.find(items => items?.length) || [];
+  }
+
+  function historyFromBucket(bucket, exercise) {
+    if (!bucket) return [];
+    return firstHistory(
+      exercise.id ? bucket.byId.get(exercise.id) : null,
+      exercise.name ? bucket.byName.get(exercise.name) : null
+    );
+  }
+
+  function buildHistoryContext(planRef) {
+    const index = historyIndex();
+    const plan = planIdentity(planRef);
+    const sameId = plan.id ? index.byPlanId.get(plan.id) : null;
+    const sameName = plan.name ? index.byPlanName.get(plan.name) : null;
+    return {
+      history(exerciseRef) {
+        const exercise = exerciseIdentity(exerciseRef);
+        return firstHistory(
+          historyFromBucket(sameId, exercise),
+          historyFromBucket(sameName, exercise),
+          exercise.id ? index.all.byId.get(exercise.id) : null,
+          exercise.name ? index.all.byName.get(exercise.name) : null
+        );
       },
-      latest(name) { return this.history(name)[0]?.exercise || null; }
+      latest(exerciseRef) { return this.history(exerciseRef)[0]?.exercise || null; }
     };
   }
 
