@@ -134,25 +134,26 @@
   grid-template-columns:minmax(0,1.55fr) minmax(0,.72fr);
 }
 
-/* v172: compact app chrome and edge-to-edge system-bar treatment. */
-:root{
-  --app-safe-bottom-max:env(safe-area-max-inset-bottom,36px);
-}
-
+/* v173: restore the pre-v172 system-bar layout and turn the brand header into a compact glass card. */
 .app-header{
   position:relative;
   top:auto;
-  width:100%;
-  max-width:820px;
-  margin:0 auto;
-  padding:calc(16px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 4px max(14px,env(safe-area-inset-left,0px));
-  background:transparent;
-  border-bottom:0;
-  -webkit-backdrop-filter:none;
-  backdrop-filter:none;
-  box-shadow:none;
-  transform:none;
-  transition:none;
+  z-index:30;
+  width:min(calc(100% - 28px),792px);
+  margin:12px auto 8px;
+  padding:13px 18px;
+  background:
+    radial-gradient(118% 92% at 12% 0%,rgba(255,255,255,.58),rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,rgba(255,255,255,.78),rgba(245,248,252,.64));
+  border:1px solid rgba(255,255,255,.84);
+  border-radius:26px;
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+  backdrop-filter:blur(22px) saturate(150%);
+  box-shadow:
+    0 12px 30px rgba(30,35,44,.065),
+    0 2px 6px rgba(30,35,44,.032),
+    inset 0 1.5px 0 rgba(255,255,255,.96),
+    inset 0 -1px 0 rgba(91,104,122,.05);
 }
 
 .app-header > div{
@@ -161,10 +162,10 @@
 
 .app-header h1{
   margin:0;
-  font-size:22px;
-  font-weight:820;
+  font-size:21px;
   line-height:1.16;
-  letter-spacing:-.022em;
+  letter-spacing:-.018em;
+  font-weight:820;
 }
 
 .app-header p{
@@ -172,9 +173,7 @@
 }
 
 .app-header #installBtn{
-  margin-left:auto;
-  padding:9px 12px;
-  border-radius:14px;
+  display:none!important;
 }
 
 body.chrome-hidden .app-header{
@@ -182,42 +181,28 @@ body.chrome-hidden .app-header{
 }
 
 @media(display-mode:standalone){
-  html,
-  body{
-    background-color:var(--bg);
-  }
-
   .app-header{
-    background:transparent;
-    border-bottom:0;
+    background:
+      radial-gradient(118% 92% at 12% 0%,rgba(255,255,255,.58),rgba(255,255,255,0) 58%),
+      linear-gradient(180deg,rgba(255,255,255,.78),rgba(245,248,252,.64));
+    border-bottom-color:rgba(255,255,255,.84);
   }
 }
 
 @media(max-width:680px){
   .app-header{
-    padding:calc(14px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 3px max(12px,env(safe-area-inset-left,0px));
+    width:calc(100% - 20px);
+    margin:10px auto 8px;
+    padding:13px 16px;
+    border-radius:25px;
   }
 
   .app-header h1{
-    font-size:22px;
+    font-size:21px;
     line-height:1.16;
   }
 
   main{
-    padding-top:8px;
-  }
-
-  body:not(.app-booting)::after{
-    content:"";
-    position:fixed;
-    left:0;
-    right:0;
-    height:var(--app-safe-bottom-max);
-    bottom:calc(env(safe-area-inset-bottom,0px) - var(--app-safe-bottom-max));
-    background:
-      radial-gradient(85% 140% at 50% 100%,rgba(199,220,226,.11) 0%,rgba(199,220,226,0) 72%),
-      var(--bg);
-    pointer-events:none;
-    z-index:3;
+    padding-top:4px;
   }
 }
