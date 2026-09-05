@@ -9,7 +9,6 @@
   const AUTO_CHECK_COOLDOWN_MS = 60000;
 
   let applyingRemote = false;
-  let todayStatusTimer = null;
   let autoInitialized = false;
   let autoChecking = false;
   let lastAutoCheckAt = 0;
@@ -105,15 +104,8 @@
     }
     const today = document.getElementById("todaySyncStatus");
     if (today) {
-      clearTimeout(todayStatusTimer);
       today.textContent = message || "";
       today.className = `today-sync-status${ok === true ? " sync-ok" : ok === false ? " sync-error" : ""}${message ? " show" : ""}`;
-      if (message && ok === true) {
-        const shown = message;
-        todayStatusTimer = setTimeout(() => {
-          if (today.textContent === shown) today.className = "today-sync-status";
-        }, 4200);
-      }
     }
   }
 
@@ -330,12 +322,13 @@
       await App.training?.prepareRemotePlans(oldPlanName, plansChanged);
       await App.refresh("remote");
 
-      const message = [
-        plansChanged ? "计划已更新" : "计划已是最新",
-        addedSessions ? `新增 ${addedSessions} 条训练` : "训练记录已是最新",
-        addedBody ? `新增 ${addedBody} 条身体记录` : "身体数据已是最新",
+      const updates = [
+        plansChanged ? "计划已更新" : "",
+        addedSessions ? `新增 ${addedSessions} 条训练` : "",
+        addedBody ? `新增 ${addedBody} 条身体记录` : "",
         removed ? `清理 ${removed} 条旧重复记录` : ""
-      ].filter(Boolean).join(" · ");
+      ].filter(Boolean);
+      const message = updates.length ? updates.join(" · ") : "计划与数据已是最新";
       status(message, true);
       return { ok: true, kind: "pull", plansChanged, addedSessions, addedBody, removed, message };
     } catch (error) {
