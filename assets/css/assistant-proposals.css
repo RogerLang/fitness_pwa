@@ -1,0 +1,41 @@
+#plan .planning-current.assistant-proposal{
+  grid-template-columns:1fr;
+  align-items:stretch;
+  gap:6px;
+}
+
+#plan .planning-current.assistant-proposal > span,
+#plan .planning-current.assistant-proposal > strong,
+#plan .planning-current.assistant-proposal > small{
+  overflow:visible;
+  text-overflow:clip;
+  white-space:normal;
+}
+
+#plan .planning-current.assistant-proposal > small{
+  display:block;
+  color:#7f8996;
+  font-size:11px;
+  line-height:1.45;
+}
+
+#plan .planning-proposal-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:2px;
+}
+
+#plan .planning-proposal-actions button{
+  min-height:38px;
+}
+
+#plan .planning-proposal-note{
+  margin:0 0 10px;
+  padding:9px 10px;
+  border-radius:14px;
+  background:rgba(255,255,255,.35);
+  color:#7f8996;
+  font-size:11px;
+  line-height:1.45;
+}
