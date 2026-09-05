@@ -228,7 +228,11 @@
     }).join("")}</div>`;
   }
 
-  function renderTemplate() {
+  function templateShell() {
+    return document.querySelector("#plan .planning-template-shell");
+  }
+
+  function renderTemplate({ force = false } = {}) {
     const root = document.getElementById("planningTemplateList");
     if (!root) return;
     const plan = currentPlan();
@@ -236,6 +240,7 @@
       root.innerHTML = "";
       return;
     }
+    if (!force && !templateShell()?.open) return;
 
     root.innerHTML = (plan.exercises || []).map((ex, ei) => {
       const [min, max] = repRange(ex);
@@ -478,6 +483,10 @@
       if (button.classList.contains("template-add-set")) adjustTemplateSets(ei, 1);
       else if (button.classList.contains("template-remove-set")) adjustTemplateSets(ei, -1);
       else if (button.classList.contains("template-delete")) deleteTemplateExercise(ei);
+    });
+    const shell = templateShell();
+    shell?.addEventListener("toggle", () => {
+      if (shell.open) renderTemplate({ force: true });
     });
     document.getElementById("planningRegenerateBtn")?.addEventListener("click", regenerate);
     for (const id of ["planningPushTopBtn", "planningPushBottomBtn"]) {
