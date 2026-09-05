@@ -6,13 +6,42 @@
   let historyLimit = 20;
   let historyPlanFilter = "all";
   let progressRange = "1y";
+  let orderedSessionsCache = null;
+
+  function orderedSessions() {
+    if (orderedSessionsCache) return orderedSessionsCache;
+    orderedSessionsCache = App.state.sessions
+      .map((session, index) => ({ session, index }))
+      .sort((a, b) => {
+        const at = String(a.session?.completedAt || a.session?.date || "");
+        const bt = String(b.session?.completedAt || b.session?.date || "");
+        return bt.localeCompare(at) || b.index - a.index;
+      })
+      .map(entry => entry.session);
+    return orderedSessionsCache;
+  }
 
   function allExerciseNames() {
-    return [...new Set(App.state.plans.flatMap(plan => (plan.exercises || []).filter(ex => !ex.warmup).map(ex => ex.name)).filter(Boolean))];
+    const names = new Set();
+    const warmupNames = new Set();
+    for (const plan of App.state.plans) {
+      for (const ex of plan.exercises || []) {
+        if (!ex?.name) continue;
+        if (ex.warmup) warmupNames.add(ex.name);
+        else names.add(ex.name);
+      }
+    }
+    for (const session of orderedSessions()) {
+      for (const ex of session.exercises || []) {
+        if (ex?.name && !warmupNames.has(ex.name)) names.add(ex.name);
+      }
+    }
+    return [...names];
   }
 
   function historyPlans() {
-    return [...new Set(App.state.sessions.map(session => session?.plan).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), "zh-CN"));
+    return [...new Set(orderedSessions().map(session => session?.plan).filter(Boolean))]
+      .sort((a, b) => String(a).localeCompare(String(b), "zh-CN"));
   }
 
   function renderHistoryFilter() {
@@ -40,13 +69,28 @@
     return { exerciseCount: exercises.length, setCount, volume };
   }
 
+  function historyDetailsHtml(session) {
+    return (session.exercises || []).map(ex => {
+      const chips = (ex.sets || []).map((set, index) => `<span class="history-set-chip"><b>${index + 1}</b>${App.esc(Progression.setText(set, ex) || "未记录")}</span>`).join("");
+      return `<div class="history-exercise"><div class="history-exercise-name">${App.esc(ex.name || "")}</div><div class="history-set-list">${chips}</div></div>`;
+    }).join("");
+  }
+
+  function bindHistoryDetails(details, session) {
+    details.addEventListener("toggle", () => {
+      if (!details.open || details.dataset.loaded === "true") return;
+      const body = details.querySelector(".history-details-body");
+      if (!body) return;
+      body.innerHTML = historyDetailsHtml(session);
+      details.dataset.loaded = "true";
+    });
+  }
+
   function renderHistory() {
     const box = document.getElementById("historyList");
     if (!box) return;
     renderHistoryFilter();
-    const arr = [...App.state.sessions]
-      .filter(session => historyPlanFilter === "all" || session.plan === historyPlanFilter)
-      .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+    const arr = orderedSessions().filter(session => historyPlanFilter === "all" || session.plan === historyPlanFilter);
     if (!arr.length) {
       box.innerHTML = `<div class="card empty">${historyPlanFilter === "all" ? "暂无训练记录" : "暂无此训练计划的记录"}</div>`;
       return;
@@ -54,10 +98,6 @@
     const shown = arr.slice(0, historyLimit);
     box.innerHTML = shown.map(session => {
       const stats = sessionStats(session);
-      const exercises = (session.exercises || []).map(ex => {
-        const chips = (ex.sets || []).map((set, index) => `<span class="history-set-chip"><b>${index + 1}</b>${App.esc(Progression.setText(set, ex) || "未记录")}</span>`).join("");
-        return `<div class="history-exercise"><div class="history-exercise-name">${App.esc(ex.name || "")}</div><div class="history-set-list">${chips}</div></div>`;
-      }).join("");
       const volumeText = stats.volume > 0 ? `<span>训练量 ${Math.round(stats.volume).toLocaleString("zh-CN")} kg</span>` : "";
       return `<article class="history-card">
         <div class="history-head">
@@ -67,10 +107,11 @@
         <div class="history-summary-meta"><span>${stats.setCount} 组</span>${volumeText}</div>
         <details class="history-details">
           <summary>查看详情</summary>
-          <div class="history-details-body">${exercises}</div>
+          <div class="history-details-body"></div>
         </details>
       </article>`;
     }).join("") + (shown.length < arr.length ? `<div class="load-more-row"><button id="loadMoreHistory" class="secondary">加载更多（${shown.length}/${arr.length}）</button></div>` : "");
+    box.querySelectorAll(".history-details").forEach((details, index) => bindHistoryDetails(details, shown[index]));
     const more = document.getElementById("loadMoreHistory");
     if (more) more.onclick = () => { historyLimit += 20; renderHistory(); };
   }
@@ -93,9 +134,9 @@
   }
 
   function progressData(name) {
-    const history = [...App.state.sessions]
+    const history = orderedSessions()
       .filter(session => withinRange(session.date))
-      .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")))
+      .reverse()
       .map(session => ({ date: session.date, ex: (session.exercises || []).find(ex => ex.name === name) }))
       .filter(item => item.ex);
     const typed = [...history].reverse().find(item => item.ex?.loadType)?.ex || history.at(-1)?.ex || null;
@@ -240,6 +281,10 @@
     if (id === "history") renderHistory();
     if (id === "progress") { renderProgressOptions(); drawProgress(); }
   }
+
+  App.registerPersistHook((reason, keys = []) => {
+    if (keys.includes("sessions")) orderedSessionsCache = null;
+  });
 
   window.TrainingInsights = Object.freeze({ init, refresh, onPage });
 })();
