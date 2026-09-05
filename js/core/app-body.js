@@ -2,6 +2,8 @@
   const App = window.FitnessApp;
   if (!App) throw new Error("FitnessApp must load before app-body.js");
 
+  let orderedBodyCache = null;
+
   function numberValue(id) {
     const input = document.getElementById(id);
     if (!input || input.value === "") return null;
@@ -19,12 +21,23 @@
     return `较上次 ${sign}${delta.toFixed(1)} ${unit}`;
   }
 
+  function orderedBodyItems() {
+    if (orderedBodyCache) return orderedBodyCache;
+    orderedBodyCache = App.state.body
+      .map((item, index) => ({ item, index }))
+      .sort((a, b) => {
+        const at = String(a.item?.recordedAt || a.item?.date || "");
+        const bt = String(b.item?.recordedAt || b.item?.date || "");
+        return bt.localeCompare(at) || b.index - a.index;
+      })
+      .map(entry => entry.item);
+    return orderedBodyCache;
+  }
+
   function renderHistory() {
     const box = document.getElementById("bodyHistory");
     if (!box) return;
-    const items = [...App.state.body]
-      .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-      .slice(0, 12);
+    const items = orderedBodyItems().slice(0, 12);
 
     if (!items.length) {
       box.innerHTML = '<div class="empty">暂无身体数据</div>';
@@ -74,9 +87,11 @@
   }
 
   async function save() {
+    const now = new Date();
     const item = {
       id: crypto.randomUUID(),
-      date: App.isoDate(),
+      date: App.isoDate(now),
+      recordedAt: now.toISOString(),
       weight: numberValue("bodyWeight"),
       chest: numberValue("chestCirc"),
       waist: numberValue("waistCirc"),
@@ -89,6 +104,7 @@
     }
 
     App.state.body.push(item);
+    orderedBodyCache = null;
     await App.persist("body");
     ["bodyWeight", "chestCirc", "waistCirc", "armCirc"].forEach(id => {
       const input = document.getElementById(id);
@@ -110,6 +126,10 @@
   function onPage(id) {
     if (id === "progress") renderHistory();
   }
+
+  App.registerPersistHook((reason, keys = []) => {
+    if (keys.includes("body")) orderedBodyCache = null;
+  });
 
   App.registerModule({ init, refresh, onPage });
 })();
