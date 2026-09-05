@@ -72,14 +72,22 @@ if (!shellMatch) {
       if (!exists(script)) fail(`PAGE_SCRIPTS references missing file: ${script}`);
       if (!shellSet.has(normalizeLocal(script))) fail(`PAGE_SCRIPTS asset is missing from SHELL_ASSETS: ${script}`);
     }
+    for (const required of [
+      "js/training/planning-core.js",
+      "js/training/planning.js",
+      "js/sync/assistant-proposals-core.js"
+    ]) {
+      if (!pageScripts.includes(required)) fail(`plan page dependency is missing from PAGE_SCRIPTS: ${required}`);
+    }
   }
 
   for (const required of [
-    "js/training/planning-v165.js",
-    "js/sync/sync-v165.js",
-    "js/sync/assistant-proposals-v165.js"
+    "js/training/planned-workout.js",
+    "js/training/planning-core.js",
+    "js/sync/sync-core.js",
+    "js/sync/assistant-proposals-core.js"
   ]) {
-    if (!shellSet.has(required)) fail(`v165 core module is missing from SHELL_ASSETS: ${required}`);
+    if (!shellSet.has(required)) fail(`architecture module is missing from SHELL_ASSETS: ${required}`);
   }
 }
 
@@ -87,25 +95,47 @@ if (/\?v=\d+/i.test(indexHtml) || /\?v=\d+/i.test(serviceWorker)) {
   fail("per-file ?v= resource versions must not return; shell cache version is the release boundary");
 }
 
+for (const deprecated of [
+  "js/training/planning-v165.js",
+  "js/sync/sync-v165.js",
+  "js/sync/assistant-proposals-v165.js",
+  "js/training/training-next-workout.js"
+]) {
+  if (exists(deprecated)) fail(`deprecated transition module must stay removed: ${deprecated}`);
+}
+
+if (!exists("ARCHITECTURE.md")) fail("ARCHITECTURE.md is required");
+
 const motionJs = read("js/training/training-motion.js");
 const motionCss = read("assets/css/training-motion.css");
 if (!motionJs.includes("overviewTargetY = 0;")) fail("protected overviewTargetY = 0 regression guard failed");
 if (!motionCss.includes("--training-overview-offset:68px;")) fail("protected --training-overview-offset:68px regression guard failed");
 
-const planningCore = read("js/training/planning-v165.js");
-const nextWorkout = read("js/training/training-next-workout.js");
-const syncCore = read("js/sync/sync-v165.js");
-const assistantCore = read("js/sync/assistant-proposals-v165.js");
+const planningEntry = read("js/training/planning.js");
+const planningCore = read("js/training/planning-core.js");
+const plannedWorkout = read("js/training/planned-workout.js");
+const syncEntry = read("js/sync/sync.js");
+const syncCore = read("js/sync/sync-core.js");
+const assistantEntry = read("js/sync/assistant-proposals.js");
+const assistantCore = read("js/sync/assistant-proposals-core.js");
 
-if (!planningCore.includes('const CANDIDATES_KEY = "planningCandidatesV1"')) fail("v165 Candidate Workout store key is missing");
-if (!planningCore.includes("NextWorkout.setConfirmed")) fail("v165 planning must push Candidate into global Planned Workout");
-if (/plan\.plannedWorkout\s*=/.test(planningCore)) fail("v165 planning must not write Planned Workout into Template objects");
-if (!nextWorkout.includes('const STORE_KEY = "plannedWorkoutV1"')) fail("v165 global Planned Workout store key is missing");
-if (!nextWorkout.includes("delete plan.plannedWorkout")) fail("v165 legacy embedded Planned Workout migration is missing");
-if (!syncCore.includes('const PLANNED_PATH = "planned-workout.json"')) fail("v165 independent Planned Workout remote file is missing");
-if (!syncCore.includes('format: "fitness-planned-workout-v1"')) fail("v165 Planned Workout remote payload format is missing");
-if (!assistantCore.includes('await App.persist("plans")')) fail("v165 ChatGPT confirmation must persist Template immediately");
-if (!assistantCore.includes("force: true") || !assistantCore.includes("regenerate: true")) fail("v165 ChatGPT confirmation must force Candidate regeneration");
-if (assistantCore.includes("pushPlan({ sync: false })")) fail("v165 ChatGPT confirmation must not push Planned Workout");
+for (const [name, source] of [
+  ["planning.js", planningEntry],
+  ["sync.js", syncEntry],
+  ["assistant-proposals.js", assistantEntry]
+]) {
+  if (/document\.createElement\(\s*["']script["']\s*\)/.test(source)) fail(`${name} must not create a nested script loader`);
+}
+
+if (!planningCore.includes('const CANDIDATES_KEY = "planningCandidatesV1"')) fail("Candidate Workout store key is missing");
+if (!planningCore.includes("NextWorkout.setConfirmed")) fail("planning must push Candidate into global Planned Workout");
+if (/plan\.plannedWorkout\s*=/.test(planningCore)) fail("planning must not write Planned Workout into Template objects");
+if (!plannedWorkout.includes('const STORE_KEY = "plannedWorkoutV1"')) fail("global Planned Workout store key is missing");
+if (!plannedWorkout.includes("delete plan.plannedWorkout")) fail("legacy embedded Planned Workout migration is missing");
+if (!syncCore.includes('const PLANNED_PATH = "planned-workout.json"')) fail("independent Planned Workout remote file is missing");
+if (!syncCore.includes('format: "fitness-planned-workout-v1"')) fail("Planned Workout remote payload format is missing");
+if (!assistantCore.includes('await App.persist("plans")')) fail("ChatGPT confirmation must persist Template immediately");
+if (!assistantCore.includes("force: true") || !assistantCore.includes("regenerate: true")) fail("ChatGPT confirmation must force Candidate regeneration");
+if (assistantCore.includes("pushPlan({ sync: false })")) fail("ChatGPT confirmation must not push Planned Workout");
 
 if (!process.exitCode) console.log("static-check: all checks passed");
