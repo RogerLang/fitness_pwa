@@ -79,17 +79,24 @@ function modulePages(module) {
 }
 
 function moduleHandlesPage(module, pageId) {
-  const pages = modulePages(module);
-  return pages.includes(pageId);
+  return modulePages(module).includes(pageId);
 }
 
-function scriptSelector(src) {
-  return `script[src="${CSS.escape(src)}"]`;
+function pagesForScript(src) {
+  const source = String(src || "").split("?")[0];
+  if (!source) return [];
+  return Object.entries(PAGE_SCRIPTS)
+    .filter(([, scripts]) => scripts.includes(source))
+    .map(([pageId]) => pageId);
+}
+
+function currentScriptSource() {
+  return document.currentScript?.getAttribute("src")?.split("?")[0] || "";
 }
 
 function loadScript(src) {
   if (scriptLoads.has(src)) return scriptLoads.get(src);
-  const existing = document.querySelector(scriptSelector(src));
+  const existing = [...document.scripts].find(script => script.getAttribute("src")?.split("?")[0] === src);
   if (existing) {
     const ready = Promise.resolve();
     scriptLoads.set(src, ready);
@@ -271,7 +278,7 @@ async function start() {
     await loadState();
     bindCoreEvents();
 
-    const criticalModules = appModules.filter(module => module.critical === true);
+    const criticalModules = appModules.filter(module => module.critical === true && modulePages(module).length === 0);
     const auxiliaryModules = appModules.filter(module => !criticalModules.includes(module));
     for (const module of criticalModules) await initModule(module);
 
@@ -310,6 +317,10 @@ window.FitnessApp = {
   resetData,
   switchPage,
   registerModule(module) {
+    if (!Array.isArray(module?.pages)) {
+      const inferredPages = pagesForScript(currentScriptSource());
+      if (inferredPages.length) module.pages = inferredPages;
+    }
     appModules.push(module);
   },
   registerPersistHook(hook) {
