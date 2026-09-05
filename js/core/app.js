@@ -29,6 +29,7 @@ const PERSIST_SCOPES = Object.freeze({
   reset: STATE_KEYS,
   data: STATE_KEYS
 });
+const DATA_SCHEMA_VERSION = 1;
 
 let db = null;
 let state = { plans: [], sessions: [], body: [] };
@@ -61,13 +62,112 @@ function fmtDate(d = new Date()) {
   return `${date} ${weekday}`;
 }
 
-function normalizeState(next) {
+function objectValue(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function normalizedString(value) {
+  return value === undefined || value === null ? "" : String(value);
+}
+
+function normalizeSet(value) {
+  return { ...objectValue(value) };
+}
+
+function normalizeExercise(value) {
+  const exercise = objectValue(value);
+  const normalized = {
+    ...exercise,
+    name: normalizedString(exercise.name),
+    sets: Array.isArray(exercise.sets) ? exercise.sets.map(normalizeSet) : []
+  };
+  if (Object.prototype.hasOwnProperty.call(exercise, "setPresets")) {
+    normalized.setPresets = Array.isArray(exercise.setPresets) ? exercise.setPresets.map(normalizeSet) : [];
+  }
+  return normalized;
+}
+
+function normalizeWorkout(value) {
+  const workout = objectValue(value);
   return {
-    plans: Array.isArray(next?.plans) ? next.plans : [],
-    sessions: Array.isArray(next?.sessions) ? next.sessions : [],
-    body: Array.isArray(next?.body) ? next.body : []
+    ...workout,
+    planName: normalizedString(workout.planName),
+    exercises: Array.isArray(workout.exercises) ? workout.exercises.map(normalizeExercise) : []
   };
 }
+
+function normalizePlan(value) {
+  const plan = objectValue(value);
+  const normalized = {
+    ...plan,
+    name: normalizedString(plan.name),
+    exercises: Array.isArray(plan.exercises) ? plan.exercises.map(normalizeExercise) : []
+  };
+  if (plan.plannedWorkout && typeof plan.plannedWorkout === "object" && !Array.isArray(plan.plannedWorkout)) {
+    normalized.plannedWorkout = normalizeWorkout(plan.plannedWorkout);
+  }
+  return normalized;
+}
+
+function normalizeSessionExercise(value) {
+  const exercise = normalizeExercise(value);
+  if (exercise.planned && typeof exercise.planned === "object" && !Array.isArray(exercise.planned)) {
+    exercise.planned = {
+      ...exercise.planned,
+      sets: Array.isArray(exercise.planned.sets) ? exercise.planned.sets.map(normalizeSet) : []
+    };
+  }
+  return exercise;
+}
+
+function normalizeSession(value) {
+  const session = objectValue(value);
+  const normalized = {
+    ...session,
+    date: normalizedString(session.date),
+    plan: normalizedString(session.plan),
+    exercises: Array.isArray(session.exercises) ? session.exercises.map(normalizeSessionExercise) : []
+  };
+  if (session.id !== undefined && session.id !== null) normalized.id = String(session.id);
+  if (session.completedAt !== undefined && session.completedAt !== null) normalized.completedAt = String(session.completedAt);
+  return normalized;
+}
+
+function normalizeBodyRecord(value) {
+  const record = { ...objectValue(value) };
+  if (record.id !== undefined && record.id !== null) record.id = String(record.id);
+  if (record.date !== undefined && record.date !== null) record.date = String(record.date);
+  if (record.recordedAt !== undefined && record.recordedAt !== null) record.recordedAt = String(record.recordedAt);
+  return record;
+}
+
+function normalizeState(next) {
+  const value = objectValue(next);
+  return {
+    plans: Array.isArray(value.plans) ? value.plans.map(normalizePlan) : [],
+    sessions: Array.isArray(value.sessions) ? value.sessions.map(normalizeSession) : [],
+    body: Array.isArray(value.body) ? value.body.map(normalizeBodyRecord) : []
+  };
+}
+
+function stateChangedByNormalization(before, after) {
+  try {
+    return JSON.stringify(before) !== JSON.stringify(after);
+  } catch (_) {
+    return true;
+  }
+}
+
+const Schema = Object.freeze({
+  version: DATA_SCHEMA_VERSION,
+  normalizeSet,
+  normalizeExercise,
+  normalizeWorkout,
+  normalizePlan,
+  normalizeSession,
+  normalizeBodyRecord,
+  normalizeState
+});
 
 function pageFromLocation() {
   const id = window.location.hash.slice(1).split("/")[0];
@@ -124,7 +224,12 @@ const idbGet = key => Storage.get(db, key);
 const idbSet = (key, value) => Storage.set(db, key, value);
 
 async function loadState() {
-  state = await Storage.readState(db);
+  const rawState = await Storage.readState(db);
+  const normalized = Schema.normalizeState(rawState);
+  state = normalized;
+  if (stateChangedByNormalization(rawState, normalized)) {
+    await Storage.writeState(db, normalized);
+  }
 }
 
 function persistKeys(reason) {
@@ -132,6 +237,7 @@ function persistKeys(reason) {
 }
 
 async function persist(reason = "data") {
+  state = Schema.normalizeState(state);
   const keys = persistKeys(reason);
   await Storage.writeKeys(db, state, keys);
   for (const hook of persistHooks) {
@@ -167,7 +273,7 @@ async function resetData(next, reason = "reset") {
     if (module.beforeDataReset && initializedModules.has(module)) await module.beforeDataReset(reason);
   }
 
-  state = normalizeState(next);
+  state = Schema.normalizeState(next);
   await persist(reason);
 
   for (const module of appModules) {
@@ -306,6 +412,7 @@ window.FitnessApp = {
   get db() {
     return db;
   },
+  schema: Schema,
   esc,
   isoDate,
   fmtDate,
