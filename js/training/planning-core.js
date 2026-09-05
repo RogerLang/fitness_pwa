@@ -1,11 +1,11 @@
 (() => {
-  const CANDIDATES_KEY = "planningCandidatesV1";
-
   function create(App) {
     const Progression = window.TrainingProgression;
     const NextWorkout = window.TrainingNextWorkout;
-    if (!Progression || !NextWorkout) throw new Error("Planning dependencies must load before planning-v165.js");
+    const CandidateFactory = window.TrainingCandidateWorkout;
+    if (!Progression || !NextWorkout || !CandidateFactory?.create) throw new Error("Planning dependencies must load before planning-core.js");
 
+    const Candidate = CandidateFactory.create(App, Progression);
     const {
       valueOrNull,
       loadType,
@@ -15,15 +15,11 @@
       setCount,
       weightStep,
       buildHistoryContext,
-      progressionSuggestion,
       previousSummary
     } = Progression;
 
     const clone = value => JSON.parse(JSON.stringify(value));
     const AUTOFILL_GUARD = 'autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore';
-    let candidates = {};
-    let savePromise = Promise.resolve();
-    const warnedStale = new Set();
 
     function select() {
       return document.getElementById("planningPlanSelect");
@@ -44,185 +40,24 @@
       return NextWorkout.current();
     }
 
-    function fingerprint(value) {
-      const text = JSON.stringify(value ?? null);
-      let h1 = 0x811c9dc5;
-      let h2 = 0x9e3779b9;
-      for (let i = 0; i < text.length; i++) {
-        const code = text.charCodeAt(i);
-        h1 = Math.imul(h1 ^ code, 0x01000193);
-        h2 = Math.imul(h2 ^ code, 0x85ebca6b);
-      }
-      return `${(h1 >>> 0).toString(36)}${(h2 >>> 0).toString(36)}`;
+    function entryFor(index = currentIndex(), options = {}) {
+      return Candidate.entryForPlan(App.state.plans[index] || null, options);
     }
 
-    function templateSig(plan) {
-      if (!plan) return "";
-      return fingerprint({ planId: plan.planId || "", name: plan.name || "", exercises: plan.exercises || [] });
+    function draftFor(index = currentIndex()) {
+      return Candidate.draftForPlan(App.state.plans[index] || null);
     }
 
-    function historySig(plan) {
-      if (!plan) return "";
-      const planId = String(plan.planId || "");
-      const name = String(plan.name || "");
-      const records = (App.state.sessions || [])
-        .filter(session => (planId && String(session?.planId || "") === planId) || (!planId && String(session?.plan || "") === name) || String(session?.plan || "") === name)
-        .map(session => [String(session?.id || ""), String(session?.completedAt || session?.date || "")])
-        .sort((a, b) => a[0].localeCompare(b[0]));
-      return fingerprint(records);
+    function markEdited(index = currentIndex()) {
+      Candidate.markEdited(App.state.plans[index] || null);
     }
 
-    function basis(plan) {
-      return { templateSig: templateSig(plan), historySig: historySig(plan) };
-    }
-
-    function candidateKey(plan) {
-      return String(plan?.planId || plan?.name || "").trim();
-    }
-
-    function queueSave() {
-      const snapshot = clone(candidates);
-      savePromise = savePromise.catch(() => {}).then(() => App.idbSet(CANDIDATES_KEY, snapshot));
-      return savePromise;
-    }
-
-    async function loadCandidates() {
-      const stored = await App.idbGet(CANDIDATES_KEY);
-      candidates = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
+    function regenerateEntry(index = currentIndex()) {
+      return Candidate.regenerate(App.state.plans[index] || null);
     }
 
     function warmupSet(ex, si) {
       return Array.isArray(ex?.setPresets) ? (ex.setPresets[si] || {}) : {};
-    }
-
-    function suggestionSnapshot(plan) {
-      const historyContext = buildHistoryContext(plan);
-      const exercises = (plan.exercises || []).map(ex => {
-        const type = loadType(ex);
-        if (ex.warmup) {
-          const count = setCount(ex);
-          return {
-            name: ex.name,
-            exerciseId: ex.exerciseId || "",
-            warmup: true,
-            loadType: type,
-            note: ex.note || "",
-            repRange: null,
-            weightStep: 0,
-            suggestionLabel: "专项热身",
-            reason: ex.note || "按预设完成后进入正式工作组。",
-            sets: Array.from({ length: count }, (_, si) => {
-              const preset = warmupSet(ex, si);
-              return {
-                weight: usesWeight(ex) ? valueOrNull(preset.weight) : null,
-                reps: valueOrNull(preset.reps ?? preset.repsLabel)
-              };
-            })
-          };
-        }
-
-        const history = historyContext.history(ex);
-        const suggestion = progressionSuggestion(ex, history);
-        return {
-          name: ex.name,
-          exerciseId: ex.exerciseId || "",
-          warmup: false,
-          loadType: type,
-          note: ex.note || "",
-          repRange: [...suggestion.repRange],
-          weightStep: suggestion.weightStep,
-          suggestionLabel: suggestion.statusLabel,
-          suggestionStatus: suggestion.status,
-          reason: suggestion.reason,
-          sets: suggestion.reps.map(reps => ({ weight: type === "bodyweight" ? null : suggestion.weight, reps }))
-        };
-      });
-
-      return {
-        id: crypto.randomUUID(),
-        revision: null,
-        status: "draft",
-        planId: plan.planId || "",
-        planName: plan.name,
-        generatedAt: new Date().toISOString(),
-        exercises
-      };
-    }
-
-    function newEntry(plan) {
-      const currentBasis = basis(plan);
-      return {
-        planId: plan.planId || "",
-        planName: plan.name || "",
-        workout: suggestionSnapshot(plan),
-        edited: false,
-        stale: false,
-        staleReason: "",
-        ...currentBasis
-      };
-    }
-
-    function entryFor(index = currentIndex(), { notify = true } = {}) {
-      const plan = App.state.plans[index];
-      if (!plan) return null;
-      const key = candidateKey(plan);
-      let entry = candidates[key];
-      const currentBasis = basis(plan);
-
-      if (!entry?.workout || String(entry.planId || "") !== String(plan.planId || "")) {
-        entry = newEntry(plan);
-        candidates[key] = entry;
-        queueSave();
-        return entry;
-      }
-
-      const templateChanged = entry.templateSig !== currentBasis.templateSig;
-      const historyChanged = entry.historySig !== currentBasis.historySig;
-      if (templateChanged || historyChanged) {
-        if (entry.edited) {
-          entry.stale = true;
-          entry.staleReason = templateChanged ? "训练模板已更新" : "训练记录已更新";
-          candidates[key] = entry;
-          queueSave();
-          if (notify && !warnedStale.has(key)) {
-            warnedStale.add(key);
-            App.toast("训练依据已更新，已保留你的当前调整", "info");
-          }
-        } else {
-          entry = newEntry(plan);
-          candidates[key] = entry;
-          warnedStale.delete(key);
-          queueSave();
-        }
-      }
-      return entry;
-    }
-
-    function draftFor(index = currentIndex()) {
-      return entryFor(index)?.workout || null;
-    }
-
-    function markEdited(index = currentIndex()) {
-      const plan = App.state.plans[index];
-      const entry = entryFor(index, { notify: false });
-      if (!plan || !entry) return;
-      entry.edited = true;
-      entry.stale = false;
-      entry.staleReason = "";
-      Object.assign(entry, basis(plan));
-      candidates[candidateKey(plan)] = entry;
-      warnedStale.delete(candidateKey(plan));
-      queueSave();
-    }
-
-    function regenerateEntry(index = currentIndex()) {
-      const plan = App.state.plans[index];
-      if (!plan) return null;
-      const entry = newEntry(plan);
-      candidates[candidateKey(plan)] = entry;
-      warnedStale.delete(candidateKey(plan));
-      queueSave();
-      return entry;
     }
 
     function ensureCandidateStatus() {
@@ -554,7 +389,7 @@
         planName: plan.name,
         generatedAt: draft.generatedAt || now,
         confirmedAt: now,
-        sourceTemplateSig: entry.templateSig || templateSig(plan),
+        sourceTemplateSig: entry.templateSig || Candidate.templateSig(plan),
         exercises: clone((draft.exercises || []).map(ex => ({ ...ex, loadType: loadType(ex) })))
       });
 
@@ -581,14 +416,9 @@
     }
 
     function keepCurrentCandidate() {
-      const index = currentIndex();
-      const plan = App.state.plans[index];
-      const entry = entryFor(index, { notify: false });
-      if (!plan || !entry) return;
-      Object.assign(entry, basis(plan), { stale: false, staleReason: "", edited: true });
-      candidates[candidateKey(plan)] = entry;
-      warnedStale.delete(candidateKey(plan));
-      queueSave();
+      const plan = currentPlan();
+      if (!plan) return;
+      Candidate.keep(plan);
       render();
       App.toast("已保留当前调整", "success");
     }
@@ -634,22 +464,7 @@
     async function invalidate(index = currentIndex(), options = {}) {
       const plan = App.state.plans[index];
       if (!plan) return;
-      if (options?.force || options?.regenerate) {
-        regenerateEntry(index);
-      } else {
-        const key = candidateKey(plan);
-        const entry = candidates[key];
-        if (!entry) return;
-        const currentBasis = basis(plan);
-        if (entry.edited) {
-          entry.stale = true;
-          entry.staleReason = entry.templateSig !== currentBasis.templateSig ? "训练模板已更新" : "训练记录已更新";
-          candidates[key] = entry;
-          queueSave();
-        } else {
-          regenerateEntry(index);
-        }
-      }
+      Candidate.invalidate(plan, options);
       if (document.getElementById("plan")?.classList.contains("active")) render();
     }
 
@@ -699,15 +514,13 @@
     }
 
     async function init() {
-      await loadCandidates();
+      await Candidate.init();
       ensureCandidateStatus();
       bindEvents();
     }
 
     async function refresh(reason) {
-      if (reason === "remote") {
-        for (let index = 0; index < App.state.plans.length; index++) entryFor(index, { notify: false });
-      }
+      if (reason === "remote") Candidate.refreshPlans(App.state.plans);
       render();
     }
 
@@ -716,14 +529,12 @@
     }
 
     async function onDataReset() {
-      candidates = {};
-      warnedStale.clear();
-      await App.idbSet(CANDIDATES_KEY, {});
+      await Candidate.reset();
     }
 
     const publicApi = { render, pushPlan, invalidate };
     return { init, refresh, onPage, onDataReset, publicApi };
   }
 
-  window.FitnessPlanningV165 = Object.freeze({ create });
+  window.FitnessPlanningCore = Object.freeze({ create });
 })();
