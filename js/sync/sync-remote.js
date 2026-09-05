@@ -146,7 +146,8 @@
     if (!file) throw new Error("云端计划文件缺失");
     const payload = file.data;
     if (payload?.format !== "fitness-plans-v3" || payload.revision !== manifest.plans.revision || !Array.isArray(payload.plans)) throw new Error("云端训练计划完整性检查失败");
-    return payload.plans;
+    const normalizePlan = window.FitnessApp?.schema?.normalizePlan;
+    return normalizePlan ? payload.plans.map(plan => normalizePlan(plan)) : payload.plans;
   }
 
   window.FitnessSyncRemote = Object.freeze({
