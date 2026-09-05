@@ -74,7 +74,11 @@
   function buildHistoryIndex() {
     const sorted = App.state.sessions
       .map((session, index) => ({ session, index }))
-      .sort((a, b) => String(b.session?.date || "").localeCompare(String(a.session?.date || "")) || b.index - a.index);
+      .sort((a, b) => {
+        const at = String(a.session?.completedAt || a.session?.date || "");
+        const bt = String(b.session?.completedAt || b.session?.date || "");
+        return bt.localeCompare(at) || b.index - a.index;
+      });
     const all = new Map();
     const byPlan = new Map();
 
