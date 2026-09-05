@@ -206,3 +206,30 @@ body.chrome-hidden .app-header{
     padding-top:4px;
   }
 }
+
+/* v174: keep the top brand shell and bottom navigation on the same mobile geometry. */
+@media(max-width:680px){
+  :root{
+    --mobile-chrome-height:63px;
+    --mobile-chrome-radius:31px;
+    --mobile-chrome-width:calc(100% - 20px);
+  }
+
+  .app-header{
+    width:var(--mobile-chrome-width);
+    height:var(--mobile-chrome-height);
+    min-height:var(--mobile-chrome-height);
+    margin:10px auto 8px;
+    padding:9px 16px;
+    border-radius:var(--mobile-chrome-radius);
+  }
+
+  .app-header h1{
+    line-height:1.1;
+  }
+
+  .bottom-nav{
+    min-height:var(--mobile-chrome-height);
+    border-radius:var(--mobile-chrome-radius);
+  }
+}
