@@ -131,7 +131,7 @@ async function switchPage(id, { historyMode = "replace", scroll = true } = {}) {
   document.body.classList.remove("chrome-hidden");
 
   for (const module of appModules) {
-    if (module.onPage) await module.onPage(pageId);
+    if (module.onPage && initializedModules.has(module)) await module.onPage(pageId);
   }
   if (scroll) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 }
@@ -184,8 +184,9 @@ function initAuxiliaryModules(modules) {
     for (const module of modules) {
       try {
         await initModule(module);
+        if (module.onPage && initializedModules.has(module)) await module.onPage(pageFromLocation());
       } catch (error) {
-        console.warn("auxiliary module init", error);
+        console.warn("auxiliary module lifecycle", error);
       }
     }
   }, 0));
