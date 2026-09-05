@@ -22,3 +22,21 @@ jobs:
           node --check sw.js
       - name: Check static shell and protected regressions
         run: node scripts/check-static.mjs
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install smoke-test dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start local app server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/fitness-pwa-http.log 2>&1 &
+          echo $! > /tmp/fitness-pwa-http.pid
+      - name: Run browser smoke tests
+        run: npm run test:smoke
