@@ -1,4 +1,4 @@
-const SHELL_CACHE = "fitness-pwa-shell-v159";
+const SHELL_CACHE = "fitness-pwa-shell-v160";
 const SHELL_ASSETS = [
   "./",
   "./index.html",
@@ -68,7 +68,7 @@ self.addEventListener("activate", event => {
     await Promise.all(
       keys
         .filter(key => key.startsWith("fitness-pwa-") && key !== SHELL_CACHE)
-        .map(key => cache.delete(key))
+        .map(key => caches.delete(key))
     );
     await self.clients.claim();
   })());
