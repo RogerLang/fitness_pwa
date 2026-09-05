@@ -1,15 +1,16 @@
 .pwa-update-banner{
   position:fixed;
   left:50%;
-  bottom:calc(env(safe-area-inset-bottom) + 92px);
+  bottom:calc(env(safe-area-inset-bottom) + 104px);
   z-index:1400;
   width:min(calc(100vw - 28px),420px);
+  min-height:58px;
   transform:translate(-50%,18px);
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
   gap:12px;
   align-items:center;
-  padding:12px 13px 12px 15px;
+  padding:9px 10px 9px 14px;
   border:1px solid rgba(255,255,255,.72);
   border-radius:18px;
   background:rgba(247,249,252,.92);
@@ -53,10 +54,12 @@
 }
 
 .pwa-update-actions button{
-  min-height:34px;
-  padding:0 10px;
-  border-radius:11px;
-  font-size:11px;
+  min-width:60px;
+  min-height:40px;
+  height:40px;
+  padding:0 13px;
+  border-radius:14px;
+  font-size:13px;
   white-space:nowrap;
 }
 
@@ -68,7 +71,7 @@
   .pwa-update-banner{
     width:calc(100vw - 20px);
     gap:9px;
-    padding:11px 10px 11px 13px;
+    padding:9px 9px 9px 12px;
   }
 
   .pwa-update-meta{
@@ -76,7 +79,8 @@
   }
 
   .pwa-update-actions button{
-    padding-inline:8px;
+    min-width:58px;
+    padding-inline:10px;
   }
 }
 
