@@ -60,94 +60,18 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
   font-variant-numeric:tabular-nums;
 }
 
-/* Shared visual language for Progress and Settings. */
-#progress > .card,
+/* Settings page surfaces. */
 #settings > .card{
   overflow:hidden;
 }
 
-#progress h2,
-#settings h2,
-#progress h3{
+#settings h2{
   margin-bottom:12px;
   color:var(--workout-text-primary);
   font-weight:820;
   letter-spacing:-.012em;
 }
 
-/* Progress: control, chart summary and body history use the same thin-panel material. */
-#progress > .card:first-child > label{
-  margin-top:0;
-  padding:11px 12px;
-  border:1px solid var(--ui-panel-border);
-  border-radius:18px;
-  background:var(--ui-panel-bg);
-  box-shadow:var(--ui-panel-shadow);
-}
-
-#progress > .card:first-child > label select{
-  margin-top:1px;
-}
-
-#progressRange{
-  margin:9px 0 0;
-  padding:8px;
-  border:1px solid var(--ui-panel-border);
-  border-radius:18px;
-  background:rgba(255,255,255,.32);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
-}
-
-#progress #progressChart{
-  margin-top:10px;
-  border-color:rgba(255,255,255,.48);
-  border-radius:20px;
-  background:rgba(255,255,255,.62);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.88),
-    0 3px 9px rgba(37,48,64,.032);
-}
-
-#progress #progressSummary{
-  margin:9px 0 0;
-  padding:10px 12px;
-  border:1px solid rgba(255,255,255,.36);
-  border-radius:16px;
-  background:rgba(255,255,255,.32);
-  line-height:1.45;
-}
-
-#progress > .card:nth-child(2) .grid2{
-  padding:10px;
-  border:1px solid var(--ui-panel-border);
-  border-radius:20px;
-  background:var(--ui-panel-bg);
-  box-shadow:var(--ui-panel-shadow);
-}
-
-#progress > .card:nth-child(2) .grid2 label{
-  margin-top:0;
-}
-
-#progress #saveBodyBtn{
-  width:100%;
-  margin-top:9px;
-}
-
-#progress #bodyHistory:not(:empty){
-  margin-top:10px;
-  padding:3px 11px;
-  border:1px solid rgba(255,255,255,.36);
-  border-radius:18px;
-  background:rgba(255,255,255,.30);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
-}
-
-#progress .body-history-row{
-  border-bottom-color:rgba(126,145,169,.10);
-}
-
-/* Settings: account, actions, privacy and backup surfaces. */
 #settings .card > .grid2,
 #settings .card > label,
 #settings .card > .row.top-gap,
@@ -277,19 +201,8 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
 }
 
 @media(max-width:680px){
-  #progress > .card,
   #settings > .card{
     padding:14px 11px 12px;
-  }
-
-  #progressRange{
-    gap:5px;
-    padding:7px;
-  }
-
-  #progressRange .v16-range-btn{
-    flex:1 1 auto;
-    min-width:68px;
   }
 
   #settings .card > .row.top-gap{
@@ -332,11 +245,6 @@ html #workoutContainer .workout-set-row.set-completed .set-complete[aria-pressed
 }
 
 @media(prefers-reduced-transparency:reduce){
-  #progress > .card:first-child > label,
-  #progressRange,
-  #progress #progressSummary,
-  #progress > .card:nth-child(2) .grid2,
-  #progress #bodyHistory:not(:empty),
   #settings .card > .grid2,
   #settings .card > label,
   #settings .card > .row.top-gap,
