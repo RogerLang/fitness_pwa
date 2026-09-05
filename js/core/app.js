@@ -4,6 +4,7 @@ if (!Storage) throw new Error("FitnessStorage must load before app.js");
 const PAGE_IDS = new Set(["today", "plan", "history", "progress", "settings"]);
 const PAGE_SCRIPTS = Object.freeze({
   plan: [
+    "js/training/candidate-workout.js",
     "js/training/planning-core.js",
     "js/training/planning.js",
     "js/sync/assistant-proposals-core.js"
