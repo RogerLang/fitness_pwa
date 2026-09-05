@@ -10,6 +10,15 @@ const fail = message => {
 const normalizeLocal = value => String(value || "").split("#")[0].split("?")[0].replace(/^\.\//, "");
 const exists = file => fs.existsSync(path.join(root, normalizeLocal(file)));
 
+function jsFiles(dir = "js") {
+  const full = path.join(root, dir);
+  return fs.readdirSync(full, { withFileTypes: true }).flatMap(entry => {
+    const relative = path.join(dir, entry.name);
+    if (entry.isDirectory()) return jsFiles(relative);
+    return entry.isFile() && entry.name.endsWith(".js") ? [relative] : [];
+  });
+}
+
 const indexHtml = read("index.html");
 const serviceWorker = read("sw.js");
 const appCore = read("js/core/app.js");
@@ -20,6 +29,19 @@ const localRefs = [...indexHtml.matchAll(/\b(?:href|src)="([^"]+)"/g)]
 
 for (const ref of localRefs) {
   if (!exists(ref)) fail(`index.html references missing local asset: ${ref}`);
+}
+
+for (const file of jsFiles()) {
+  const source = read(file);
+  const dynamicRefs = [
+    ...source.matchAll(/\.src\s*=\s*["']([^"']+\.js(?:[?#][^"']*)?)["']/g),
+    ...source.matchAll(/\.setAttribute\(\s*["']src["']\s*,\s*["']([^"']+\.js(?:[?#][^"']*)?)["']\s*\)/g)
+  ].map(match => match[1]);
+
+  for (const ref of dynamicRefs) {
+    if (/^(?:https?:|data:|\/\/|#)/i.test(ref)) continue;
+    if (!exists(ref)) fail(`${file} dynamically references missing local script: ${ref}`);
+  }
 }
 
 const shellMatch = serviceWorker.match(/const SHELL_ASSETS = \[([\s\S]*?)\];/);
