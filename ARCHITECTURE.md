@@ -45,12 +45,14 @@ Template 不得包含新的 `plannedWorkout`。旧数据中的嵌套 `plan.plann
 ### Candidate Workout
 
 - 本机 key：`planningCandidatesV1`
-- 每个 Template 一份 Candidate
+- 正式模块：`js/training/candidate-workout.js`
+- 每个 Template 一份 Candidate，以 `planId` 为业务主键
+- 模板名称仅作为旧数据兼容回退
 - 不上传 Private GitHub
 - 刷新、切页面后保留
 - Template 或历史变化时执行 stale / regenerate 规则
 
-当前 Candidate 生命周期由 `js/training/planning-core.js` 统一负责。这里同时包含计划页渲染逻辑，是现阶段有意保留的边界：Candidate 行为刚稳定，不在架构清理版本中为拆文件而重写其生命周期。
+`candidate-workout.js` 是 Candidate 生命周期和本机持久化的唯一主要负责人。`planning-core.js` 只负责选择当前 Template、渲染 Candidate、接收编辑并调用 Candidate service。
 
 ### Planned Workout
 
@@ -79,7 +81,8 @@ js/
 │   └── app-storage.js         # IndexedDB 基础存储
 │
 ├── training/
-│   ├── planning-core.js       # Plan 页面业务 + Candidate 生命周期
+│   ├── candidate-workout.js   # Candidate 生成、持久化、edited/stale、失效/重建
+│   ├── planning-core.js       # Plan 页面业务和 Candidate orchestration
 │   ├── planning.js            # Plan 页面生命周期适配器
 │   ├── planned-workout.js     # 全局 Planned Workout
 │   ├── training-progression.js# 历史索引和进阶算法
@@ -189,9 +192,10 @@ Proposal 网络错误不能阻塞 Plan 页面本身。
 - Training 首屏依赖保持静态加载，避免训练页面闪烁和二次加载。
 - Plan 页面通过 `PAGE_SCRIPTS` 按需加载。
 - Plan 页依赖顺序显式声明：
-  1. `planning-core.js`
-  2. `planning.js`
-  3. `assistant-proposals-core.js`
+  1. `candidate-workout.js`
+  2. `planning-core.js`
+  3. `planning.js`
+  4. `assistant-proposals-core.js`
 - 页面入口和同步入口不得再自行创建第二层本地 `<script>` loader。
 - Service Worker shell cache 是发布资源版本边界，不恢复每文件 `?v=` 查询参数。
 
@@ -206,12 +210,13 @@ v165 之前曾把 Planned Workout 嵌套在 Template 中。`planned-workout.js` 
 
 迁移代码可以在确认历史数据已经全部跨过旧 schema 后单独删除，不应与功能迭代混在一起。
 
-## 9. 静态回归保护
+## 9. 自动化回归保护
 
 `scripts/check-static.mjs` 必须持续保护：
 
 - 所有页面和 shell 资源存在。
 - PAGE_SCRIPTS 资源进入 Service Worker shell。
+- Candidate store 只由 `candidate-workout.js` 负责，Planning 不重新接管持久化。
 - `planning-v165.js`、`sync-v165.js`、`assistant-proposals-v165.js`、`training-next-workout.js` 不得重新出现。
 - 页面入口不得重新创建嵌套 script loader。
 - Planning 不得把 Planned Workout 写回 Template。
@@ -219,11 +224,19 @@ v165 之前曾把 Planned Workout 嵌套在 Template 中。`planned-workout.js` 
 - ChatGPT 确认必须立即持久化 Template、强制重建 Candidate，且不得顺带推送 Planned Workout。
 - 已保护的 Training motion 参数不得回退。
 
+浏览器 smoke test 必须持续验证：
+
+- 页面能够真实启动和切换。
+- Candidate 编辑可持久化并跨刷新恢复。
+- Candidate 可以推送并覆盖全局 Planned Workout。
+- Template 修改不会反向修改既有 Planned Workout。
+- Session 完成会消费对应 Planned Workout。
+
 ## 10. 未来修改原则
 
 优先做小范围增量改动：
 
 - 新功能先确认属于 Template、Candidate、Planned Workout 还是 Session。
 - 不在 UI 模块之间直接复制正式状态。
+- 业务身份优先使用 `planId` / `exerciseId`；数组 index 只用于当前 UI 定位。
 - 不为了代码形式统一而重写已经稳定的训练交互。
-- 如果以后 Candidate 逻辑继续增长，再把它从 `planning-core.js` 抽成独立 service；抽取时必须保持当前 IndexedDB key、stale 语义和生成规则兼容。

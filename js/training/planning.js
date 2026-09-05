@@ -6,7 +6,7 @@
 
   function ensureCore() {
     if (core) return core;
-    const create = window.FitnessPlanningV165?.create;
+    const create = window.FitnessPlanningCore?.create;
     if (!create) throw new Error("planning-core.js must load before planning.js");
     core = create(App);
     App.planning = core.publicApi;
