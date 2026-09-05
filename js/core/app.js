@@ -90,13 +90,13 @@ function normalizeSet(value) {
   return { ...objectValue(value) };
 }
 
-function normalizeTemplateExercise(value, planId = "") {
+function normalizeTemplateExercise(value, planId = "", legacyIndex = 0) {
   const exercise = objectValue(value);
   const name = normalizedString(exercise.name);
   const normalized = {
     ...exercise,
     name,
-    exerciseId: normalizedId(exercise.exerciseId) || legacyId("exercise", planId, name)
+    exerciseId: normalizedId(exercise.exerciseId) || legacyId("exercise", planId, name, legacyIndex)
   };
   if (Object.prototype.hasOwnProperty.call(exercise, "setPresets")) {
     normalized.setPresets = Array.isArray(exercise.setPresets) ? exercise.setPresets.map(normalizeSet) : [];
@@ -116,15 +116,18 @@ function exerciseLookup(exercises = []) {
   return { byId, byName };
 }
 
-function normalizeWorkoutExercise(value, planId = "", templates = null) {
+function normalizeWorkoutExercise(value, planId = "", templates = null, positionalTemplate = null, legacyIndex = 0) {
   const exercise = objectValue(value);
   const name = normalizedString(exercise.name);
   const existingId = normalizedId(exercise.exerciseId);
-  const matched = existingId ? templates?.byId?.get(existingId) : templates?.byName?.get(name);
+  const positionalMatch = positionalTemplate && normalizedString(positionalTemplate.name) === name ? positionalTemplate : null;
+  const matched = existingId
+    ? templates?.byId?.get(existingId)
+    : positionalMatch || templates?.byName?.get(name);
   return {
     ...exercise,
     name,
-    exerciseId: existingId || normalizedId(matched?.exerciseId) || legacyId("exercise", planId, name),
+    exerciseId: existingId || normalizedId(matched?.exerciseId) || legacyId("exercise", planId, name, legacyIndex),
     sets: Array.isArray(exercise.sets) ? exercise.sets.map(normalizeSet) : []
   };
 }
@@ -139,7 +142,7 @@ function normalizeWorkout(value, fallbackPlanId = "", templateExercises = []) {
     planName,
     planId,
     exercises: Array.isArray(workout.exercises)
-      ? workout.exercises.map(exercise => normalizeWorkoutExercise(exercise, planId, templates))
+      ? workout.exercises.map((exercise, index) => normalizeWorkoutExercise(exercise, planId, templates, templateExercises[index], index))
       : []
   };
 }
@@ -149,7 +152,7 @@ function normalizePlan(value) {
   const name = normalizedString(plan.name);
   const planId = normalizedId(plan.planId) || legacyId("plan", name);
   const exercises = Array.isArray(plan.exercises)
-    ? plan.exercises.map(exercise => normalizeTemplateExercise(exercise, planId))
+    ? plan.exercises.map((exercise, index) => normalizeTemplateExercise(exercise, planId, index))
     : [];
   const normalized = {
     ...plan,
@@ -163,8 +166,8 @@ function normalizePlan(value) {
   return normalized;
 }
 
-function normalizeSessionExercise(value, planId = "", templates = null) {
-  const exercise = normalizeWorkoutExercise(value, planId, templates);
+function normalizeSessionExercise(value, planId = "", templates = null, positionalTemplate = null, legacyIndex = 0) {
+  const exercise = normalizeWorkoutExercise(value, planId, templates, positionalTemplate, legacyIndex);
   if (exercise.planned && typeof exercise.planned === "object" && !Array.isArray(exercise.planned)) {
     exercise.planned = {
       ...exercise.planned,
@@ -192,14 +195,15 @@ function normalizeSession(value, plans = null) {
   const existingPlanId = normalizedId(session.planId);
   const matchedPlan = existingPlanId ? plans?.byId?.get(existingPlanId) : plans?.byName?.get(planName);
   const planId = existingPlanId || normalizedId(matchedPlan?.planId) || legacyId("plan", planName);
-  const templates = exerciseLookup(matchedPlan?.exercises || []);
+  const templateExercises = matchedPlan?.exercises || [];
+  const templates = exerciseLookup(templateExercises);
   const normalized = {
     ...session,
     date: normalizedString(session.date),
     plan: planName,
     planId,
     exercises: Array.isArray(session.exercises)
-      ? session.exercises.map(exercise => normalizeSessionExercise(exercise, planId, templates))
+      ? session.exercises.map((exercise, index) => normalizeSessionExercise(exercise, planId, templates, templateExercises[index], index))
       : []
   };
   if (session.id !== undefined && session.id !== null) normalized.id = String(session.id);
