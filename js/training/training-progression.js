@@ -1,6 +1,6 @@
 (() => {
   const App = window.FitnessApp;
-  const PROGRESSION_VERSION = 2;
+  const PROGRESSION_VERSION = 3;
   const LOAD_TYPES = new Set(["weight", "bodyweight", "added-weight"]);
   let historyIndexCache = null;
 
@@ -40,8 +40,9 @@
   }
 
   function weightStep(ex) {
-    if (ex?.weightStep !== undefined && ex?.weightStep !== null && ex.weightStep !== "") {
-      const n = Number(ex.weightStep);
+    for (const value of [ex?.weightStep, ex?.increment]) {
+      if (value === undefined || value === null || value === "") continue;
+      const n = Number(value);
       if (Number.isFinite(n) && n >= 0) return n;
     }
     return /硬拉/.test(String(ex?.name || "")) ? 6 : 5;
@@ -291,6 +292,13 @@
           reason: "已达到次数上限，但最后一组为 RIR 0；本次保持重量确认。"
         };
       }
+      if (step === 0) {
+        return {
+          version: PROGRESSION_VERSION, status: "maintain", statusLabel: "保持重量",
+          weight: baseWeight, reps: Array(count).fill(max), repRange: [min, max], weightStep: 0, confirmation: 2,
+          reason: `已达到 ${max} 次上限；当前动作未启用自动升重，保持当前重量，以动作质量和目标 RIR 为优先。`
+        };
+      }
       const confirmed = previous && previous.allTop && previous.rirAllowsProgress &&
         ((baseWeight === null && previous.weight === null) || previous.weight === baseWeight);
       if (confirmed && baseWeight !== null && step > 0) {
@@ -360,6 +368,7 @@
   });
 
   window.TrainingProgression = Object.freeze({
+    version: PROGRESSION_VERSION,
     valueOrNull,
     loadType,
     usesWeight,

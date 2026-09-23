@@ -2,7 +2,7 @@
   "name": "fitness-pwa",
   "private": true,
   "scripts": {
-    "test:smoke": "playwright test tests/smoke.spec.js"
+    "test:smoke": "playwright test tests"
   },
   "devDependencies": {
     "@playwright/test": "1.55.0"
