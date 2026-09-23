@@ -12,6 +12,7 @@
       buildHistoryContext,
       progressionSuggestion
     } = Progression;
+    const progressionVersion = Number(Progression.version) || 0;
 
     const clone = value => JSON.parse(JSON.stringify(value));
     let candidates = {};
@@ -47,7 +48,11 @@
     }
 
     function basis(plan) {
-      return { templateSig: templateSig(plan), historySig: historySig(plan) };
+      return {
+        templateSig: templateSig(plan),
+        historySig: historySig(plan),
+        progressionVersion
+      };
     }
 
     function keyForPlan(plan) {
@@ -145,10 +150,15 @@
 
       const templateChanged = entry.templateSig !== currentBasis.templateSig;
       const historyChanged = entry.historySig !== currentBasis.historySig;
-      if (templateChanged || historyChanged) {
+      const progressionChanged = entry.progressionVersion !== currentBasis.progressionVersion;
+      if (templateChanged || historyChanged || progressionChanged) {
         if (entry.edited) {
           entry.stale = true;
-          entry.staleReason = templateChanged ? "训练模板已更新" : "训练记录已更新";
+          entry.staleReason = templateChanged
+            ? "训练模板已更新"
+            : historyChanged
+              ? "训练记录已更新"
+              : "进阶规则已更新";
           candidates[key] = entry;
           queueSave();
           if (notify && !warnedStale.has(key)) {
@@ -210,7 +220,11 @@
       const currentBasis = basis(plan);
       if (entry.edited) {
         entry.stale = true;
-        entry.staleReason = entry.templateSig !== currentBasis.templateSig ? "训练模板已更新" : "训练记录已更新";
+        entry.staleReason = entry.templateSig !== currentBasis.templateSig
+          ? "训练模板已更新"
+          : entry.historySig !== currentBasis.historySig
+            ? "训练记录已更新"
+            : "进阶规则已更新";
         candidates[key] = entry;
         queueSave();
         return entry;
